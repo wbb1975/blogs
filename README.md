@@ -1,2 +1,2 @@
 # blogs
-Bingbing's blog to record techinical learning, experiences, etc
+    A place to record my learning history, my developing experiences, etc. Not only technique.
