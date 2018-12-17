@@ -11,17 +11,8 @@ awk会根据空格和制表符，将每一行分成若干字段，依次用$1、
 $echo 'this is a test' | awk '{print $3}'
 a
 
-下面，为了便于举例，我们把/etc/passwd文件保存成test.txt。
-root:x:0:0:root:/root:/bin/bash
-daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
-bin:x:2:2:bin:/bin:/usr/sbin/nologin
-sys:x:3:3:sys:/dev:/usr/sbin/nologin
-sync:x:4:65534:sync:/bin:/bin/sync
-games:x:5:60:games:/usr/games:/usr/sbin/nologin
-...
-这个文件的字段分隔符是冒号（:），所以要用-F参数指定分隔符为冒号。然后，才能提取到它的第一个字段。
-
-$awk -F ':' '{ print $1 }' test.txt
+/etc/passwd的字段分隔符是冒号（:），所以要用-F参数指定分隔符为冒号。然后，才能提取到它的第一个字段。
+$awk -F ':' '{ print $1 }' /etc/passwd
 root
 daemon
 bin
