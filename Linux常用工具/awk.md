@@ -1,4 +1,4 @@
-#awk入门教程
+# awk入门教程
 awk是处理文本文件的一个应用程序，对于处理结构化的文本尤其有效。基本上，awk其实不仅仅是工具软件，还是一种编程语言。
 一、基本用法
 \# 格式
@@ -96,7 +96,7 @@ $ awk -F ':' '$1 == "root" || $1 == "bin" {print $1}' /etc/passwd
 root
 bin
 
-五、if 语句
+五、if语句
 awk提供了if结构，用于编写复杂的条件。
 $ awk -F ':' '{if ($1 > "m") print $1}' /etc/passwd
 root
@@ -107,10 +107,10 @@ mail
 ...
 
 if结构还可以指定else部分。
-$ awk -F ':' '{if ($1 > "m") print $1; else print "---"}' /etc/passwd
+$ awk -F ':' '{if ($1 > "m") print $1; else print "less"}' /etc/passwd
 root
----
----
+less
+less
 sys
 sync
 
