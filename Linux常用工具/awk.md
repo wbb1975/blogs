@@ -2,13 +2,13 @@
 awk是处理文本文件的一个应用程序，对于处理结构化的文本尤其有效。基本上，awk其实不仅仅是工具软件，还是一种编程语言。
 一、基本用法
 \# 格式
-$ awk 动作 文件名
+$awk 动作 文件名
 
 \# 示例
-$ awk '{print $0}' README.md　＃处理动作print $0代表打印当前行
+$awk '{print $0}' README.md　＃处理动作print $0代表打印当前行
 
 awk会根据空格和制表符，将每一行分成若干字段，依次用$1、$2、$3代表第一个字段、第二个字段、第三个字段等等.
-$ echo 'this is a test' | awk '{print $3}'
+$echo 'this is a test' | awk '{print $3}'
 a
 
 下面，为了便于举例，我们把/etc/passwd文件保存成test.txt。
@@ -21,7 +21,7 @@ games:x:5:60:games:/usr/games:/usr/sbin/nologin
 ...
 这个文件的字段分隔符是冒号（:），所以要用-F参数指定分隔符为冒号。然后，才能提取到它的第一个字段。
 
-$ awk -F ':' '{ print $1 }' test.txt
+$awk -F ':' '{ print $1 }' test.txt
 root
 daemon
 bin
@@ -34,11 +34,11 @@ games
 除了$ + 数字表示某个字段，awk还提供其他一些变量。
 变量NF表示当前行有多少个字段，因此$NF就代表最后一个字段。
 
-$ echo 'this is a test' | awk '{print $NF}'
+$echo 'this is a test' | awk '{print $NF}'
 test
 $(NF-1)代表倒数第二个字段。
 变量NR表示当前处理的是第几行。
-$ awk -F ':' '{print NR ") " $1}' /etc/passwd
+$awk -F ':' '{print NR ") " $1}' /etc/passwd
 1) root
 2) daemon
 3) bin
@@ -58,7 +58,7 @@ OFMT：数字输出的格式，默认为％.6g。
 三、函数
 awk还提供了一些内置函数，方便对原始数据的处理。
 函数toupper()用于将字符转为大写。
-$ awk -F ':' '{ print toupper($1) }' /etc/passwd
+$awk -F ':' '{ print toupper($1) }' /etc/passwd
 ROOT
 DAEMON
 BIN
@@ -78,8 +78,8 @@ rand()：随机数。
 
 四、条件
 awk允许指定输出条件，只输出符合条件的行，输出条件要写在动作的前面。
-$ awk '条件 动作' 文件名
-$ awk -F ':' '/usr/ {print $1}' /etc/passwd
+$awk '条件 动作' 文件名
+$awk -F ':' '/usr/ {print $1}' /etc/passwd
 daemon
 bin
 sys
@@ -92,13 +92,13 @@ man
 $ awk -F ':' 'NR % 2 == 1 {print $1}' /etc/passwd
 
 下面的例子输出第一个字段等于指定值的行。
-$ awk -F ':' '$1 == "root" || $1 == "bin" {print $1}' /etc/passwd
+$awk -F ':' '$1 == "root" || $1 == "bin" {print $1}' /etc/passwd
 root
 bin
 
 五、if语句
 awk提供了if结构，用于编写复杂的条件。
-$ awk -F ':' '{if ($1 > "m") print $1}' /etc/passwd
+$awk -F ':' '{if ($1 > "m") print $1}' /etc/passwd
 root
 sys
 sync
@@ -106,8 +106,8 @@ man
 mail
 ...
 
-if结构还可以指定else部分。
-$ awk -F ':' '{if ($1 > "m") print $1; else print "less"}' /etc/passwd
+if结构还可以指定else部分：
+$awk -F ':' '{if ($1 > "m") print $1; else print "less"}' /etc/passwd
 root
 less
 less
