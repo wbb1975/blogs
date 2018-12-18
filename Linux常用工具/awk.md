@@ -128,3 +128,4 @@ sync
 ### 六、参考链接
 - [An Awk tutorial by Example](https://gregable.com/2010/09/why-you-should-know-just-little-awk.html), Greg Grothaus
 - [30 Examples for Awk Command in Text Processing](https://likegeeks.com/awk-command/), Mokhtar Ebrahim
+- [awk 入门教程](http://www.ruanyifeng.com/blog/2018/11/awk.html), 阮一峰
