@@ -65,7 +65,7 @@ Optional并非用于任何现有可选"option"的直接近似物，也并非直�
 [boolean isPresent()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#isPresent--)|Returns true if this Optional contains a non-null instance.
 [T get()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#get--)|Returns the contained T instance, which must be present; otherwise, throws an IllegalStateException.
 [T or(T)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#or-T-)|Returns the present value in this Optional, or if there is none, returns the specified default.
-[T orNull(http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#orNull--)]()|Returns the present value in this Optional, or if there is none, returns null. The inverse operation of fromNullable.
+[T orNull()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#orNull--)|Returns the present value in this Optional, or if there is none, returns null. The inverse operation of fromNullable.
 [Set<T> asSet()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#asSet--)|Returns an immutable singleton Set containing the instance in this Optional, if there is one, or otherwise an empty immutable set.
 除了这些，Optional还提供了一些方便的工具方法，请查询JavaDoc以获取更多细节。
 
