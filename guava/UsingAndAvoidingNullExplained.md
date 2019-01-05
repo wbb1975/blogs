@@ -1,6 +1,7 @@
 # Using and avoiding null
 ##### [原文地址](https://github.com/google/guava/wiki/UsingAndAvoidingNullExplained)
 > "Null sucks." -Doug Lea
+
 > "I call it my billion-dollar mistake." - Sir C. A. R. Hoare, on his invention of the null reference
 
 null的随意使用可能导致各种令人震惊的错误（bugs）。经过对Google代码的研究，我们发现约有９５％的集合假设不会包含null，而且
@@ -44,8 +45,11 @@ possible.get(); // returns 5
 
 Optional并非用于任何现有可选"option"的直接近似物，也并非直接从其它编程环境构造而来，虽然可能有一些相似性。
 我们把一些最常用的Optional操作罗列如下：
+
 ###＃ Making an Optional
+
 下面的每个都是Optional的静态方法
+
 **Method**|**Description**
 ----------|---------------
 [Optional.of(T)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#of-T-)|Make an Optional containing the given non-null value, or fail fast on null.
