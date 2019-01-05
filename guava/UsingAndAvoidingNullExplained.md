@@ -53,11 +53,13 @@ Optional并非用于任何现有可选"option"的直接近似物，也并非直�
 **Method**|**Description**
 ----------|---------------
 [Optional.of(T)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#of-T-)|Make an Optional containing the given non-null value, or fail fast on null.
-[Optional.absent(http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#absent--)]()|Return an absent Optional of some type.
+[Optional.absent()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#absent--)|Return an absent Optional of some type.
 [Optional.fromNullable(T)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#fromNullable-T-)|Turn the given possibly-null reference into an Optional, treating non-null as present and null as absent.
 
 ###＃ Query methods
+
 以下这些每个都是正对Optional<T>值的非静态方法
+
 **Method**|**Description**
 ----------|---------------
 [boolean isPresent()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#isPresent--)|Returns true if this Optional contains a non-null instance.
