@@ -46,7 +46,7 @@ possible.get(); // returns 5
 Optional并非用于任何现有可选"option"的直接近似物，也并非直接从其它编程环境构造而来，虽然可能有一些相似性。
 我们把一些最常用的Optional操作罗列如下：
 
-###＃ Making an Optional
+#### Making an Optional
 
 下面的每个都是Optional的静态方法
 
@@ -56,7 +56,7 @@ Optional并非用于任何现有可选"option"的直接近似物，也并非直�
 [Optional.absent()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#absent--)|Return an absent Optional of some type.
 [Optional.fromNullable(T)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Optional.html#fromNullable-T-)|Turn the given possibly-null reference into an Optional, treating non-null as present and null as absent.
 
-###＃ Query methods
+#### Query methods
 
 以下这些每个都是正对Optional<T>值的非静态方法
 
