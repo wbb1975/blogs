@@ -29,7 +29,7 @@ Returns index.｜IndexOutOfBoundsException
 
 我们偏向于使用我们的前置检查设施而不是一些类似的设施比如说Apache Commons，主要基于以下原因：
 - 静态导入后，Guava的方法更清晰也更少歧义。checkNotNull能够更清楚表明它主要做什么，以及什么异常被抛出。
-- checkNotNull在验证参数后返回其参数，这便于使用所谓的一行构早晚函数：
+- checkNotNull在验证参数后返回其参数，这便于使用所谓的一行构早晚函数：  
   `this.field = checkNotNull(field);.`
 - 简单可变参数像"printf-style" 的异常消息。（这点优势也是我们推荐使用checkNotNull而非Objects.requireNonNull的原因所在。）
 
