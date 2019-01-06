@@ -19,7 +19,7 @@ checkArgument(i < j, "Expected i < j, but %s >= %s", i, j);
 **Signature (not including extra args)**|**Description**|**Exception thrown on failure**  
 ----------|---------------|---------------
 [checkArgument(boolean)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Preconditions.html#checkArgument-boolean-)|Checks that the boolean is true. Use for validating arguments to methods.|IllegalArgumentException
-[checkNotNull(T))]（http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Preconditions.html#checkNotNull-T-)|Checks that the value is not null. Returns the value directly, so you can use checkNotNull(value) inline.|NullPointerException
+[checkNotNull(T)]（http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Preconditions.html#checkNotNull-T-)|Checks that the value is not null. Returns the value directly, so you can use checkNotNull(value) inline.|NullPointerException
 [checkState(boolean)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Preconditions.html#checkState-boolean-)|Checks some state of the object, not dependent on the method arguments. For example, an Iterator might use this to check that next has been called before any call to remove.|IllegalStateException
 [checkElementIndex(int index, int size)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Preconditions.html#checkElementIndex-int-int-)|Checks that index is a valid element index into a list, string, or array with the specified size. An element index may range from 0 inclusive to size exclusive. You don't pass the list, string, or array directly; you just pass its size.
 Returns index.|IndexOutOfBoundsException
