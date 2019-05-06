@@ -1,3 +1,4 @@
+## 平均负载释义
 wangbb@wangbb-ThinkPad-T420:~$ uptime
 
 21:02:30 up 40 min,  1 user,  load average: 0.89, 0.55, 0.51
