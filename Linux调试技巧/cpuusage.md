@@ -3,8 +3,8 @@
 
 节拍率 HZ 是内核的可配选项，可以设置为 100、250、1000 等。不同的系统可能设置不同数值，你可以通过查询 /boot/config 内核选项来查看它的配置值。比如在我的系统中，节拍率设置成了 250，也就是每秒钟触发 250 次时间中断。
 ```
-\# grep 'CONFIG_HZ=' /boot/config-$(uname -r)
-\# CONFIG_HZ=250
+# grep 'CONFIG_HZ=' /boot/config-$(uname -r)
+# CONFIG_HZ=250
 wangbb@wangbb-ThinkPad-T420:~$ uname -r
 4.15.0-47-generic
 wangbb@wangbb-ThinkPad-T420:~$ grep CONFIG_HZ= /boot/config-4.15.0-47-generic
@@ -12,3 +12,30 @@ CONFIG_HZ=250
 ```
 
 同时，正因为节拍率 HZ 是内核选项，所以用户空间程序并不能直接访问。为了方便用户空间程序，内核还提供了一个用户空间节拍率 USER_HZ，它总是固定为 100，也就是 1/100 秒。这样，用户空间程序并不需要关心内核中 HZ 被设置成了多少，因为它看到的总是固定值 USER_HZ。
+
+Linux 通过 /proc 虚拟文件系统，向用户空间提供了系统内部状态的信息，而 /proc/stat 提供的就是系统的 CPU 和任务统计信息。比方说，如果你只关注 CPU 的话，可以执行下面的命令：
+```
+# 只保留各个 CPU 的数据
+wangbb@wangbb-ThinkPad-T420:~$ cat /proc/stat | grep ^cpu
+cpu  727112 9045 152458 49234226 55191 0 1244 0 0 0
+cpu0 204580 2341 37168 12271935 11791 0 765 0 0 0
+cpu1 151382 1444 34004 12362060 17375 0 199 0 0 0
+cpu2 197664 1820 37754 12274934 11507 0 171 0 0 0
+cpu3 173485 3439 43532 12325296 14516 0 108 0 0 0
+```
+这里的输出结果是一个表格。其中，第一列表示的是 CPU 编号，如 cpu0、cpu1，而第一行没有编号的 cpu，表示的是所有 CPU 的累加。其他列则表示不同场景下 CPU 的累加节拍数，它的单位是 USER_HZ，也就是 10 ms（1/100 秒），所以这其实就是不同场景下的 CPU 时间。
+
+### CPU状态
+- user（通常缩写为 us），代表用户态 CPU 时间。注意，它不包括下面的 nice 时间，但包括了 guest 时间。
+- nice（通常缩写为 ni），代表低优先级用户态 CPU 时间，也就是进程的 nice 值被调整为 1-19之间时的 CPU 时间。这里注意，nice 可取值范围是 -20 到 19，数值越大，优先级反而越低。
+- system（通常缩写为 sys），代表CPU 时间。
+- idle（通常缩写为 id），代表空闲时间。注意，它不包括等待 I/O 的时间（iowait）。
+- iowait（通常缩写为 wa），代表等待 I/O 的 CPU 时间。
+- irq（通常缩写为 hi），代表处理硬中断的 CPU 时间。
+- softirq（通常缩写为 si），代表处理软中断的 CPU时间。
+- steal（通常缩写为 st），代表当系统运行在虚拟机中的时候，被其他虚拟机占用的 CPU 时间。
+- guest（通常缩写为 guest），代表通过虚拟化运行其他操作系统的时间，也就是运行虚拟机的 CPU 时间。
+- guest_nice（通常缩写为 gnice），代表以低优先级运行虚拟机的时间。
+
+而我们通常所说的 CPU 使用率，就是除了空闲时间外的其他时间占总 CPU 时间的百分比，用公式来表示就是：
+![CPU Usage](https://static001.geekbang.org/resource/image/3e/09/3edcc7f908c7c1ddba4bbcccc0277c09.png)
