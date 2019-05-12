@@ -129,7 +129,9 @@ $ perf report # 展示类似于 perf top 的报告
 下面我们就以 Nginx + PHP 的 Web 服务为例，来看看当你发现 CPU 使用率过高的问题后，要怎么使用 top 等工具找出异常的进程，又要怎么利用 perf 找出引发性能问题的函数。ab（apache bench）是一个常用的 HTTP 服务性能测试工具，这里用来模拟 Ngnix 的客户端。由于 Nginx 和 PHP 的配置比较麻烦，我把它们打包成了两个 [Docker 镜像](https://github.com/feiskyer/linux-perf-examples/tree/master/nginx-high-cpu)，这样只需要运行两个容器，就可以得到模拟环境。
 
 注意，这个案例要用到两台虚拟机，如下图所示：
+
 ![Phsical View](https://static001.geekbang.org/resource/image/90/3d/90c30b4f555218f77241bfe2ac27723d.png)
+
 你可以看到，其中一台用作 Web 服务器，来模拟性能问题；另一台用作 Web 服务器的客户端，来给 Web 服务增加压力请求。使用两台虚拟机是为了相互隔离，避免“交叉感染”。
 
 接下来，我们打开两个终端，分别 SSH 登录到两台机器上，并安装上面提到的工具。
