@@ -124,3 +124,98 @@ perf record # 按 Ctrl+C 终止采样
 $ perf report # 展示类似于 perf top 的报告
 ```
 在实际使用中，我们还经常为 perf top 和 perf record 加上 -g 参数，开启调用关系的采样，方便我们根据调用链来分析性能问题。
+
+## 案例
+下面我们就以 Nginx + PHP 的 Web 服务为例，来看看当你发现 CPU 使用率过高的问题后，要怎么使用 top 等工具找出异常的进程，又要怎么利用 perf 找出引发性能问题的函数。ab（apache bench）是一个常用的 HTTP 服务性能测试工具，这里用来模拟 Ngnix 的客户端。由于 Nginx 和 PHP 的配置比较麻烦，我把它们打包成了两个 [Docker 镜像](https://github.com/feiskyer/linux-perf-examples/tree/master/nginx-high-cpu)，这样只需要运行两个容器，就可以得到模拟环境。
+
+注意，这个案例要用到两台虚拟机，如下图所示：
+![Phsical View](https://static001.geekbang.org/resource/image/90/3d/90c30b4f555218f77241bfe2ac27723d.png)
+你可以看到，其中一台用作 Web 服务器，来模拟性能问题；另一台用作 Web 服务器的客户端，来给 Web 服务增加压力请求。使用两台虚拟机是为了相互隔离，避免“交叉感染”。
+
+接下来，我们打开两个终端，分别 SSH 登录到两台机器上，并安装上面提到的工具。
+### 操作和分析
+首先，在第一个终端执行下面的命令来运行 Nginx 和 PHP 应用：
+```
+docker run --name nginx -p 10000:80 -itd feisky/nginx
+$ docker run --name phpfpm -itd --network container:nginx feisky/php-fpm
+```
+然后，在第二个终端使用 curl 访问 http://[VM1 的 IP]:10000，确认Nginx 已正常启动。你应该可以看到 It works! 的响应。
+```
+# 192.168.0.10 是第一台虚拟机的 IP 地址
+$ curl http://192.168.0.10:10000/
+It works!
+```
+接着，我们来测试一下这个 Nginx 服务的性能。在第二个终端运行下面的 ab 命令：
+```
+# 并发 10 个请求测试 Nginx 性能，总共测试 100 个请求
+$ ab -c 10 -n 100 http://192.168.0.10:10000/
+This is ApacheBench, Version 2.3 <$Revision: 1706008 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, 
+...
+Requests per second:    11.63 [#/sec] (mean)
+Time per request:       859.942 [ms] (mean)
+...
+```
+从 ab 的输出结果我们可以看到，Nginx 能承受的每秒平均请求数只有 11.63。你一定在吐槽，这也太差了吧。那到底是哪里出了问题呢？我们用 top 和 pidstat 再来观察下。
+
+这次，我们在第二个终端，将测试的请求总数增加到 10000。这样当你在第一个终端使用性能分析工具时，Nginx 的压力还是继续。继续在第二个终端，运行 ab 命令：
+```
+ab -c 10 -n 10000 http://10.240.0.5:10000/
+```
+
+接着，回到第一个终端运行 top 命令，并按下数字 1 ，切换到每个 CPU 的使用率：
+```
+top
+...
+%Cpu0  : 98.7 us,  1.3 sy,  0.0 ni,  0.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+%Cpu1  : 99.3 us,  0.7 sy,  0.0 ni,  0.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+...
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+21514 daemon    20   0  336696  16384   8712 R  41.9  0.2   0:06.00 php-fpm
+21513 daemon    20   0  336696  13244   5572 R  40.2  0.2   0:06.08 php-fpm
+21515 daemon    20   0  336696  16384   8712 R  40.2  0.2   0:05.67 php-fpm
+21512 daemon    20   0  336696  13244   5572 R  39.9  0.2   0:05.87 php-fpm
+21516 daemon    20   0  336696  16384   8712 R  35.9  0.2   0:05.61 php-fpm
+```
+这里可以看到，系统中有几个 php-fpm 进程的 CPU 使用率加起来接近 200%；而每个 CPU 的用户使用率（us）也已经超过了 98%，接近饱和。这样，我们就可以确认，正是用户空间的 php-fpm 进程，导致 CPU 使用率骤升。
+
+那再往下走，怎么知道是 php-fpm 的哪个函数导致了 CPU 使用率升高呢？我们来用 perf 分析一下。在第一个终端运行下面的 perf 命令：
+```
+# -g 开启调用关系分析，-p 指定 php-fpm 的进程号 21515
+$ perf top -g -p 21515
+```
+按方向键切换到 php-fpm，再按下回车键展开 php-fpm 的调用关系，你会发现，调用关系最终到了 sqrt 和 add_function。看来，我们需要从这两个函数入手了。
+![call stack](https://static001.geekbang.org/resource/image/6e/10/6e58d2f7b1ace94501b1833bab16f210.png)
+
+为了方便你验证优化后的效果，我把修复后的应用也打包成了一个 Docker 镜像，你可以在第一个终端中执行下面的命令来运行它：
+```
+# 停止原来的应用
+$ docker rm -f nginx phpfpm
+# 运行优化后的应用
+$ docker run --name nginx -p 10000:80 -itd feisky/nginx:cpu-fix
+$ docker run --name phpfpm -itd --network container:nginx feisky/php-fpm:cpu-fix
+```
+
+接着，到第二个终端来验证一下修复后的效果。首先 Ctrl+C 停止之前的 ab 命令后，再运行下面的命令：
+```
+ab -c 10 -n 10000 http://10.240.0.5:10000/
+...
+Complete requests:      10000
+Failed requests:        0
+Total transferred:      1720000 bytes
+HTML transferred:       90000 bytes
+Requests per second:    2237.04 [#/sec] (mean)
+Time per request:       4.470 [ms] (mean)
+Time per request:       0.447 [ms] (mean, across all concurrent requests)
+Transfer rate:          375.75 [Kbytes/sec] received
+...
+```
+从这里你可以发现，现在每秒的平均请求数，已经从原来的 11 变成了 2237。
+## 小结
+CPU 使用率是最直观和最常用的系统性能指标，更是我们在排查性能问题时，通常会关注的第一个指标。所以我们更要熟悉它的含义，尤其要弄清楚用户（%user）、Nice（%nice）、系统（%system） 、等待 I/O（%iowait） 、中断（%irq）以及软中断（%softirq）这几种不同 CPU 的使用率。比如说：
+- 用户 CPU 和 Nice CPU 高，说明用户态进程占用了较多的 CPU，所以应该着重排查进程的性能问题。
+- 系统 CPU 高，说明内核态占用了较多的 CPU，所以应该着重排查内核线程或者系统调用的性能问题。
+- I/O 等待 CPU 高，说明等待 I/O 的时间比较长，所以应该着重排查系统存储是不是出现了 I/O 问题。
+- 软中断和硬中断高，说明软中断或硬中断的处理程序占用了较多的 CPU，所以应该着重排查内核中的中断服务程序。
+
+碰到 CPU 使用率升高的问题，你可以借助 top、pidsstat 等工具，确认引发 CPU 性能问题的来源；再使用 perf 等工具，排查出引起性能问题的具体函数。
