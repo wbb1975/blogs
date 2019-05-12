@@ -189,7 +189,30 @@ $ perf top -g -p 21515
 按方向键切换到 php-fpm，再按下回车键展开 php-fpm 的调用关系，你会发现，调用关系最终到了 sqrt 和 add_function。看来，我们需要从这两个函数入手了。
 ![call stack](https://static001.geekbang.org/resource/image/6e/10/6e58d2f7b1ace94501b1833bab16f210.png)
 
-为了方便你验证优化后的效果，我把修复后的应用也打包成了一个 Docker 镜像，你可以在第一个终端中执行下面的命令来运行它：
+我们拷贝出 Nginx 应用的源码，看看是不是调用了这两个函数：
+```
+# 从容器 phpfpm 中将 PHP 源码拷贝出来
+$ docker cp phpfpm:/app .
+
+# 使用 grep 查找函数调用
+$ grep sqrt -r app/ # 找到了 sqrt 调用
+app/index.php:  $x += sqrt($x);
+$ grep add_function -r app/ # 没找到 add_function 调用，这其实是 PHP 内置函数
+```
+OK，原来只有 sqrt 函数在 app/index.php文件中调用了。那最后一步，我们就该看看这个文件的源码了：
+```
+cat app/index.php
+<?php
+// test only.
+$x = 0.0001;
+for ($i = 0; $i <= 1000000; $i++) {
+  $x += sqrt($x);
+}
+
+echo "It works!"
+```
+
+测试代码没删就直接发布应用了。为了方便你验证优化后的效果，我把修复后的应用也打包成了一个 Docker 镜像，你可以在第一个终端中执行下面的命令来运行它：
 ```
 # 停止原来的应用
 $ docker rm -f nginx phpfpm
