@@ -17,7 +17,7 @@
 ＃＃＃　操作和分析
 首先，我们在第一个终端，执行下面的命令运行 Nginx 和 PHP 应用：
 ```
-docker run --name nginx -p 10000:80 -itd feisky/nginx:sp
+$ docker run --name nginx -p 10000:80 -itd feisky/nginx:sp
 $ docker run --name phpfpm -itd --network container:nginx feisky/php-fpm:sp
 ```
 然后，在第二个终端，使用 curl 访问 http://[VM1 的 IP]:10000，确认 Nginx 已正常启动。你应该可以看到 It works! 的响应。
