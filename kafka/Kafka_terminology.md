@@ -17,4 +17,4 @@
 - 重平衡：Rebalance。消费者组内某个消费者实例挂掉后，其他消费者实例自动重新分配订阅主题分区的过程。Rebalance 是 Kafka 消费者端实现高可用的重要手段。
 
 以上术语或概念可以用下图来解释：
-![Kafka概念图](https://github.com/wbb1975/blogs/blob/master/kafka/terminology.png)
+![Kafka概念图](https://github.com/wbb1975/blogs/blob/master/kafka/images/terminology.png)
