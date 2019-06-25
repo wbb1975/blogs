@@ -7,9 +7,9 @@ A typical java project directory layout look like the below:
 Layout    |SubDirectory
 ----------|-------------
 ![Typical Java Project Layoutt](https://github.com/wbb1975/blogs/blob/master/java/images/SampleProjectDirectoryLayout.png) | - src/main/java    contains all application/library sources
-- src/main/resources    contains application/library resources
-- src/test/java    contain test sources
-- src/test/resources    test resources
+ |- src/main/resources    contains application/library resources
+ |- src/test/java    contain test sources
+ |- src/test/resources    test resources
 
 
 In this article, we mainly focus on the test sources and resources. There are several cases that we may want to read file and resource in JUnit tests such as:
