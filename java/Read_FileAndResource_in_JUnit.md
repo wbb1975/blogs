@@ -3,18 +3,20 @@ This quick tutorial is going to cover how to read file and resource in JUnit tes
 
 ## Sample Project Directory Layout
 A typical java project directory layout look like the below:
-![Typical Java Project Layoutt](https://github.com/wbb1975/blogs/blob/master/java/images/SampleProjectDirectoryLayout.png)
-- src/main/java    contains all application/library sources
+| Layout   |    SubDirectory
+|----------|-------------
+| ![Typical Java Project Layoutt](https://github.com/wbb1975/blogs/blob/master/java/images/SampleProjectDirectoryLayout.png) | - src/main/java    contains all application/library sources
 - src/main/resources    contains application/library resources
 - src/test/java    contain test sources
 - src/test/resources    test resources
+
 
 In this article, we mainly focus on the test sources and resources. There are several cases that we may want to read file and resource in JUnit tests such as:
 - File or resource contains the test data
 - Tests are related to file operations
 - Configuration files
 ## Read File and Resource in JUnit Test Examples
-### Using ClassLoader’s Resource
+### 1. Using ClassLoader’s Resource
 ```
     @Test
     public void testReadFileWithClassLoader(){
@@ -34,7 +36,7 @@ If we need to read file or resource in the sub directory of the src/test/resourc
  
     }
 ```
-### Using Class’s Resource
+### 2. Using Class’s Resource
 Any file under src/test/resources is often copied to target/test-classes. To access these resource files in JUnit we can use the class’s resource. It will locate the file in the test’s classpath /target/test-classes.
 ```
     @Test
@@ -52,7 +54,7 @@ The “/” means the file or resource is located at the src/test/resources dire
         assertNotNull(is);
     }
 ```
-### Using Relative Path
+### 3. Using Relative Path
 We can read file and resource in JUnit test by using the relative path from the src/test/resources folder. Let’s see an example:
 ```
     @Test
@@ -61,7 +63,7 @@ We can read file and resource in JUnit test by using the relative path from the 
         assertTrue(file.exists());
     }
 ```
-### Read File and Resource in JUnit Test into Stream
+### 4. Read File and Resource in JUnit Test into Stream
 If we want to read file and resource in JUnit test directly into stream, we can use the class’s resource again:
 ```
     @Test
