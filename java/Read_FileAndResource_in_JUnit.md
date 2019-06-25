@@ -3,14 +3,29 @@ This quick tutorial is going to cover how to read file and resource in JUnit tes
 
 ## Sample Project Directory Layout
 A typical java project directory layout look like the below:
-
-Layout    |SubDirectory
-----------|-------------
-![Typical Java Project Layoutt](https://github.com/wbb1975/blogs/blob/master/java/images/SampleProjectDirectoryLayout.png) | - src/main/java    contains all application/library sources
- |- src/main/resources    contains application/library resources
- |- src/test/java    contain test sources
- |- src/test/resources    test resources
-
+<table>
+ <tr>
+    <td>Layout</td>
+    <tdSubDirectory</td>
+</tr>
+<tr>
+    <td rowspan="4">![Typical Java Project Layoutt](https://github.com/wbb1975/blogs/blob/master/java/images/SampleProjectDirectoryLayout.png)
+        </td>
+    <td>src/main/java    contains all application/library sources</td>
+</tr>
+<tr>
+    <td>第一行：</td>
+    <td>src/main/resources    contains application/library resources</td>
+</tr>
+<tr>
+    <td>第二行：</td>
+    <td>src/test/java    contain test sources</td>
+</tr>
+<tr>
+    <td>第三行：</td>
+    <td>src/test/resources    test resources</td>
+</tr>
+</table>
 
 In this article, we mainly focus on the test sources and resources. There are several cases that we may want to read file and resource in JUnit tests such as:
 - File or resource contains the test data
