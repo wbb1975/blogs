@@ -2,7 +2,7 @@
 chroot，即 change root directory (更改 root 目录)。在 linux 系统中，系统默认的目录结构都是以 `/`，即是以根 (root) 开始的。而在使用 chroot 之后，系统的目录结构将以指定的位置作为 `/` 位置。
 
 图 1. Linux 系统的目录结构
-![Linux 系统的目录结构](https://github.com/wbb1975/blogs/blob/master/conatiner/images/directory.jpg)
+![Linux 系统的目录结构](https://github.com/wbb1975/blogs/blob/master/container/images/directory.jpg)
 
 ## 为何使用chroot
 在经过 chroot 之后，系统读取到的目录和文件将不在是旧系统根下的而是新根下(即被指定的新的位置)的目录结构和文件，因此它带来的好处大致有以下3个：
