@@ -2,6 +2,7 @@
 chroot，即 change root directory (更改 root 目录)。在 linux 系统中，系统默认的目录结构都是以 `/`，即是以根 (root) 开始的。而在使用 chroot 之后，系统的目录结构将以指定的位置作为 `/` 位置。
 
 图 1. Linux 系统的目录结构
+
 ![Linux 系统的目录结构](https://github.com/wbb1975/blogs/blob/master/container/images/directory.jpg)
 
 ## 为何使用chroot
@@ -83,6 +84,7 @@ switch_root 和 run-init 完成了类似清单 6中的功能，删除 rootfs 的
 
 ## 编写一个chroot
 chroot 的编写涉及了2个函数，chroot() 以及 chdir()，它们都包含在 unistd.h 头文件中。
+
 清单 7. 编写 chroot 涉及的2个函数
 ```
 #include <unistd.h>
@@ -121,6 +123,7 @@ bin      etc      newhome  test     test.c
 ```
 
 下面给出功能将近完整的 chroot ，加上了一些错误处理并新增了可执行指定命令的功能。当在没有给出 chroot 切换后要执行的命令时，默认执行 `/bin/sh`，同时检测环境以确认使用何种 shell。
+
 清单 10. 功能完整的 chroot
 ```
 #include <stdio.h>
@@ -164,6 +167,7 @@ int main(int argc, char *argv[])
 ```
 
 保存以上代码为 newchroot.c 文件，编译后运行测试其功能。最后要指出的是，本文中的 `chroot` 并没有使用静态编译。如果有必要(如，在 initrd 中使用 chroot)，chroot 应该使用静态编译，若是使用动态编译，那么要拷贝相关的动态库文件到相应目录结构中。
+
 清单 11. `newchroot` 的测试
 ```
 $ gcc -Wall newchroot.c -o newchroot
@@ -175,3 +179,12 @@ newroot = .
 
 ## 结束语
 在 Linux 系统初始引导的过程中，通常都有使用 chroot。但是 chroot 的好处不仅于此，它还增加了系统的安全性等。而通过本文后半部分对 chroot 的认识，我相信读者可以更好的发挥chroot 的作用。
+
+## 相关主题
+- [Understand chroot](https://www.ibm.com/developerworks/cn/linux/l-cn-chroot/)
+- [Linux initial RAM disk (initrd) overview](https://developer.ibm.com/articles/l-initrd/)
+- [Linux2.6 内核的 Initrd 机制解析](https://www.ibm.com/developerworks/cn/linux/l-k26initrd/)
+- [Using the initial RAM disk (initrd)](http://www.kernel.org/doc/Documentation/initrd.txt)
+- [ramfs, rootfs and initramfs](http://www.kernel.org/doc/Documentation/filesystems/ramfs-rootfs-initramfs.txt)
+- [Coreutils - GNU core utilities](http://www.gnu.org/software/coreutils/coreutils.html)
+- [BusyBox 简化嵌入式 Linux 系统](http://www.ibm.com/developerworks/cn/linux/l-busybox/)
