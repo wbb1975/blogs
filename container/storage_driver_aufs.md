@@ -104,9 +104,12 @@ drwxr-xr-x  6 root root 4096 Oct  1 11:56 2ee58d81e4ac6811bbc78beb4b46bf213c79c9
    ```
 
    在手工将 .wh 文件删除后，文件就会再次回到容器中。
-   
+
    ```
    rm ./2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab/usr/local/lib/python2.7/dist-packages/.wh.itsdangerous.py
    root@fa385836d5b9:/# find -iname itsdangerous.py
    ./usr/local/lib/python2.7/dist-packages/itsdangerous.py
    ```
+
+## 参考
+- [Docker 存储 - AUFS](https://www.cnblogs.com/sammyliu/p/5931383.html)
