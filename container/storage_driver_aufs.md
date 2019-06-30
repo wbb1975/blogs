@@ -53,4 +53,50 @@ AUFS 是一种 Union File System（联合文件系统），又叫 Another UnionF
 > **注意**：AUFS把每个目录都作为一个AUFS branch，整整齐齐的垛在一起，在最上面提供了一个统一的视图union mount point进行管理。另外，对于一个容器来说，只有顶层的容器layer是可读写的，而下面的layer都是只读的。
 
 这种分层文件系统可以通过官网的图来清晰的展示出来：
+
 ![分层文件系统系意图](https://github.com/wbb1975/blogs/blob/master/container/images/layer_fs.jpg)
+### 做一些实验
+1. 在容器中创建一个文件，该文件会被创建在可写的容器层中
+```
+root@docker1:/var/lib/docker/aufs/diff# find -iname createdbysammy
+./2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab/opt/webapp/createdbysammy
+root@docker1:/var/lib/docker/aufs/diff# ls -lt
+total 60
+drwxr-xr-x  9 root root 4096 Oct  4 22:37 2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab
+drwxr-xr-x  6 root root 4096 Oct  1 11:56 2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab-init
+```
+2. 修改一个镜像层中的文件
+   修改前，文件 /etc/apt/sources.list 出现在两个层中：
+   ```
+   root@docker1:/var/lib/docker/aufs/diff# find -iname sources.list
+./f68672aaf17dd158aabc635b2d8d459d79db1cd5ff38bf3834fe8f9c7a05235e/etc/apt/sources.list
+./b2188d5c09cfe24acd6da5ce67720f81138f0c605a25efc592f1f55b3fd3dffa/etc/apt/sources.list
+   ```
+   在容器中对它进行修改后，它被拷贝到了容器层然后被修改了：
+   ```
+   root@docker1:/var/lib/docker/aufs/diff# find -iname sources.list
+./f68672aaf17dd158aabc635b2d8d459d79db1cd5ff38bf3834fe8f9c7a05235e/etc/apt/sources.list
+./2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab/etc/apt/sources.list
+./b2188d5c09cfe24acd6da5ce67720f81138f0c605a25efc592f1f55b3fd3dffa/etc/apt/sources.list
+   ```
+   而另外两个层中的文件保持了不变。这说明了 AUFS 的 CoW 特性。
+3. 删除容器层中的文件
+   容器中的文件 ./usr/local/lib/python2.7/dist-packages/itsdangerous.py 位于 56d37c8eecd8be9ba13e07e1486e7a6ac2f0aa01f8e865ee6136137369d8d8a0 层中，这是一个只读层，在容器内删除它：
+   ```
+   root@fa385836d5b9:/# find -iname itsdangerous.py
+   ./usr/local/lib/python2.7/dist-packages/itsdangerous.py
+   root@fa385836d5b9:/# rm ./usr/local/lib/python2.7/dist-packages/itsdangerous.py
+   root@fa385836d5b9:/# find -iname itsdangerous.py
+   ```
+   然后，容器层中出现了一个 .wh 文件，而镜像层中的文件保持不变：
+   ```
+   root@docker1:/var/lib/docker/aufs/diff# find -iname *itsdangerous.py
+   ./56d37c8eecd8be9ba13e07e1486e7a6ac2f0aa01f8e865ee6136137369d8d8a0/usr/local/lib/python2.7/dist-packages/itsdangerous.py
+   ./2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab/usr/local/lib/python2.7/dist-packages/.wh.itsdangerous.py
+   ```
+   在手工将 .wh 文件删除后，文件就会再次回到容器中。
+   ```
+   rm ./2ee58d81e4ac6811bbc78beb4b46bf213c79c9e2dc7e441741afc8c4349c6bab/usr/local/lib/python2.7/dist-packages/.wh.itsdangerous.py
+   root@fa385836d5b9:/# find -iname itsdangerous.py
+   ./usr/local/lib/python2.7/dist-packages/itsdangerous.py
+   ```
