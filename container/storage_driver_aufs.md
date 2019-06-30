@@ -51,3 +51,6 @@ AUFS 是一种 Union File System（联合文件系统），又叫 Another UnionF
 ![ubuntu的镜像是如何用AUFS联合到一起的](https://github.com/wbb1975/blogs/blob/master/container/images/image_layer.gif)
 
 > **注意**：AUFS把每个目录都作为一个AUFS branch，整整齐齐的垛在一起，在最上面提供了一个统一的视图union mount point进行管理。另外，对于一个容器来说，只有顶层的容器layer是可读写的，而下面的layer都是只读的。
+
+这种分层文件系统可以通过官网的图来清晰的展示出来：
+![分层文件系统系意图](https://github.com/wbb1975/blogs/blob/master/container/images/layer_fs.jpg)
