@@ -264,5 +264,5 @@ handle_initrd函数的主要功能是执行initrd的linuxrc文件，并且将rea
 2. cpio-initrd相对于image-initrd承担了更多的初始化责任，这种变化也可以看作是内核代码的用户层化的一种体现，我们在其它的诸如FUSE等项目中也看到了将内核功能扩展到用户层实现的尝试。精简内核代码，将部分功能移植到用户层必然是linux内核发展的一个趋势。
 
 ## 参考资料
-1. [VFS]( http://www.ibm.com/developerworks/cn/linux/l-vfs/)
-2. [initrc](http://www.die.net/doc/linux/man/man4/initrd.4.html)
+1. [vfs]( http://www.ibm.com/developerworks/cn/linux/l-vfs/)
+2. [initrd](http://www.die.net/doc/linux/man/man4/initrd.4.html)
