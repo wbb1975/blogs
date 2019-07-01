@@ -89,9 +89,7 @@ AUFS在性能方面的特性可以总结如下：
 ## device mapper
 Docker在Debian，Ubuntu系的系统中默认使用aufs，在RedHat系中使用device mapper。device mapper在Linux2.6内核中被并入内核，它很稳定，也有很好的社区支持。
 
-device mapper中镜像的分层和共享:
-
-device mapper将所有的镜像和容器存储在它自己的虚拟设备上，这些虚拟设备是一些支持写时复制策略的快照设备。device mapper工作在块层次上而不是文件层次上，这意味着它的写时复制策略不需要拷贝整个文件。device mapper创建镜像的过程如下： 
+device mapper中镜像的分层和共享: device mapper将所有的镜像和容器存储在它自己的虚拟设备上，这些虚拟设备是一些支持写时复制策略的快照设备。device mapper工作在块层次上而不是文件层次上，这意味着它的写时复制策略不需要拷贝整个文件。device mapper创建镜像的过程如下：
 - 使用device mapper的storge driver创建一个精简配置池；精简配置池由块设备或稀疏文件创建。
 - 接下来创建一个基础设备； 
 - 每个镜像和镜像层都是基础设备的快照；这写快照支持写时复制策略，这意味着它们起始都是空的，当有数据写入时才耗费空间。
@@ -101,10 +99,11 @@ device mapper将所有的镜像和容器存储在它自己的虚拟设备上，�
 ![资源池，基础设备和两个镜像之间的关系](https://github.com/wbb1975/blogs/blob/master/container/images/devicemapper.jpg)
 
 从上面的图可以看出，镜像的每一层都是它下面一层的快照，镜像最下面一层是存在于thin pool中的base device的快照。容器是创建容器的镜像的快照，
+
 ![容器与镜像的关系](https://github.com/wbb1975/blogs/blob/master/container/images/container_and_image.jpg)
 
 ### device mapper中的读操作
-下图展示了容器中的某个进程读取块号为0x44f的数据： 
+下图展示了容器中的某个进程读取块号为0x44f的数据：
 
 ![devicemapper read](https://github.com/wbb1975/blogs/blob/master/container/images/devicemapper_read.jpg)
 
@@ -129,3 +128,9 @@ device mapper的性能主要受“需要时分配”策略和“写时复制”�
   与aufs一样，device mapper也支持写时复制策略。容器中第一次更新某个文件时，device mapper调用写时复制策略，将数据块从镜像快照中复制到容器快照中。device mapper的写时复制策略以64KB作为粒度，意味着无论是对32KB的文件还是对1GB大小的文件的修改都仅复制64KB大小的文件。这相对于在文件层面进行的读操作具有很明显的性能优势。但是，如果容器频繁对小于64KB的文件进行改写，device mapper的性能是低于aufs的。
 - 存储空间使用效率
   device mapper不是最有效使用存储空间的storage driver，启动n个相同的容器就复制了n份文件在内存中，这对内存的影响很大。所以device mapper并不适合容器密度高的场景。
+
+## overlayfs & overlay2fs
+OverlayFS与AUFS相似，也是一种联合文件系统(union filesystem)，与AUFS相比，OverlayFS： 
+- 设计更简单； 
+- 被加入Linux3.18版本内核 
+- 可能更快
