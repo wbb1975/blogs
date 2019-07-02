@@ -134,3 +134,65 @@ OverlayFS与AUFS相似，也是一种联合文件系统(union filesystem)，与A
 - 设计更简单； 
 - 被加入Linux3.18版本内核 
 - 可能更快
+OverlayFS是内核提供的文件系统，overlay和overlay2是docker的存储驱动。overlayfs在Docker社区中获得了很高的人气，被认为比AUFS具有很多优势。
+
+### overlayfs中镜像的分层和共享
+OverlayFS将一个Linux主机中的两个目录组合起来，一个在上，一个在下，对外提供统一的视图。这两个目录就是层layer，将两个层组合在一起的技术被成为联合挂载union mount。在OverlayFS中，上层的目录被称作upperdir，下层的，目录被称作lowerdir，对外提供的统一视图被称作merged。 
+
+![容器和镜像的层与OverlayFS的upperdir，lowerdir以及merged之间的对应关系](https://github.com/wbb1975/blogs/blob/master/container/images/overlay_constructs.jpg)
+
+由上图可以看出，在一个容器中，容器层container layer也就是读写层对应与OverlayFS的upperdir，容器使用的对象对应于OverlayFS的lowerdir，容器文件系统的挂载点对应merged。注意到，镜像层和容器曾可以有相同的文件，这中情况下，upperdir中的文件覆盖lowerdir中的文件。
+
+OverlayFS仅有两层，也就是说镜像中的每一层并不对应OverlayFS中的层，而是，镜像中的每一层对应/var/lib/docker/overlay中的一个文件夹，文件夹以该层的UUID命名。然后使用硬连接将下面层的文件引用到上层。这在一定程度上节省了磁盘空间。这样，OverlayFS中的lowerdir就对应镜像层的最上层，并且是只读的。在创建镜像时，Docker会新建一个文件夹作为OverlayFS的upperdir，它是可写的。
+
+### overlayfs中镜像和容器的结构
+lower-id文件保存了当前容器依赖镜像的最上层的UUID，并将其作为lowerdir；upper文件夹就是容器的读写层read-write layer，对容器的所有修改都保存在这个文件夹里；merged文件夹就是容器文件系统的挂载点，容器通过它提供统一的视角。对容器的任何修改都会立即在这个文件夹里得到反应；work文件夹需要OverlayFS来发挥作用，它用来支持像copy-up这样的操作。
+
+### overlayfs中容器的读写操作
+#### 读文件： 
+- 要读的文件不在container layer中：那就从lowerdir中读，会耗费一点性能； 
+- 要读的文件之存在于container layer中：直接从upperdir中读； 
+- 要读的文件在container layer和image layer中都存在：从upperdir中读文件；
+
+#### 修改文件
+- 第一次修改一个文件的内容：第一次修改时，文件不在container layer(upperdir)中，overlay driver调用copy-up操作将文件从lowerdir读到upperdir中，然后对文件的副本做出修改。需要说明的是，overlay的copy-up操作工作在文件层面，不是块层面，这意味着对文件的修改需要将整个文件拷贝到upperdir中。索性下面两个事实使这一操作的开销很小
+- copy-up操作仅发生在文件第一次被修改时，此后对文件的读写都直接在upperdir中进行； 
+- overlayfs中仅有两层，这使得文件的查找效率很高(相对于aufs)。 
+- 删除文件和目录： 
+- 删除文件：文件被删除时，和aufs一样，相应的whiteout文件被创建在upperdir。并不删除容器层(lowerdir)中的文件，whiteout文件屏蔽了它的存在。 
+- 删除文件夹：删除一个文件夹时，一个“遮挡目录”(opaque dir)被创建在upperdir中，它的作用与whitout文件一样，屏蔽了lowerdir中文件夹的存在。
+
+### 在Docker中使用overlayfs
+OverlayFS在Linux3.18版本中被并入内核，所以要使用overlayfs，请确保你的系统的内核版本大于等于3.18。overlayfs可以工作在各种Linux文件系统上，但目前比较推荐extfs。
+> Note: 在进行下列操作之前，如果你本机上有需要保存的镜像，使用docker push将它们保存到Docker Hub或其他的镜像库当中。 
+下面是在Docker中使用overlayfs的步骤： 
+- 如果docker daemon正在运行，停止它； 
+- 检查你的内核版本和overlay模块的按装情况：
+  ```
+  wangbb@wangbb-ThinkPad-T420:~/git/blogs$ sudo uname -r
+  4.15.0-52-generic
+  wangbb@wangbb-ThinkPad-T420:~/git/blogs$ lsmod | grep overlay
+  overlay                77824  0
+  ```
+- 使用overlaystorage driver启动docker daemon： 
+  
+  ```$ docker daemon --storage-driver=overlay &```
+
+  此外，你可以在/etc/default/docker文件中通过配置DOCKER_OPTS使overlay作为Docker的默认storage driver。
+
+### overlayfs在Docker中的性能表现
+总体上，overlay要比aufs和device mapper快一点，在某些场景下甚至比btrfs快。下面是对overlay性能影响较大的几个方面： 
+- 页缓存(page caching)：overlayfs支持页缓存的共享，这意味着多个使用同一文件的容器可以共享同一页缓存，这使得overlayfs具有很高的内存使用效率
+- copy-up操作：overlay的拷贝操作工作在文件层面上，也就是对文件的第一次修改需要复制整个文件，这回带来一些性能开销，在修改大文件时尤其明显。
+但overlay的拷贝操作比aufs还是快一点，因为aufs有很多层，而overlay只有两层，所以overlay在文件的搜索方面相对于aufs具有优势。 
+- i节点限制：使用overlay作为storage driver会消耗大量的i节点，随着镜像和容器数量的增长这种消耗尤其显著，这在一定程度上限制了overlay的使用。
+
+### overlay和overlay2的区别
+本质区别是镜像层之间共享数据的方法不同：
+- overlay共享数据方式是通过硬连接，只挂载一层,其他层通过最高层通过硬连接形式共享(增加了磁盘inode的负担)
+- 而overlay2是通过每层的 lower文件
+
+## 参考
+- [Docker之几种storage-driver比较](https://blog.csdn.net/vchy_zhao/article/details/70238690)
+- [存储驱动overlay和overlay2](https://blog.csdn.net/zhonglinzhang/article/details/80970411)
+- [About storage drivers](https://docs.docker.com/storage/storagedriver/)
