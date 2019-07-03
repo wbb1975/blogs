@@ -12,7 +12,7 @@
 
 如果你的容器将要产生非持久化的状态数据，可以考虑用临时文件系统挂载（tmpfs mount）来避免把数据到处持久化，而且，由于不把数据写入容器可写层。从而提升了容器的性能。
 
-卷使用rpricate绑定传播（bind propagation），而绑定传播不能针对卷配置。
+卷使用rprivate绑定传播（bind propagation），而绑定传播不能针对卷配置。
 ## 选择-v或--mount标记
 最初，-v或--volume标记用于单独的容器而--mount用于一大群服务。但是，从Docker 17.06开始，--mount选项也可用于单独的容器。基本上，--mount更直白，更冗长。最大的区别在于-v在一个字段中把多个选项绑定在一起，而--mount把选项分开。下面是每个选项的无法对比。
 > 新用户应该尽量使用--mount语法，它比-v更简单
@@ -44,6 +44,32 @@
 但当卷用于服务时，只有--mount被支持。
 
 ## 卷创建和管理
+不象绑定传播（bind propagation），你可以在任何容器之外创建和管理卷。
+### 创建卷
+```$ docker volume create my-vol```
+### 打印卷列表
+```
+$ docker volume ls
+local            my-vol
+```
+### 检视卷
+```
+$ docker volume inspect my-vol
+[
+    {
+        "Driver": "local",
+        "Labels": {},
+        "Mountpoint": "/var/lib/docker/volumes/my-vol/_data",
+        "Name": "my-vol",
+        "Options": {},
+        "Scope": "local"
+    }
+]
+```
+### 删除卷
+```$ docker volume rm my-vol```
+## 带卷启动容器
+如果你启动一个容器，其附带的容器不存在，Docker将为你创建它。下面的例子将把卷myvol2挂载到容器中的/app/位置。
 
 ## 参考
 - [use volumes](https://docs.docker.com/storage/volumes/)
