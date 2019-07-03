@@ -1,5 +1,5 @@
 # 使用卷（volumes）
-卷是持久化Docker容器产生和使用的首选方案，虽然绑定点依赖于主机目录结构，卷却是完全由容器控制。卷相比绑定点有如下优势：
+卷是持久化Docker容器产生和使用的首选方案，虽然绑定挂载（bind mounts）依赖于主机目录结构，卷却是完全由容器控制。卷相比绑定点有如下优势：
 - 卷相对绑定点易于备份和迁移
 - 你可以用Docker命令行和Docker API来管理卷
 - 卷在Linux，Windows容器上皆可工作
@@ -39,6 +39,11 @@
 下面的例子将显示--mount和-v语法，--mount会被首先演示。
 
 ## -v和--mount的行为差异
+和绑定挂载（bind mounts）相反，所有卷相关的选项对--mount和-v都可用。
+
+但当卷用于服务时，只有--mount被支持。
+
+## 卷创建和管理
 
 ## 参考
 - [use volumes](https://docs.docker.com/storage/volumes/)
