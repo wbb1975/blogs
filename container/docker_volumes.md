@@ -69,7 +69,122 @@ $ docker volume inspect my-vol
 ### 删除卷
 ```$ docker volume rm my-vol```
 ## 带卷启动容器
-如果你启动一个容器，其附带的容器不存在，Docker将为你创建它。下面的例子将把卷myvol2挂载到容器中的/app/位置。
+如果你启动一个容器，其附带的容器不存在，Docker将为你创建它。下面的例子将把卷 myvol2 挂载到容器中的/app/位置。
+
+```docker run -d --name devtest --mount source=myvol2,target=/app nginx:latest```
+
+或者
+
+```$ docker run -d --name devtest -v myvol2:/app nginx:latest```
+
+使用“docker inspect devtest”来验证卷是否创建并正确挂载。查看Mounts段：
+```
+"Mounts": [
+    {
+        "Type": "volume",
+        "Name": "myvol2",
+        "Source": "/var/lib/docker/volumes/myvol2/_data",
+        "Destination": "/app",
+        "Driver": "local",
+        "Mode": "",
+        "RW": true,
+        "Propagation": ""
+    }
+],
+```
+结果显示挂载的类型是卷，同时也展示了卷的源和目标，以及挂载后的读写属性。
+
+可以停止容器并删除卷。注意卷删除是个单独的步骤。
+```
+$ docker container stop devtest
+$ docker container rm devtest
+$ docker volume rm myvol2
+```
+
+## 带卷启动服务
+当你启动一个服务并定义一个卷，每个服务容器都会使用其本地卷。如果你使用本地（local）驱动，那么没有任何容器可以共享卷的数据。但是有一些卷驱动类型可以支持数据共享。用于AWS和Azure的Docker利用Cloudstor插件来支持持久存储。
+
+下面的例子启动一个包含四个副本的nginx服务，每个副本使用名为myvol2的本地（local）卷：
+```
+$ docker service create -d --replicas=4 --name devtest-service \
+  --mount source=myvol2,target=/app nginx:latest
+```
+使用“docker service ps devtest-service”命令来验证服务被正常启动：
+```
+$ docker service ps devtest-service
+ID              NAME                IMAGE          NODE     DESIRED STATE   CURRENT STATE       ERROR           PORTS
+4d7oz1j85wwn    devtest-service.1   nginx:latest   moby     Running         Running 14 seconds ago
+```
+移除服务，这将停止其所有任务。
+
+```$ docker service rm devtest-service```
+
+移除服务并不会移除服务创建的任何卷，卷的移除是个单独的步骤。
+
+## 针对服务的语义差别
+“docker service create”命令不支持-v 或 --volume选项，当把卷挂载进服务容易时，必须使用--mount选项。
+## 用容器填充（populates）眷数据
+如果你象上面提到的那样启动一个容器，新创建一个卷，并且挂载过来的卷里含有文件或目录（象上面的/app/），文件的内容就被拷贝到卷中。接下来容器挂载并使用卷，其它使用这个卷的容器也可以访问到其中的内容。
+
+为了演示这个，本例将启动一个nginx容器，并把容器/usr/share/nginx/html中的内容填充（populates）到新卷nginx-vol中，填充的内容主要是nginx的缺省HTML内容。
+```
+$ docker run -d --name=nginxtest \
+  --mount source=nginx-vol,destination=/usr/share/nginx/html nginx:latest
+```
+或
+```
+$ docker run -d --name=nginxtest \
+  -v nginx-vol:/usr/share/nginx/html nginx:latest
+```
+运行完上面的任一例子，运行下面的命令清理容器和卷。注意清理卷是个单独的步骤：
+```
+$ docker container stop nginxtest
+$ docker container rm nginxtest
+$ docker volume rm nginx-vol
+```
+## 使用只读卷
+对某些应用，容器需要把数据写回挂载点（bind mount ）从而能把数据持久化回Docker主机。但有些时候，容器只需要数据的只读访问。记住多个容器可以挂载同一个卷，并且这个圈可以同时维持对某些容器是读写挂载，而对另一些容器维持只读挂载。
+
+这个例子对上面的例子稍作修改，在容器内的挂载点后添加了ro选项，这里给出了多个挂载选项，以逗号分割：
+```
+$ docker run -d --name=nginxtest \
+  --mount source=nginx-vol,destination=/usr/share/nginx/html,readonly nginx:latest
+```
+或
+```
+$ docker run -d --name=nginxtest \
+  -v nginx-vol:/usr/share/nginx/html:ro nginx:latest
+```
+用“docker inspect nginxtest”来验证只读挂载点并正确创建。查看Mounts段：
+```
+"Mounts": [
+    {
+        "Type": "volume",
+        "Name": "nginx-vol",
+        "Source": "/var/lib/docker/volumes/nginx-vol/_data",
+        "Destination": "/usr/share/nginx/html",
+        "Driver": "local",
+        "Mode": "",
+        "RW": false,
+        "Propagation": ""
+    }
+],
+```
+停止容器并删除卷。注意卷删除是个单独的步骤。
+```
+$ docker container stop nginxtest
+$ docker container rm nginxtest
+$ docker volume rm nginx-vol
+```
+## 在机器间共享数据
+当创建 fault-tolerant应用时，你需要配置同一服务的多个副本来访问同样的文件。
+
+![共享卷](https://github.com/wbb1975/blogs/blob/master/container/images/volumes-shared-storage.svg)
+
+当开发你的应用你有几种方法能达成目标：一种方法是让你的应用添加逻辑，把文件存进云对象存储系统，比如Amazon S3。另一种就是利用支持往外部存储系统比如NFS或Amazon S3写入文件的驱动来创建卷。
+
+卷驱动能够让你从应用逻辑中抽象底层存储系统。比如，如果你的服务使用NFS驱动的卷，你就可以更新你的应用使用不同的驱动，一个例子就是把数据存到云中而不需要更改任何应用逻辑。
+
 
 ## 参考
 - [use volumes](https://docs.docker.com/storage/volumes/)
