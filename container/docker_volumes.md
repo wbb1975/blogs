@@ -184,6 +184,21 @@ $ docker volume rm nginx-vol
 当开发你的应用你有几种方法能达成目标：一种方法是让你的应用添加逻辑，把文件存进云对象存储系统，比如Amazon S3。另一种就是利用支持往外部存储系统比如NFS或Amazon S3写入文件的驱动来创建卷。
 
 卷驱动能够让你从应用逻辑中抽象底层存储系统。比如，如果你的服务使用NFS驱动的卷，你就可以更新你的应用使用不同的驱动，一个例子就是把数据存到云中而不需要更改任何应用逻辑。
+## 使用卷驱动
+当你使用“docker volume create”创建卷，或者或者启动使用了尚未创建的卷的容器的话，你可以指定卷驱动。下面的例子使用vieux/sshfs卷驱动，首先展示创建单独一个卷，然后启动一个容器来创建卷。
+### 初始环境设立
+本例假设你有两个节点，第一个是一个Docker主机，它可以通过SSH访问另一个节点。
+在Docker主机上安装vieux/sshfs插件：
+
+```$ docker plugin install --grant-all-permissions vieux/sshfs```
+
+### 通过指定卷驱动创建卷
+本例使用SSH密码，但如果已经配置好共享密钥，则不需要它。每个卷驱动可以有０或多个选项，每个选项用-o标记指定。
+```
+$ docker volume create --driver vieux/sshfs -o sshcmd=test@node2:/home/test \
+  -o password=testpassword sshvolume
+```
+### 启动容器，指定卷驱动来创建卷
 
 
 ## 参考
