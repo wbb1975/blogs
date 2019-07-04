@@ -123,7 +123,7 @@ ID              NAME                IMAGE          NODE     DESIRED STATE   CURR
 
 ## 针对服务的语义差别
 “docker service create”命令不支持-v 或 --volume选项，当把卷挂载进服务容易时，必须使用--mount选项。
-## 用容器填充（populates）眷数据
+## 用容器填充（populates）卷数据
 如果你象上面提到的那样启动一个容器，新创建一个卷，并且挂载过来的卷里含有文件或目录（象上面的/app/），文件的内容就被拷贝到卷中。接下来容器挂载并使用卷，其它使用这个卷的容器也可以访问到其中的内容。
 
 为了演示这个，本例将启动一个nginx容器，并把容器/usr/share/nginx/html中的内容填充（populates）到新卷nginx-vol中，填充的内容主要是nginx的缺省HTML内容。
