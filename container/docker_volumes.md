@@ -199,7 +199,61 @@ $ docker volume create --driver vieux/sshfs -o sshcmd=test@node2:/home/test \
   -o password=testpassword sshvolume
 ```
 ### 启动容器，指定卷驱动来创建卷
+本例使用SSH密码，但如果已经配置好共享密钥，则不需要它。每个卷驱动可以有０或多个选项。如果你的卷驱动需要你传入相关选项，你就必须使用--mount标记来挂载卷，而不是使用-v。
+```
+$ docker run -d --name sshfs-container --volume-driver vieux/sshfs \
+  --mount src=sshvolume,target=/app,volume-opt=sshcmd=test@node2:/home/test,volume-opt=password=testpassword nginx:latest
+```
+### 创建一个将创建一个NFS卷的服务
+下面的例子将显示当你创建服务的时候可以创建一个NFS卷。该例使用10.0.0.10作为NFS服务器，将NFS服务器上的/var/docker-nfs目录导出。注意卷驱动被指定为本地（local）类型。
+
+NFSV3
+```
+$ docker service create -d --name nfs-service \
+  --mount 'type=volume,source=nfsvolume,target=/app,volume-driver=local,volume-opt=type=nfs,volume-opt=device=:/var/docker-nfs,volume-opt=o=addr=10.0.0.10' nginx:latest
+```
+NFSV4
+```
+$ docker service create -d --name nfs-service \
+    --mount 'type=volume,source=nfsvolume,target=/app,volume-driver=local,volume-opt=type=nfs,volume-opt=device=:/,"volume-opt=o=10.0.0.10,rw,nfsvers=4,async"' nginx:latest
+```
+
+## 备份，恢复，迁移数据卷
+卷对数据备份，恢复，迁移是有用的，利用--volumes-from来在创建一个容器时挂载那个卷。
+### 备份容器
+例如，在下面的命令中，我们：
+- 启动一个新容器，并从名为dbstore的容器哪里挂载卷
+- 挂载一个本地主机目录到/backup
+- 运行一个命令把dbdata卷的内容打包到/backup目录下的backup.tar
+
+```$ docker run --rm --volumes-from dbstore -v $(pwd):/backup ubuntu tar cvf /backup/backup.tar /dbdata```
+
+当这个命令结束并且容器被停止，我们将持有dbdata卷的数据的备份。
+### 从备份回复容器
+因为创建了备份，你可以恢复数据到同一个容器，或者一个你在别处启动的容器。比如，创建一个名为dbstore2的容器：
+
+```$ docker run -v /dbdata --name dbstore2 ubuntu /bin/bash```
+
+然后在新容器的数据卷中解包备份文件。
+
+```$ docker run --rm --volumes-from dbstore2 -v $(pwd):/backup ubuntu bash -c "cd /dbdata && tar xvf /backup/backup.tar --strip 1"```
+
+你可以使用上面展示的技术来自动化备份，迁移，恢复测试。
+## 删除卷
+当一个容器被删除后，Docker数据卷是已经持久化的。有两类卷可供考虑：
+- 命名卷，它有特殊的来自容器外的数据源，比如awesome:/bar
+- 匿名卷，它没有特定数据源，因此当容器被删除时，必须显示告诉Docker引擎删除卷
+
+### 删除匿名卷
+为了自动删除匿名卷，使用--rm选项。例如，下面的命令创建/foo卷。当容器被删除时，Docker引擎将删除卷/foo，但保留卷awesome。
+
+```$ docker run --rm -v /foo -v awesome:/bar busybox top```
+### 删除所有卷
+为了删除所有卷，释放空间，使用
+
+```$ docker volume prune```
 
 
 ## 参考
 - [use volumes](https://docs.docker.com/storage/volumes/)
+中解包
