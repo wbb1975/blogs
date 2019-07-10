@@ -22,7 +22,7 @@ CPU 的性能指标那么多，CPU 性能分析工具也是一抓一大把，如
     上下文切换，本身是保证 Linux 正常运行的一项核心功能。但过多的上下文切换，会将原本运行进程的 CPU 时间，消耗在寄存器、内核栈以及虚拟内存等数据的保存和恢复上，缩短进程真正运行的时间，成为性能瓶颈。
 - **CPU 缓存的命中率**。由于 CPU 发展的速度远快于内存的发展，CPU 的处理速度就比内存的访问速度快得多。这样，CPU 在访问内存的时候，免不了要等待内存的响应。为了协调这两者巨大的性能差距，CPU 缓存（通常是多级缓存）就出现了。
 
-![cpu cache](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/cpu_cache.png)
+  ![cpu cache](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/cpu_cache.png)
 
   就像上面这张图显示的，CPU 缓存的速度介于 CPU 和内存之间，缓存的是热点的内存数据。根据不断增长的热点数据，这些缓存按照大小不同分为 L1、L2、L3 等三级缓存，其中 L1 和 L2 常用在单核中， L3 则用在多核中。
 
