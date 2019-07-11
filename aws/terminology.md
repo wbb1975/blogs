@@ -86,6 +86,7 @@
     ElastiCache API 和 AWS CLI 操作将继续区分单节点 ElastiCache for Redis 集群与多节点复制组。下图从 ElastiCache API 和 AWS CLI 的角度阐明了各种 ElastiCache for Redis 拓扑。
     
     ![API View: topologies of ElastiCache for Redis clusters](https://github.com/wbb1975/blogs/blob/master/aws/images/ElastiCache-Clusters-APIView.png)
+
 7. Amazon Elastic Block Store (Amazon EBS) 
 
 
