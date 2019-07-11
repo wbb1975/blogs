@@ -34,6 +34,7 @@
      ![Fargate 启动类型](https://github.com/wbb1975/blogs/blob/master/aws/images/overview-fargate.png)
   2. EC2 启动类型
      EC2 启动类型允许您在管理的 Amazon EC2 实例集群上运行容器化的应用程序。下图显示了一般架构：
+     
      ![EC2 启动类型](https://github.com/wbb1975/blogs/blob/master/aws/images/overview-standard.png)
 - AWS Lambda
   AWS Lambda 是一项计算服务，可使您无需预配置或管理服务器即可运行代码。AWS Lambda 只在需要时执行您的代码并自动缩放，从每天几个请求到每秒数千个请求。您只需按消耗的计算时间付费 – 代码未运行时不产生费用。借助 AWS Lambda，您几乎可以为任何类型的应用程序或后端服务运行代码，并且不必进行任何管理。AWS Lambda 在可用性高的计算基础设施上运行您的代码，执行计算资源的所有管理工作，其中包括服务器和操作系统维护、容量预置和自动扩展、代码监控和记录。您只需要以 AWS Lambda 支持的一种语言提供您的代码。
