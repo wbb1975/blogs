@@ -49,6 +49,7 @@
   Amazon SQS 支持[标准队列](https://docs.aws.amazon.com/zh_cn/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html)和 [FIFO 队列](https://docs.aws.amazon.com/zh_cn/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html)。有关更多信息，请参阅 我需要哪种类型的队列？
 
   我需要哪种类型的队列？
+  
   标准队列|FIFO 队列
   --|--
   无限吞吐量 – 标准 队列每个 操作支持接近无限的每秒事务数 (TPS)|高吞吐量 – 默认情况下，借助批处理，FIFO 队列每秒支持多达 3000 条消息。要请求提高上限，请提交支持请求。 在不使用批处理的情况下，FIFO 队列的每个操作（SendMessage、ReceiveMessage 或 DeleteMessage）每秒最多支持 300 条消息
