@@ -28,11 +28,11 @@
   Amazon Elastic Container Service (Amazon ECS) 是一项高度可扩展的快速容器管理服务，它可轻松运行、停止和管理集群上的 Docker 容器。您可以通过使用 Fargate 启动类型启动服务或任务，将集群托管在由 Amazon ECS 管理的无服务器基础设施上。若要进行更多控制，您可以在使用 EC2 启动类型进行管理的 Amazon Elastic Compute Cloud (Amazon EC2) 实例集群上托管您的任务。有关启动类型的更多信息，请参阅 [Amazon ECS 启动类型](https://docs.aws.amazon.com/zh_cn/AmazonECS/latest/developerguide/launch_types.html)。
 
   Amazon ECS 启动类型决定了托管您的任务和服务的基础设施类型。
-  1. Fargate 启动类型
+  + Fargate 启动类型
      Fargate 启动类型允许您运行容器化的应用程序，而无需预置和管理后台基础设施。只需注册您的任务定义，Fargate 就会为您启动容器。下图显示了一般架构：
 
      ![Fargate 启动类型](https://github.com/wbb1975/blogs/blob/master/aws/images/overview-fargate.png)
-  2. EC2 启动类型
+  + EC2 启动类型
      EC2 启动类型允许您在管理的 Amazon EC2 实例集群上运行容器化的应用程序。下图显示了一般架构：
      
      ![EC2 启动类型](https://github.com/wbb1975/blogs/blob/master/aws/images/overview-standard.png)
