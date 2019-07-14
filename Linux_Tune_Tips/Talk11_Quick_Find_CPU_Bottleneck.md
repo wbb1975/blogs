@@ -30,7 +30,7 @@ CPU 的性能指标那么多，CPU 性能分析工具也是一抓一大把，如
 
 这些指标都很有用，需要我们熟练掌握，所以我总结成了一张图，帮你分类和记忆。你可以保存打印下来，随时查看复习，也可以当成 CPU 性能分析的“指标筛选”清单。
 
-![CPU Performance Index](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/cpu_performance_index.png)
+![CPU Performance Index](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/cpu_performance_tools_mind.png)
 
 ## 性能工具
 掌握了 CPU 的性能指标，我们还需要知道，怎样去获取这些指标，也就是工具的使用。
