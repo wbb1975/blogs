@@ -153,8 +153,39 @@
   + EBS 卷在特定可用区中创建，随后可以附加到同一可用区内的任何实例。若要在可用区外部提供某个卷，您可以创建一个快照并将该快照还原到该区域中任意位置处的新卷。您可以将快照复制到其他区域，再将它们还原到该区域中的新卷，从而更轻松地利用多个 AWS 区域来实现地理扩展、数据中心迁移和灾难恢复。有关更多信息，请参阅[创建 Amazon EBS 快照](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-creating-snapshot.html)、[从快照还原 Amazon EBS 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-restoring-volume.html)和[复制 Amazon EBS 快照](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-copy-snapshot.html)。
   + 带宽、吞吐量、延迟和平均队列长度等性能指标是通过 AWS 管理控制台提供的。通过 Amazon CloudWatch 提供的这些指标，您可以监视卷的性能，确保为应用程序提供足够性能，又不会为不需要的资源付费。有关更多信息，请参阅[Linux 实例上的 Amazon EBS 卷性能](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSPerformance.html)。
   
-- **10. **
+- **10. Amazon Simple Notification Service(SNS)**
 
+  Amazon Simple Notification Service (Amazon SNS) 是一项 Web 服务，用于协调和管理向订阅终端节点或客户端交付或发送消息的过程。在 Amazon SNS 中，有两类客户端—发布者和订阅者—也称为创建者和用户。发布者通过创建消息并将消息发送至主题与订阅者进行异步交流，主题是一个逻辑访问点和通信渠道。订阅者（即 Web 服务器、电子邮件地址、Amazon SQS 队列、AWS Lambda 函数）在其订阅主题后通过受支持协议（即 Amazon SQS、HTTP/S、电子邮件、SMS、Lambda）之一使用或接收消息或通知。
+ 
+  ![How SNS Works](https://github.com/wbb1975/blogs/blob/master/aws/sns-how-works.png)
+
+  使用 Amazon SNS 时，您（作为拥有者）可通过定义确定哪些发布者和订阅者能就主题进行交流的策略来创建主题和控制对主题的访问权。发布者会发送消息至他们创建的主题或他们有权发布的主题。除了在每个消息中包括特定目标地址之外，发布者还要将消息发送至主题。Amazon SNS 将主题与订阅了该主题的用户列表对应，并将消息发送给这些订阅者中的每一个。每个主题都有一个独特的名称，用户为发布者识别 Amazon SNS 终端节点，从而发布消息和订阅者以注册通知。订阅者接收所有发布至他们所订阅主题的消息，并且一个主题的所有订阅者收到的消息都相同。
+
+- **11. AWS Identity and Access Management (IAM)**
+  
+  AWS Identity and Access Management (IAM) 是一种 Web 服务，可以帮助您安全地控制对 AWS 资源的访问。您可以使用 IAM 控制对哪个用户进行身份验证 (登录) 和授权 (具有权限) 以使用资源。
+
+  当您首次创建 AWS 账户时，最初使用的是一个对账户中所有 AWS 服务和资源有完全访问权限的单点登录身份。此身份称为 AWS 账户 根用户，可使用您创建账户时所用的电子邮件地址和密码登录来获得此身份。强烈建议您不使用 根用户 执行日常任务，即使是管理任务。请遵守[仅将根用户用于创建首个 IAM 用户的最佳实践](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#create-iam-users)。然后请妥善保存 根用户 凭证，仅用它们执行少数账户和服务管理任务。
+
+  IAM 功能：
+  + 对您 AWS 账户的共享访问权限：您可以向其他人员授予管理和使用您 AWS 账户中的资源的权限，而不必共享您的密码或访问密钥。
+  + 精细权限：您可以针对不同资源向不同人员授予不同权限。例如，您可以允许某些用户完全访问 Amazon Elastic Compute Cloud (Amazon EC2)、Amazon Simple Storage Service (Amazon S3)、Amazon DynamoDB、Amazon Redshift 和其他 AWS 服务。对于另一些用户，您可以允许仅针对某些 S3 存储桶的只读访问权限，或是仅管理某些 EC2 实例的权限，或是访问您的账单信息但无法访问任何其他内容的权限。
+  + 在 Amazon EC2 上运行的应用程序针对 AWS 资源的安全访问权限：您可以使用 IAM 功能安全地为 EC2 实例上运行的应用程序提供凭证。这些凭证为您的应用程序提供权限以访问其他 AWS 资源。示例包括 S3 存储桶和 DynamoDB 表。
+  + 多重验证 (MFA)：您可以向您的账户和各个用户添加双重身份验证以实现更高安全性。借助 MFA，您或您的用户不仅必须提供使用账户所需的密码或访问密钥，还必须提供来自经过特殊配置的设备的代码。
+  + 联合身份：您可以允许已在其他位置（例如，在您的企业网络中或通过 Internet 身份提供商）获得密码的用户获取对您 AWS 账户的临时访问权限。
+  + 实现保证的身份信息：如果您使用 [AWS CloudTrail](https://aws.amazon.com/cloudtrail/)，则会收到日志记录，其中包括有关对您账户中的资源进行请求的人员的信息。这些信息基于 IAM 身份。
+  + PCI DSS 合规性：IAM 支持由商家或服务提供商处理、存储和传输信用卡数据，而且已经验证符合支付卡行业 (PCI) 数据安全标准 (DSS)。有关 PCI DSS 的更多信息，包括如何请求 AWS PCI Compliance Package 的副本，请参阅 [PCI DSS 第 1 级](https://aws.amazon.com/compliance/pci-dss-level-1-faqs/)。
+  + 已与很多 AWS 服务集成：有关使用 IAM 的 AWS 服务的列表，请参阅[使用 IAM 的 AWS 服务](https://docs.aws.amazon.com/zh_cn/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)。
+  + 最终一致性：与许多其他 AWS 服务一样，IAM 具有[最终一致性](https://wikipedia.org/wiki/Eventual_consistency)。IAM 通过在 Amazon 的全球数据中心中的多个服务器之间复制数据来实现高可用性。如果成功请求更改某些数据，则更改会提交并安全存储。不过，更改必须跨 IAM 复制，这需要时间。此类更改包括创建或更新用户、组、角色或策略。在应用程序的关键、高可用性代码路径中，我们不建议进行此类 IAM 更改。而应在不常运行的、单独的初始化或设置例程中进行 IAM 更改。另外，在生产工作流程依赖这些更改之前，请务必验证更改已传播。有关更多信息，请参阅 [我所做的更改可能不会立即可见](https://docs.aws.amazon.com/zh_cn/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_eventual-consistency)。
+  + 免费使用：AWS Identity and Access Management (IAM) 和 AWS Security Token Service (AWS STS) 是为您的 AWS 账户提供的功能，不另行收费。仅当您使用 IAM 用户或 AWS STS 临时安全凭证访问其他 AWS 服务时，才会向您收取费用。有关其他 AWS 产品的定价信息，请参阅 [Amazon Web Services 定价页面](https://aws.amazon.com/pricing/)。
+  
+  访问 IAM：
+  + AWS 管理控制台：控制台是用于管理 IAM 和 AWS 资源的基于浏览器的界面。有关通过控制台访问 IAM 的更多信息，请参阅 [IAM 控制台和登录页面](https://docs.aws.amazon.com/zh_cn/IAM/latest/UserGuide/console.html)。有关指导您使用控制台的教程，请参阅[创建您的第一个 IAM 管理员用户和组](https://docs.aws.amazon.com/zh_cn/IAM/latest/UserGuide/getting-started_create-admin-group.html)。
+  + AWS 命令行工具：您可以使用 AWS 命令行工具，在系统的命令行中发出命令以执行 IAM 和 AWS 任务。与控制台相比，使用命令行更快、更方便。如果要构建执行 AWS 任务的脚本，命令行工具也会十分有用。
+  
+   AWS 提供两组命令行工具：[AWS Command Line Interface (AWS CLI)](https://aws.amazon.com/cli/) 和 [适用于 Windows PowerShell 的 AWS 工具](https://aws.amazon.com/powershell/)。有关安装和使用 AWS CLI 的更多信息，请参阅 [AWS Command Line Interface 用户指南](https://docs.aws.amazon.com/cli/latest/userguide/)。有关安装和使用Windows PowerShell 工具的更多信息，请参阅[适用于 Windows PowerShell 的 AWS 工具 用户指南](https://docs.aws.amazon.com/powershell/latest/userguide/)。
+  + AWS 开发工具包：AWS 提供的 SDK (开发工具包) 包含各种编程语言和平台 (Java、Python、Ruby、.NET、iOS、Android 等) 的库和示例代码。开发工具包提供便捷的方式来创建对 IAM 和 AWS 的编程访问。例如，开发工具包执行以下类似任务：加密签署请求、管理错误以及自动重试请求。有关 AWS 开发工具包的信息（包括如何下载及安装），请参阅[适用于 Amazon Web Services 的工具](https://aws.amazon.com/tools/)页面。
+  + IAM HTTPS API：您可以使用 IAM HTTPS API（可让您直接向服务发布 HTTPS 请求）以编程方式访问 IAM 和 AWS。使用 HTTPS API 时，必须添加代码，才能使用您的凭证对请求进行数字化签名。有关更多信息，请参见[通过提出 HTTP 查询请求来调用 API](https://docs.aws.amazon.com/zh_cn/IAM/latest/UserGuide/programming.html)和 [IAM API 参考](https://docs.aws.amazon.com/IAM/latest/APIReference/)。
 
 ## 参看
 - [AWS文档](https://docs.aws.amazon.com/)
