@@ -102,9 +102,57 @@
   + 现在，您已将对象添加到存储桶，您可以查看有关对象的信息并将对象下载到本地计算机上。
   + 目前，您已向存储桶添加一个对象并已下载该对象。现在，我们创建文件夹，并通过复制和粘贴对象将其移动到此文件夹中。
   + 如果您完成此指南后不再需要存储您已上传并为其创建副本的对象，则应删除该对象以免进一步产生费用。您可以逐个删除对象。或者，您可以清空存储桶，这将删除存储桶中的所有对象而不删除存储桶。您也可以删除存储桶及其包含的所有对象。不过，如果您希望继续使用相同的存储桶名称，请不要删除该存储桶。我们建议您，清空并保留存储桶。删除存储桶后，该名称可供重用，但是出于各种原因，您可能无法重新使用该名称。
+ 
+- **8. Amazon CloudFront**
+    
+  Amazon CloudFront 是一个 Web 服务，它加快将静态和动态 Web 内容（如 .html、.css、.js 和图像文件）分发到用户的速度。CloudFront 通过全球数据中心网络传输内容，这些数据中心称为边缘站点。当用户请求您用 CloudFront 提供的内容时，用户被路由到提供最低延迟 (时间延迟) 的边缘站点，从而以尽可能最佳的性能传送内容。
+  + 如果该内容已经在延迟最短的边缘站点上，CloudFront 将直接提供它。
+  + 如果内容没有位于边缘站点中，CloudFront 从定义的源中检索内容，例如，指定为内容最终版本来源的 Amazon S3 存储桶、MediaPackage 通道或 HTTP 服务器（如 Web 服务器）。
+  
+  例如，假设您要从传统的 Web 服务器中提供图像，而不是从 CloudFront 中提供图像。例如，您可能会使用 URL http://example.com/sunsetphoto.png 提供图像 sunsetphoto.png。
 
-- **8. Amazon Elastic Block Store (Amazon EBS)**
-- **9. **
+  您的用户可以轻松导航到该 URL 并查看图像。但他们可能不知道其请求从一个网络路由到另一个网络（通过构成 Internet 的相互连接的复杂网络集合），直到找到图像。
+
+  CloudFront 通过 AWS 主干网络将每个用户请求传送到以最佳方式提供内容的边缘站点，从而加快分发内容的速度。通常，这是向查看器提供传输最快的 CloudFront 边缘服务器。使用 AWS 网络可大大降低用户的请求必须经由的网络数量，从而提高性能。用户遇到的延迟（加载文件的第一个字节所花的时间）更短，数据传输速率更高。
+
+  您还会获得更高的可靠性和可用性，因为您的文件（也称为对象）的副本现在存储（或缓存）在全球各地的多个边缘站点上。
+
+  ## 如何设置 CloudFront 以传输内容
+  您可以创建 CloudFront 分配以指示 CloudFront 您希望从何处传输内容，并了解如何跟踪和管理内容传输的详细信息。然后，在有人要查看或使用内容时，CloudFront 使用靠近您的查看器的计算机（边缘服务器）快速传输内容。
+
+  ![How You Configure CloudFront](https://github.com/wbb1975/blogs/blob/master/aws/images/how-you-configure-cf.png)
+  
+  如何配置 CloudFront 以便传输您的内容：
+  1. 您指定源服务器（如 Amazon S3 存储桶或您自己的 HTTP 服务器），CloudFront 从该服务器中获取您的文件，然后从全世界的 CloudFront 边缘站点中分配这些文件。
+  2. 您将您的文件上传到源服务器。您的文件也称为对象，通常包括网页、图像和媒体文件，但可以是可通过 HTTP 或支持的 Adobe RTMP（Adobe Flash Media Server 使用的协议）版本提供的任何内容。
+  3. 您创建一个 CloudFront 分配（create a CloudFront distribution），在用户通过您的网站或应用程序请求文件时，这会指示 CloudFront 从哪些源服务器中获取您的文件。同时，您还需指定一些详细信息，如您是否希望 CloudFront 记录所有请求以及您是否希望此项分配创建后便立即启用。
+  4. CloudFront 为新分配指定一个域名（CloudFront assigns a domain name to your new distribution），您可以在 CloudFront 控制台中查看该域名，或者返回该域名以响应编程请求（如 API 请求）。
+  5. CloudFront 将您的分配的配置（而不是您的内容）发送到它的所有边缘站点，边缘站点是位于地理位置分散的数据中心（CloudFront 在其中缓存您的对象的副本）的服务器集合。
+
+- **9. Amazon Elastic Block Store (Amazon EBS)**
+  
+  Amazon Elastic Block Store (Amazon EBS) 提供了块级存储卷以用于 EC2 实例。EBS 卷是高度可用、可靠的存储卷，您可以将其附加到同一可用区域中任何正在运行的实例。附加到 EC2 实例的 EBS 卷公开为独立于实例生命周期存在的存储卷。使用 Amazon EBS，您可以按实际用量付费。
+
+  如果数据必须能够快速访问且需要长期保存，建议使用 Amazon EBS。EBS 卷特别适合用作文件系统和数据库的主存储，还适用于任何需要细粒度更新及访问原始的、未格式化的块级存储的应用程序。Amazon EBS 非常适合依赖随机读写操作的数据库式应用程序以及执行长期持续读写操作的吞吐量密集型应用程序。
+
+  为简化数据加密，您可以将 EBS 卷作为加密卷启动。Amazon EBS 加密 提供了用于 EBS 卷的简单加密解决方案，您无需构建、管理和保护自己的密钥管理基础设施。创建加密 EBS 卷并将它连接到支持的实例类型时，该卷上静态存储的数据、磁盘 I/O 和通过该卷创建的快照都会进行加密。加密在托管 EC2 实例的服务器上进行，对从 EC2 实例传输到 EBS 存储的数据进行加密。有关更多信息，请参阅 [Amazon EBS Encryption](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSEncryption.html)。
+
+  Amazon EBS 加密在创建加密卷以及通过加密卷创建任何快照时，使用 AWS Key Management Service (AWS KMS) 主密钥。首次在区域中创建加密的 EBS 卷时，将自动为您创建一个默认主密钥。此密钥将用于 Amazon EBS 加密，除非您选择采用 AWS Key Management Service 单独创建的客户主密钥 (CMK)。创建您自己的 CMK 可以让您在定义访问控制时获得更高的灵活性，包括创建、轮换、禁用和审核特定于各个应用程序和用户的加密密钥的能力。有关更多信息，请参阅 [AWS Key Management Service Developer Guide](https://docs.aws.amazon.com/kms/latest/developerguide/)。
+
+  您可以将多个卷附加到同一实例，但是不能超过 AWS 账户指定的限额。您的账户对您可以使用的 EBS 卷数量和总存储量有相应的限制。如要了解有关限制的更多信息，以及如何申请提高限额，请参阅[请求提高 Amazon EBS 卷限制](https://console.aws.amazon.com/support/home#/case/create?issueType=service-limit-increase&limitType=service-code-ebs)。
+
+  Amazon EBS 的功能：
+  + 您可以创建大小高达 16TiB 的 EBS 通用型 SSD (gp2)、预配置 IOPS SSD (io1)、吞吐优化 HDD (st1) 和 Cold HDD (sc1) 卷。您可以将这些卷作为设备装载在您的 Amazon EC2 实例上。您可以在同一实例上安装多个卷，但每个卷一次只能连接到一个实例。您可以动态更改附加到实例的卷的配置。有关更多信息，请参阅 [创建 Amazon EBS 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-creating-volume.html)。
+  + 通过 通用型 SSD (gp2) 卷，基本性能可以达到 3 IOPS/GiB，能突增至 3000 IOPS 并保持一段较长的时间。Gp2 卷适用于多种使用案例，例如引导卷、中小型数据库以及开发和测试环境。Gp2 卷最高可支持 16,000 IOPS 和 250 MiB/s 的吞吐量。有关更多信息，请参阅 [通用型 SSD (gp2) 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_gp2)。
+  + 通过 预配置 IOPS SSD (io1) 卷，您可以预配置特定级别的 I/O 性能。Io1 卷最高可支持 64,000 IOPS 和 1,000 MB/s 的吞吐量。因此，您可预见性地将每个 EC2 实例扩展到数万 IOPS。有关更多信息，请参阅 [预配置 IOPS SSD (io1) 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_piops)。
+  + 吞吐优化 HDD (st1) 卷提供低成本的磁性存储，该存储以吞吐量而不是 IOPS 定义性能。这种卷的吞吐量高达 500MiB/s，非常适合大型顺序工作负载，例如 Amazon EMR、ETL、数据仓库和日志处理。有关更多信息，请参阅[吞吐优化 HDD (st1) 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_st1)。
+  + Cold HDD (sc1) 卷提供低成本的磁性存储，该存储以吞吐量而不是 IOPS 定义性能。sc1 的吞吐量高达 250MiB/s，是大型顺序冷数据工作负载的理想选择。如果您需要频繁访问数据并且希望节约成本，sc1 提供价格低廉的数据块存储。有关更多信息，请参阅[Cold HDD (sc1) 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSVolumeTypes.html#EBSVolumeTypes_sc1)。
+  + EBS 卷的行为类似于原始、未格式化的块储存设备。您可基于这些卷来创建文件系统，或以任何其他块储存设备 (如硬盘) 使用方式使用这些卷。有关创建文件系统和装载卷的更多信息，请参阅使 [Amazon EBS 卷可在 Linux 上使用](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-using-volumes.html)。
+  + 您可以使用加密 EBS 卷为监管/审核的数据和应用程序实现各种静态数据加密要求。有关更多信息，请参阅 [Amazon EBS Encryption](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSEncryption.html)。
+  + 您可以创建持久保存到 Amazon S3 的 EBS 卷的时间点快照。快照可为数据提供保护以获得长期持久性，可用作新 EBS 卷的起点。您随心所欲地用相同快照对任意多的卷进行实例化。可以跨多个 AWS 区域复制这些快照。有关更多信息，请参阅[Amazon EBS 快照](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSSnapshots.html)。
+  + EBS 卷在特定可用区中创建，随后可以附加到同一可用区内的任何实例。若要在可用区外部提供某个卷，您可以创建一个快照并将该快照还原到该区域中任意位置处的新卷。您可以将快照复制到其他区域，再将它们还原到该区域中的新卷，从而更轻松地利用多个 AWS 区域来实现地理扩展、数据中心迁移和灾难恢复。有关更多信息，请参阅[创建 Amazon EBS 快照](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-creating-snapshot.html)、[从快照还原 Amazon EBS 卷](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-restoring-volume.html)和[复制 Amazon EBS 快照](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/ebs-copy-snapshot.html)。
+  + 带宽、吞吐量、延迟和平均队列长度等性能指标是通过 AWS 管理控制台提供的。通过 Amazon CloudWatch 提供的这些指标，您可以监视卷的性能，确保为应用程序提供足够性能，又不会为不需要的资源付费。有关更多信息，请参阅[Linux 实例上的 Amazon EBS 卷性能](https://docs.aws.amazon.com/zh_cn/AWSEC2/latest/UserGuide/EBSPerformance.html)。
+  
 - **10. **
 
 
