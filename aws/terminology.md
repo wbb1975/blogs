@@ -117,7 +117,7 @@
 
   您还会获得更高的可靠性和可用性，因为您的文件（也称为对象）的副本现在存储（或缓存）在全球各地的多个边缘站点上。
 
-  ## 如何设置 CloudFront 以传输内容
+  **如何设置 CloudFront 以传输内容**
   您可以创建 CloudFront 分配以指示 CloudFront 您希望从何处传输内容，并了解如何跟踪和管理内容传输的详细信息。然后，在有人要查看或使用内容时，CloudFront 使用靠近您的查看器的计算机（边缘服务器）快速传输内容。
 
   ![How You Configure CloudFront](https://github.com/wbb1975/blogs/blob/master/aws/images/how-you-configure-cf.png)
