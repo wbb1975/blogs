@@ -127,16 +127,16 @@ pling period of length delay.  The process and memory reports are instantaneous 
   
   不过还是那句话，为了安全起见，这种方法我也不推荐。
 + 第三个方法，指定符号路径为容器文件系统的路径。比如对于第 05 讲的应用，你可以执行下面这个命令：
-```
-mkdir /tmp/foo
-$ PID=$(docker inspect --format {{.State.Pid}} phpfpm)
-$ bindfs /proc/$PID/root /tmp/foo
-$ perf report --symfs /tmp/foo
+    ```
+    mkdir /tmp/foo
+    $ PID=$(docker inspect --format {{.State.Pid}} phpfpm)
+    $ bindfs /proc/$PID/root /tmp/foo
+    $ perf report --symfs /tmp/foo
 
-# 使用完成后不要忘记解除绑定
-$ umount /tmp/foo/
-```
-不过这里要注意，bindfs 这个工具需要你额外安装。bindfs 的基本功能是实现目录绑定（类似于 mount--bind），这里需要你安装的是 1.13.10 版本（这也是它的最新发布版）。
+    # 使用完成后不要忘记解除绑定
+    $ umount /tmp/foo/
+    ```
+   不过这里要注意，bindfs 这个工具需要你额外安装。bindfs 的基本功能是实现目录绑定（类似于 mount--bind），这里需要你安装的是 1.13.10 版本（这也是它的最新发布版）。
 + 第四个方法，在容器外面把分析纪录保存下来，再去容器里查看结果。这样，库和符号的路径也就都对了。
 比如，你可以这么做。先运行 perf record -g -p < pid>，执行一会儿（比如 15 秒）后，按 Ctrl+C 停止。
 
@@ -177,3 +177,97 @@ perf_events 实际上已经支持了 JIT，但还需要一个 /tmp/perf-PID.map 
 
 掌握整体的分析思路，才是我们首先要做的。因为，性能优化的原理和思路，在任何编程语言中都是相通的。
 ## 问题 8：为什么 perf 的报告中，很多符号都不显示调用栈
+perf report 是一个可视化展示 perf.data的工具。在第 08 讲的案例中，我直接给出了最终结果，并没有详细介绍它的参数。估计很多同学的机器在运行时，都碰到了跟路过同学一样的问题，看到的是下面这个界面。
+
+  ![Perf Report Without Detailed Callstack](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/perf_report_without_detailed_callstack.png)
+
+这个界面可以清楚看到，perf report 的输出中，只有 swapper 显示了调用栈，其他所有符号都不能查看堆栈情况，包括我们案例中的 app 应用。
+
+这种情况我们以前也遇到过，当你发现性能工具的输出无法理解时，应该怎么办呢？当然还是查工具的手册。比如，你可以执行 man perf-report 命令，找到 -g参数的说明：
+```
+-g, --call-graph=<print_type,threshold[,print_limit],order,sort_key[,branch],value> 
+           Display call chains using type, min percent threshold, print limit, call order, sort key, optional branch and value. Note that 
+           ordering is not fixed so any parameter can be given in an arbitrary order. One exception is the print_limit which should be 
+           preceded by threshold. 
+
+               print_type can be either: 
+               - flat: single column, linear exposure of call chains. 
+               - graph: use a graph tree, displaying absolute overhead rates. (default) 
+               - fractal: like graph, but displays relative rates. Each branch of 
+                        the tree is considered as a new profiled object. 
+               - folded: call chains are displayed in a line, separated by semicolons 
+               - none: disable call chain display. 
+
+               threshold is a percentage value which specifies a minimum percent to be 
+               included in the output call graph.  Default is 0.5 (%). 
+
+               print_limit is only applied when stdio interface is used.  It's to limit 
+               number of call graph entries in a single hist entry.  Note that it needs 
+               to be given after threshold (but not necessarily consecutive). 
+               Default is 0 (unlimited). 
+
+               order can be either: 
+               - callee: callee based call graph. 
+               - caller: inverted caller based call graph. 
+               Default is 'caller' when --children is used, otherwise 'callee'. 
+
+               sort_key can be: 
+               - function: compare on functions (default) 
+               - address: compare on individual code addresses 
+               - srcline: compare on source filename and line number 
+
+               branch can be: 
+               - branch: include last branch information in callgraph when available. 
+                         Usually more convenient to use --branch-history for this. 
+
+               value can be: 
+               - percent: diplay overhead percent (default) 
+               - period: display event period 
+               - count: display event count
+```
+通过这个说明可以看到，-g 选项等同于 --call-graph，它的参数是后面那些被逗号隔开的选项，意思分别是输出类型、最小阈值、输出限制、排序方法、排序关键词、分支以及值的类型。
+
+我们可以看到，这里默认的参数是 graph,0.5,call,function,percent，具体含义文档中都有详细讲解，这里我就不再重复了。
+
+现在再回过头来看我们的问题，堆栈显示不全，相关的参数当然就是最小阈值 threshold。通过手册中对threshold 的说明，我们知道，当一个事件发生比例高于这个阈值时，它的调用栈才会显示出来。
+
+threshold 的默认值为 0.5%，也就是说，事件比例超过 0.5% 时，调用栈才能被显示。再观察我们案例应用 app 的事件比例，只有 0.34%，低于 0.5%，所以看不到 app 的调用栈就很正常了。
+
+这种情况下，你只需要给 perf report 设置一个小于0.34% 的阈值，就可以显示我们想看到的调用图了。比如执行下面的命令：
+
+```perf report -g graph,0.3```
+
+你就可以得到下面这个新的输出界面，展开 app 后，就可以看到它的调用栈了。
+
+  ![Perf Report Without Detailed Callstack](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/perf_report_with_detailed_callstack.png)
+## 问题 9：怎么理解 perf report 报告
+看到 swapper，你可能首先想到的是 SWAP 分区。实际上， swapper 跟 SWAP 没有任何关系，它只在系统初始化时创建 init 进程，之后，它就成了一个最低优先级的空闲任务。也就是说，当 CPU 上没有其他任务运行时，就会执行 swapper 。所以，你可以称它为“空闲任务“。
+
+回到我们的问题，在 perf report 的界面中，展开它的调用栈，你会看到， swapper 时钟事件都耗费在了 do_idle 上，也就是在执行空闲任务。
+
+  ![Perf Report Without Detailed Callstack](https://github.com/wbb1975/blogs/blob/master/Linux_Tune_Tips/images/perf_report_for_swapper.png)
+
+所以，分析案例时，我们直接忽略了前面这个 99% 的符号，转而分析后面只有 0.3% 的 app。其实从这里你也能理解，为什么我们一开始不先用 perf 分析。
+
+因为在多任务系统中，次数多的事件，不一定就是性能瓶颈。所以，只观察到一个大数值，并不能说明什么问题。具体有没有瓶颈，还需要你观测多个方面的多个指标，来交叉验证。这也是我在套路篇中不断强调的一点。
+
+另外，关于 Children 和 Self 的含义，手册里其实有详细说明，还很友好地举了一个例子，来说明它们的百分比的计算方法。简单来说，
+- Self 是最后一列的符号（可以理解为函数）本身所占比例；
+- Children 是这个符号调用的其他符号（可以理解为子函数，包括直接和间接调用）占用的比例之和。
+
+正如同学留言问到的，很多性能工具确实会对系统性能有一定影响。就拿 perf 来说，它需要在内核中跟踪内核栈的各种事件，那么不可避免就会带来一定的性能损失。这一点，虽然对大部分应用来说，没有太大影响，但对特定的某些应用（比如那些对时钟周期特别敏感的应用），可能就是灾难了。
+
+所以，使用性能工具时，确实应该考虑工具本身对系统性能的影响。而这种情况，就需要你了解这些工具的原理。比如，
+- perf 这种动态追踪工具，会给系统带来一定的性能损失。
+- vmstat、pidstat 这些直接读取 proc 文件系统来获取指标的工具，不会带来性能损失。
+## 问题 10：性能优化书籍和参考资料推荐
+在 如何学习 Linux 性能优化 的文章中，我曾经介绍过Brendan Gregg，他是当之无愧的性能优化大师，你在各种 Linux 性能优化的文章中，基本都能看到他的那张性能工具图谱。
+
+所以，关于性能优化的书籍，我最喜欢的其实正是他写的那本《Systems Performance: Enterprise and the Cloud》。这本书也出了中文版，名字是《性能之巅：洞悉系统、企业与云计算》。
+
+从出版时间来看，这本书确实算一本老书了，英文版的是 2013年出版的。但是经典之所以成为经典，正是因为不会过时。这本书里的性能分析思路以及很多的性能工具，到今天依然适用。
+
+另外，我也推荐你去关注他的个人网站 http://www.brendangregg.com/，特别是 [Linux Performance](http://www.brendangregg.com/linuxperf.html) 这个页面，包含了很多 Linux 性能优化的资料，比如：
++ Linux 性能工具图谱
++ 性能分析参考资料
++ 性能优化的演讲视频
