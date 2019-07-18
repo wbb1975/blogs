@@ -187,5 +187,37 @@
   + AWS 开发工具包：AWS 提供的 SDK (开发工具包) 包含各种编程语言和平台 (Java、Python、Ruby、.NET、iOS、Android 等) 的库和示例代码。开发工具包提供便捷的方式来创建对 IAM 和 AWS 的编程访问。例如，开发工具包执行以下类似任务：加密签署请求、管理错误以及自动重试请求。有关 AWS 开发工具包的信息（包括如何下载及安装），请参阅[适用于 Amazon Web Services 的工具](https://aws.amazon.com/tools/)页面。
   + IAM HTTPS API：您可以使用 IAM HTTPS API（可让您直接向服务发布 HTTPS 请求）以编程方式访问 IAM 和 AWS。使用 HTTPS API 时，必须添加代码，才能使用您的凭证对请求进行数字化签名。有关更多信息，请参见[通过提出 HTTP 查询请求来调用 API](https://docs.aws.amazon.com/zh_cn/IAM/latest/UserGuide/programming.html)和 [IAM API 参考](https://docs.aws.amazon.com/IAM/latest/APIReference/)。
 
+- **12. Amazon Elastic Kubernetes Service (Amazon EKS)**
+
+  Amazon Elastic Kubernetes Service (Amazon EKS) 是一项托管服务，可让您在 AWS 上轻松运行 Kubernetes，而无需支持或维护您自己的 Kubernetes 控制层面。Kubernetes 是一个用于实现容器化应用程序的部署、扩展和管理的自动化的开源系统。
+
+  Amazon EKS 跨多个可用区运行 Kubernetes 控制层面实例以确保高可用性。Amazon EKS 可以自动检测和替换运行状况不佳的控制层面实例，并为它们提供自动版本升级和修补。
+
+  Amazon EKS 还与许多 AWS 服务集成以便为您的应用程序提供可扩展性和安全性，包括：
+  + 用于容器镜像的 Amazon ECR
+  + 用于负载分配的 Elastic Load Balancing
+  + 用于身份验证的 IAM
+  + 用于隔离的 Amazon VPC
+
+  Amazon EKS 运行最新版本的开源 Kubernetes 软件，因此您可以使用 Kubernetes 社区的所有现有插件和工具。在 Amazon EKS 上运行的应用程序与在任何标准 Kubernetes 环境中运行的应用程序完全兼容，无论此类环境是在本地数据中心还是在公有云中运行都是如此。这意味着，您可以轻松地将任何标准 Kubernetes 应用程序迁移到 Amazon EKS，而无需进行任何代码修改。
+  
+  **Amazon EKS 控制层面架构：**
+  Amazon EKS 为每个集群运行一个单租户 Kubernetes 控制层面，控制层面基础设施并不跨集群或 在AWS 账户之间共享。此控制层面包含至少两个 API 服务器节点和三个跨区域内的可用区运行的 etcd 节点。Amazon EKS 会自动检测并替换运行状况不佳的控制层面实例，并根据需要跨区域重启它们。Amazon EKS 利用 AWS 区域的架构以保持高可用性。因此，Amazon EKS 能够提供[确保 API 服务器终端节点可用性的 SLA](https://aws.amazon.com/eks/sla)。
+
+  Amazon EKS 使用 Amazon VPC 网络策略来将控制层面组件之间的流量限制到一个集群内。除非通过 Kubernetes RBAC 策略授权，否则，集群的控制层面组件无法查看或接收来自其他集群或其他 AWS 账户的通信。
+
+  这个安全且高度可用的配置让 Amazon EKS 成为生产工作负载的可靠的建议配置。
+  
+  **Amazon EKS 的工作原理是什么？**
+
+  ![What is eks](https://github.com/wbb1975/blogs/blob/master/aws/images/what-is-eks.png)
+
+  Amazon EKS 入门是很轻松的：
+  1. 首先，在 AWS 管理控制台中或使用 AWS CLI 或 AWS 开发工具包之一创建一个 Amazon EKS 集群。
+  2. 然后，启动向此 Amazon EKS 集群注册的工作线程节点。我们为您提供了一个可自动配置您的节点的 AWS CloudFormation 模板。
+  3. 在集群准备就绪时，可以将常用 Kubernetes 工具（如 kubectl）配置为与集群通信。
+  4. 像在任何其他 Kubernetes 环境中一样在 Amazon EKS 集群上部署和管理应用程序。
+  有关创建所需的资源和第一个 Amazon EKS 集群的更多信息，请参阅 [Amazon EKS 入门](https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/getting-started.html)。
+
 ## 参看
 - [AWS文档](https://docs.aws.amazon.com/)
