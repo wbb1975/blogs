@@ -7,8 +7,7 @@
     $ sudo apt install g++ cmake -y
     ```
  　　在这个服务器版本上，zlib, OpenSSL 和 CURL 的开发头文件并未安装，因此我们需要安装它们：
-
-    ```
+   ```
    $ sudo apt install zlib1g-dev libssl-dev libcurl4-openssl-dev -y
     ```
     
