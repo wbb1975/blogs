@@ -13,7 +13,7 @@
     
     在这个镜像中git已经安装，因此我们可以把SDK克隆下来，并在其中创建build目录。
    ```
-    $ git clone https://github.com/aws/aws-sdk-cpp.git
+   $ git clone https://github.com/aws/aws-sdk-cpp.git
    $ mkdir build
    $ cd build
    ```
