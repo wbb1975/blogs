@@ -91,7 +91,7 @@
            std::cout << " Usage: s3sample <region-endpoint> <s3 bucket> <s3 key> <local destination path>\n"
                   << "Example: s3sample s3.us-west-2.amazonaws.com MyBucket MyKey MyLocalFile.pdf" << std::endl;
            return 0;
-    }
+     }
 
     SDKOptions options;
     options.loggingOptions.logLevel = Utils::Logging::LogLevel::Error;
@@ -117,6 +117,7 @@
 
     ShutdownAPI(options);
     return 0;
+    }
    ```
    它的CMake脚本CMakeLists.txt：
     ```
