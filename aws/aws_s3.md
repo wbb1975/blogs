@@ -68,12 +68,14 @@ aws s3 cp file.txt s3://my-bucket/ --grants read=uri=http://acs.amazonaws.com.cn
 ```
 
 还可以为上传到 Amazon S3 的对象指定非默认存储类（REDUCED_REDUNDANCY 或 STANDARD_IA）。为此，请使用 --storage-class 选项。
+
 ```aws s3 cp file.txt s3://my-bucket/ --storage-class REDUCED_REDUNDANCY```
 
 s3 sync 命令使用如下语法。可能的源-目标组合有：
 - 本地文件系统到 Amazon S3
 - Amazon S3 到本地文件系统
 - Amazon S3 到 Amazon S3
+
 ```$ aws s3 sync <source> <target> [--options]```
 
 下面的示例将 my-bucket 中名为 path 的 Amazon S3 文件夹中的内容与当前工作目录同步。s3 sync 将更新与目标中的同名文件具有不同大小或修改时间的任何文件。输出显示在同步期间执行的特定操作。请注意，此操作将子目录 MySubdirectory 及其内容与 s3://my-bucket/path/MySubdirectory 递归同步。
@@ -157,6 +159,7 @@ delete: MyFile2.rtf
 ```
 
 s3 sync 命令还可以接受 --acl 选项，使用该选项可以设置对复制到 Amazon S3 中的文件的访问权限。--acl 选项接受 private、public-read 和 public-read-write 值。
+
 ```aws s3 sync . s3://my-bucket/path --acl public-read```
 
 ## 小结
