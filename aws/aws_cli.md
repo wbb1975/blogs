@@ -16,5 +16,177 @@ aws s3 cp myvideo.mp4 s3://mybucket/
 ```
 使用低级别命令 (在 aws s3api 下提供) 执行同一任务需要更多的工作。
 
+## 安装 AWS CLI 
+安装 AWS Command Line Interface (AWS CLI) 的方式
+- [Using pip](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#install-tool-pip)
+- [使用虚拟环境](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#install-tool-venv)
+- [使用捆绑安装程序](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#install-tool-bundled)
+
+先决条件：
+- Python 2 版本 2.6.5+ 或 Python 3 版本 3.3+
+- Windows、Linux, OS X, or Unix
+> 注意
+>
+> 较早版本的 Python 可能无法兼容所有 AWS 服务。如果在安装或使用 AWS CLI 时看到 InsecurePlatformWarning 或弃用通知，请更新到更高的版本。
+
+您可以查找最新 CLI 的版本号，网址为：https://github.com/aws/aws-cli/blob/master/CHANGELOG.rst。
+
+### 使用 pip 安装 AWS CLI
+AWS CLI 在 Linux、Windows 和 macOS 上的主要分发方式为 pip。这是一个用于 Python 的程序包管理器，提供了简单的方式来安装、升级和删除 Python 程序包及其相关组件。
+
+**当前 AWS CLI 版本**
+
+经常更新 AWS CLI 以支持新服务和命令。要确定您是否拥有最新版本，请查看 GitHub 上的版本页面。
+如果您已经有 pip 和支持的 Python 版本，则可以使用以下命令安装 AWS CLI：如果您安装了 Python 3+ 版本，我们建议您使用 pip3 命令。
+```
+pip3 install awscli --upgrade --user
+```
+--upgrade 选项通知 pip3 升级已安装的任何必要组件。--user 选项通知 pip3 将程序安装到用户目录的子目录中，以避免修改您的操作系统所使用的库。
+
+### 在虚拟环境中安装 AWS CLI
+如果您在尝试随 pip3 一起安装 AWS CLI 时遇到问题，可以[在虚拟环境中安装 AWS CLI ](https://docs.amazonaws.cn/cli/latest/userguide/install-virtualenv.html)来隔离工具及其依赖项。或者，您可以使用与通常不同的 Python 版本。
+
+### 使用安装程序安装 AWS CLI
+若要在 Linux, OS X, or Unix 上进行离线或自动安装，请尝试[捆绑安装程序](https://docs.amazonaws.cn/cli/latest/userguide/install-bundle.html)。捆绑安装程序包括 AWS CLI 和其依赖项，以及为您执行安装的 Shell 脚本。
+
+在 Windows 上，您也可以使用 [MSI 安装程序](https://docs.amazonaws.cn/cli/latest/userguide/install-windows.html#install-msi-on-windows)。这两种方法都简化了初始安装。但缺点是，当新版本的 AWS CLI 发布时，升级更加困难。
+
+## 安装后需要执行的步骤
+- [设置路径以包含 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#post-install-path)
+- [使用您的凭证配置 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#post-install-configure)
+- [升级到最新版本的 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#post-install-upgrade)
+- [卸载 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html#post-install-uninstall)
+### 设置路径以包含 AWS CLI
+在安装 AWS CLI 后，您可能需要将可执行文件路径添加到您的 PATH 变量中。有关特定于平台的说明，请参阅以下主题：
++ Linux – [将 AWS CLI 可执行文件添加到命令行路径](https://docs.amazonaws.cn/cli/latest/userguide/install-linux.html#install-linux-path)
++ Windows – [将 AWS CLI 可执行文件添加到命令行路径](https://docs.amazonaws.cn/cli/latest/userguide/install-windows.html#awscli-install-windows-path)
++ macOS – [将 AWS CLI 可执行文件添加到 macOS 命令行路径](https://docs.amazonaws.cn/cli/latest/userguide/install-macos.html#awscli-install-osx-path)
+
+通过运行 aws --version 来验证 AWS CLI 是否已正确安装。
+```
+aws --version
+aws-cli/1.16.116 Python/3.6.8 Linux/4.14.77-81.59-amzn2.x86_64 botocore/1.12.106
+```
+### 使用您的凭证配置 AWS CLI
+在运行 CLI 命令之前，您必须先使用您的凭证配置 AWS CLI。
+
+通过在 [AWS CLI 配置文件](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-files.html)（默认存储在用户的主目录中）中定义[配置文件](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-profiles.html)，您可以在本地存储凭证信息。有关更多信息，请参阅 [配置 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-configure.html)。
+
+> 注意：如果您在 Amazon EC2 实例上运行，可以从实例元数据中自动检索凭证。有关更多信息，请参阅 [实例元数据](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-metadata.html)。
+### 升级到最新版本的 AWS CLI
+定期更新 AWS CLI，以便添加对新服务和命令的支持。要更新到最新版本的 AWS CLI，请再次运行安装命令。有关 AWS CLI 最新版本的详细信息，请参阅 [AWS CLI 发行说明](https://github.com/aws/aws-cli/blob/develop/CHANGELOG.rst)。
+```
+pip3 install awscli --upgrade --user
+```
+### 卸载 AWS CLI
+如果需要卸载 AWS CLI，请使用 pip uninstall。
+```
+$ pip3 uninstall awscli
+```
+
+如果您没有 Python 和 pip，则使用适合您的环境的过程。
+
+### 在 Linux 上安装 AWS CLI
+您可以使用 pip（一种适用于 Python 的程序包管理器）在大多数 Linux 发行版上安装 AWS Command Line Interface (AWS CLI) 及其依赖项。
+
+如果您已有 pip，请按照主要安装主题中的说明执行操作。运行 pip --version 可查看您的 Linux 版本是否已包含 Python 和 pip。如果您安装了 Python 3+ 版本，我们建议您使用 pip3 命令。
+```
+$ pip3 --version
+```
+
+如果您还没有安装 pip，请检查以查看安装的是哪个版本的 Python。
+```
+$ python --version
+$ python3 --version
+```
+如果还没有 Python 2 版本 2.6.5+ 或 Python 3 版本 3.3+，则首先必须[安装 Python](https://docs.amazonaws.cn/cli/latest/userguide/install-linux-python.html)。如果已安装 Python，可继续安装 pip 和 AWS CLI。
+#### 安装 pip
+如果尚未安装 pip，可以使用 Python 打包权威机构 提供的脚本进行安装。
+1. 使用 curl 命令下载安装脚本。
+    ```
+    $ curl  https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    ```
+2. 使用 Python 运行脚本以下载并安装最新版本的 pip 和其他必需的支持包。
+    ```
+    $ python get-pip.py --user
+    ```
+    或
+    ```
+    $ python3 get-pip.py --user
+    ```
+
+    当您包含 --user 开关时，脚本将 pip 安装到路径 ~/.local/bin。
+3. 确保包含 pip 的文件夹是您的 PATH 变量的一部分。
+    + 在您的用户文件夹中查找 Shell 的配置文件脚本。如果您不能确定所使用的 Shell，请运行 echo $SHELL。
+    + 在配置文件脚本末尾添加与以下示例类似的导出命令。
+        ```
+        export PATH=~/.local/bin:$PATH
+        ```
+    + 将配置文件重新加载到当前会话中，以使更改生效。
+       ```
+       $ source ~/.bash_profile
+       ```
+4. 接下来，可以进行测试，以验证是否正确安装了 pip。
+   ```
+   $ pip3 --version
+   pip 19.0.3 from ~/.local/lib/python3.7/site-packages (python 3.7)
+   ```
+#### 通过 pip 安装 AWS CLI
+使用 pip 安装 AWS CLI。
+```
+$ pip3 install awscli --upgrade --user
+```
+
+当您使用 --user 开关时，pip 将 AWS CLI 安装到 ~/.local/bin。
+
+验证 AWS CLI 是否已正确安装。
+```
+$ aws --version
+aws-cli/1.16.116 Python/3.6.8 Linux/4.14.77-81.59-amzn2.x86_64 botocore/1.12.106
+```
+
+要升级到最新版本，请重新运行安装命令。
+```
+pip3 install awscli --upgrade --user
+```
+#### 将 AWS CLI 可执行文件添加到命令行路径
+在使用 pip 进行安装后，可能需要将 aws 可执行文件添加到操作系统的 PATH 环境变量中。
+
+您可以运行以下命令验证 pip 已将 AWS CLI 安装到哪个文件夹中。
+```
+$ which aws
+/home/username/.local/bin/aws
+```
+### 在虚拟环境中安装 AWS CLI
+您可以通过在虚拟环境中安装 AWS Command Line Interface (AWS CLI)，避免所需版本与其他 pip 程序包冲突。
+1. 使用 pip 安装 virtualenv。
+   ```
+   $ pip install --user virtualenv
+   ```
+2. 创建虚拟环境并命名它。
+   ```
+   $ virtualenv ~/cli-ve
+   ```
+3. 激活新虚拟环境。
+   ```
+   $ source ~/cli-ve/bin/activate
+   ```
+4. 将 AWS CLI 安装到虚拟环境中。
+   ```
+   (cli-ve)~$ pip install --upgrade awscli
+   ```
+5. 验证 AWS CLI 是否已正确安装。
+   ```
+   $ aws --version
+  aws-cli/1.16.116 Python/3.6.8 Linux/4.14.77-81.59-amzn2.x86_64 botocore/1.12.106
+   ```
+
+您可以使用 deactivate 命令退出虚拟环境。不管何时启动新会话，都必须重新激活环境。
+
+要升级到最新版本，请重新运行安装命令。
+```
+(cli-ve)~$ pip install --upgrade awscli
+```
+
 ## Reference
 - [AWS CLI 是什么](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-welcome.html)
