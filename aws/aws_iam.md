@@ -150,6 +150,17 @@ IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策�
 
 当您使用特定 AWS 产品时，请务必阅读相应文档，了解属于该产品的所有资源的安全选项。
 ## 入门
+本主题向您介绍如何在您的 AWS 账户下创建 AWS Identity and Access Management (IAM) 用户，以允许访问您的 AWS 资源。首先，您将学习在创建组和用户之前应了解的 IAM 概念；然后，您将详细了解如何使用 AWS 管理控制台 执行必要的任务。第一个任务是设置 AWS 账户的管理员组。AWS 账户中，管理员组不是必需的，但我们强烈建议您创建它。
+
+在下图所示的简单示例中，AWS 账户有三个组。一个群组由一系列具有相似责任的用户组成。在此示例中，一个群组为管理员群组（名为 Admins）。另外还有一个 Developers 群组和一个 Test 群组。每个群组均包含多个用户。尽管图中并未列明，但每个用户可处于多个群组中。您不得将群组置于其他群组中。您可使用策略向群组授予许可。
+
+![IAM Users And Groups](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-users-and-groups.diagram.png)
+
+在随后的流程中，您需要执行下列任务：
+- 创建管理员组并向该组提供访问您 AWS 账户的所有资源的权限。
+- 为您自己创建一个用户并将该用户添加到管理员组。
+- 为您的用户创建密码，以便可以登录 AWS 管理控制台。
+您需要授予管理员组权限，以访问 AWS 账户内所有可用的资源。可用的资源是指您使用或注册的任何 AWS 产品。管理员组中的用户也可以访问您的 AWS 账户信息，AWS 账户的安全证书除外。
 
 ## Reference
 - [IAM](https://docs.amazonaws.cn/IAM/latest/UserGuide/introduction.html)
