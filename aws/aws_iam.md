@@ -53,6 +53,103 @@ UpdateUser
 要允许委托人执行操作，您必须在应用于委托人或受影响的资源的策略中包含所需的操作。要查看每个服务支持的操作、资源类型和条件键的列表，请参阅[AWS服务的操作、资源类型和条件键](https://docs.amazonaws.cn/en_us/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html)。
 #### 资源
 在 AWS 批准请求中的操作后，可以对您的账户中的相关资源执行这些操作。资源是位于服务中的对象。示例包括 Amazon EC2 实例、IAM 用户和 Amazon S3 存储桶。服务定义了一组可对每个资源执行的操作。如果创建一个请求以对资源执行不相关的操作，则会拒绝该请求。例如，如果您请求删除一个 IAM 角色，但提供一个 IAM 组资源，请求将失败。要查看确定操作影响哪些资源的 AWS 服务表，请参阅[AWS服务的操作、资源类型和条件键](https://docs.amazonaws.cn/en_us/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html)。
+### 身份管理概述：用户
+为实现更好的安全性和组织，您可以向特定用户（使用自定义权限创建的身份）授予对您的 AWS 账户的访问权限。通过将现有身份联合到 AWS 中，可以进一步简化这些用户的访问。
+#### 仅限首次访问：您的根用户凭证
+创建 AWS 账户时，会创建一个用于登录 AWS 的 AWS 账户根用户身份。您可以使用此根用户身份（即，创建账户时提供的电子邮件地址和密码）登录 AWS 管理控制台。您的电子邮件地址和密码的组合也称为您的根用户凭证。
+
+使用根用户凭证时，您可以对 AWS 账户中的所有资源进行完全、无限制的访问，包括访问您的账单信息，您还能更改自己的密码。当您首次设置账户时，需要此访问级别。但是，我们不建议使用根用户凭证进行日常访问。我们特别建议您不要与任何人共享您的根用户凭证，因为如果这样做，他们可对您的账户进行无限制的访问。无法限制向根用户授予的权限。
+
+以下几节说明如何使用 IAM 创建和管理用户身份和权限以提供对您 AWS 资源的安全、有限访问，适用于您自己以及需要使用您 AWS 资源的其他人员。
+#### IAM 用户
+AWS Identity and Access Management (IAM) 的“身份”方面可帮助您解决问题“该用户是谁？”（通常称为身份验证）。您可以在账户中创建与组织中的用户对应的各 IAM 用户，而不是与他人共享您的根用户凭证。IAM 用户不是单独的账户；它们是您账户中的用户。每个用户都可以有自己的密码以用于访问 AWS 管理控制台。您还可以为每个用户创建单独的访问密钥，以便用户可以发出编程请求以使用账户中的资源。在下图中，用户 Li、Mateo、DevApp1、DevApp2、TestApp1 和 TestApp2 已添加到单个 AWS 账户。每个用户都有自己的凭证。
+
+![IAM Account With Users](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-account-with-users.diagram.png)
+
+请注意，某些用户实际上是应用程序（例如 DevApp1）。IAM 用户不必表示实际人员；您可以创建 IAM 用户以便为在公司网络中运行并需要 AWS 访问权限的应用程序生成访问密钥。
+
+我们建议您为自己创建 IAM 用户，然后向自己分配账户的管理权限。您随后可以作为该用户登录以根据需要添加更多用户。
+#### 联合现有用户
+如果您的组织中的用户已通过某种方法进行身份验证 (例如，通过登录到您的公司网络)，则不必为他们创建单独的 IAM 用户。相反，您可以在 AWS 中对这些用户身份进行联合身份验证。
+
+下图介绍用户如何使用 IAM 获取临时 AWS 安全凭证以访问您 AWS 账户中的资源。
+![IAM Federation](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-federation.diagram.png)
+
+联合在这些情况下尤其有用：
+- 您的用户已在公司目录中拥有身份。
+   如果您的公司目录与安全断言标记语言 2.0 (SAML 2.0) 兼容，则可以配置公司目录以便为用户提供对 AWS 管理控制台的单一登录 (SSO) 访问。有关更多信息，请参阅[临时凭证的常见情形](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_credentials_temp.html#sts-introduction)。
+
+  如果您的公司目录不与 SAML 2.0 兼容，则可以创建身份代理应用程序以便为用户提供对 AWS 管理控制台的单一登录 (SSO) 访问。有关更多信息，请参阅[创建一个使联合用户能够访问 AWS 管理控制台（自定义联合代理）的 URL](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html)。
+
+  如果您的公司目录是 Microsoft Active Directory，则可以使用 [AWS Directory Service](http://www.amazonaws.cn/directoryservice/)在公司目录与您的 AWS 账户之间建立信任。
+- 您的用户已有 Internet 身份。
+   如果您创建的移动应用程序或基于 Web 的应用程序可以允许用户通过 Internet 身份提供商 (如 Login with Amazon、Facebook、Google 或任何与 OpenID Connect (OIDC) 兼容的身份提供商) 标识自己，则应用程序可以使用联合访问 AWS。有关更多信息，请参阅关于 [Web 联合身份验证](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_oidc.html)。
+   > 提示：要使用与 Internet 身份提供商的联合身份，我们建议使用 [Amazon Cognito](https://docs.amazonaws.cn/cognito/devguide/)。
+### 访问管理概述：权限和策略(Permissions and Policies)
+AWS Identity and Access Management (IAM) 的访问管理部分帮助定义委托人实体可在账户内执行的操作。委托人实体是指使用 IAM 实体（用户或角色）进行身份验证的人员或应用程序。访问管理通常称为授权。您在 AWS 中通过创建策略并将其附加到 IAM 身份（用户、用户组或角色）或 AWS 资源来管理访问权限。策略是 AWS 中的对象；在与身份或资源相关联时，策略定义它们的权限。在委托人使用 IAM 实体（如用户或角色）发出请求时，AWS 将评估这些策略。策略中的权限确定是允许还是拒绝请求。大多数策略在 AWS 中存储为 JSON 文档。有关策略类型和用法的更多信息，请参阅[策略和权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies.html)。
+#### 策略和账户
+如果您管理 AWS 中的单个账户，则使用策略定义该账户中的权限。如果您管理跨多个账户的权限，则管理用户的权限会比较困难。您可以将 IAM 角色、基于资源的策略或访问控制列表 (ACL) 用于跨账户权限。但是，如果您拥有多个账户，那我们建议您改用该 AWS Organizations 服务来帮助您管理这些权限。有关更多信息，请参阅[组织用户指南 中的什么是 AWS Organizations](https://docs.amazonaws.cn/organizations/latest/userguide/orgs_introduction.html)？。
+#### 策略和用户
+IAM 用户是服务中的身份。当您创建 IAM 用户时，他们无法访问您账户中的任何内容，直到您向他们授予权限。向用户授予权限的方法是创建基于身份的策略，这是附加到用户或用户所属组的策略。下面的示例演示一个 JSON 策略，该策略允许用户对 us-west-2 区域内的 123456789012 账户中的 Books 表执行所有 Amazon DynamoDB 操作 (dynamodb:*)。
+```
+{
+  "Version": "2012-10-17",
+  "Statement": {
+    "Effect": "Allow",
+    "Action": "dynamodb:*",
+    "Resource": "arn:aws-cn:dynamodb:us-west-2:123456789012:table/Books"
+  }
+```
+在将此策略附加到您的 IAM 用户后，该用户将仅具有这些 DynamoDB 权限。大多数用户有多个策略共同代表该用户的权限。
+
+默认情况下会拒绝未显式允许的操作或资源。例如，如果上述策略是附加到用户的唯一策略，则该用户只能对 Books 表执行 DynamoDB 操作。禁止对其他任何表执行操作。同样，不允许用户在 Amazon EC2、Amazon S3 或任何其他 AWS 服务中执行任何操作。原因是策略中未包含使用这些服务的权限。
+
+IAM 控制台中提供了策略摘要 表，这些表总结了策略中对每个服务允许或拒绝的访问级别、资源和条件。策略在三个表中概括：[策略摘要](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_understand-policy-summary.html)、[服务摘要](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_understand-service-summary.html)和[操作摘要](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_understand-action-summary.html)。策略摘要表包含服务列表。选择其中的服务可查看服务摘要。该摘要表包含所选服务的操作和关联权限的列表。您可以选择该表中的操作以查看操作摘要。该表包含所选操作的资源和条件列表。
+
+![Policy DSummary](https://github.com/wbb1975/blogs/blob/master/aws/images/policy_summaries-diagram.png)
+
+您可以在 Users 页面上查看附加到该用户的所有策略 (托管和内联) 的策略摘要。可在 Policies 页面上查看所有托管策略的摘要。
+![Policies Summary DynamoDB Example](https://github.com/wbb1975/blogs/blob/master/aws/images/policies-summary-dynamodbexample.png)
+
+您还可以查看策略的 JSON 文档。有关查看摘要或 JSON 文档的信息，请参阅[了解策略授予的权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_understand.html)。
+#### 策略和组
+可以将 IAM 用户组织为 IAM 组，然后将策略附加到组。这种情况下，各用户仍有自己的凭证，但是组中的所有用户都具有附加到组的权限。使用组可更轻松地管理权限，并遵循我们的[IAM 最佳实践](https://docs.amazonaws.cn/IAM/latest/UserGuide/best-practices.html)。
+
+![IAM Users And Groups](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-users-and-groups.diagram.png)
+
+用户或组可以附加授予不同权限的多个策略。这种情况下，用户的权限基于策略组合进行计算。不过基本原则仍然适用：如果未向用户授予针对操作和资源的显式权限，则用户没有这些权限。
+#### 联合身份用户和角色(Federated Users and Roles)
+联合身份用户无法通过与 IAM 用户相同的方式在您的 AWS 账户中获得永久身份。要向联合身份用户分配权限，可以创建称为角色 的实体，并为角色定义权限。当联合用户登录 AWS 时，该用户会与角色关联，被授予角色中定义的权限。有关更多信息，请参阅[针对第三方身份提供商创建角色 (联合)](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_create_for-idp.html)。
+#### 基于身份和基于资源的策略(Identity-based and Resource-based Policies)
+基于身份的策略是附加到 IAM 身份（如 IAM 用户、组或角色）的权限策略。基于资源的策略是附加到资源（如 Amazon S3 存储桶或 IAM 角色信任策略）的权限策略。
+
+基于身份的策略控制身份可以在哪些条件下对哪些资源执行哪些操作。基于身份的策略可以进一步分类：
+- 托管策略 – 基于身份的独立策略，可附加到您的 AWS 账户中的多个用户、组和角色。您可以使用两个类型的托管策略：
+   + AWS 托管策略 – 由 AWS 创建和管理的托管策略。如果您刚开始使用策略，建议先使用 AWS 托管策略。
+   + 客户托管策略 – 您在 AWS 账户中创建和管理的托管策略。与 AWS 托管策略相比，客户托管策略可以更精确地控制策略。您可以在可视化编辑器中创建和编辑 IAM 策略，也可以直接创建 JSON 策略文档以创建和编辑该策略。有关更多信息，请参阅[创建 IAM 策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_create.html)和[编辑 IAM 策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_manage-edit.html)。
+- 内联策略 – 由您创建和管理的策略，直接嵌入在单个用户、组或角色中。大多数情况下，我们不建议使用内联策略。
+
+基于资源的策略控制指定的委托人可以在何种条件下对该资源执行哪些操作。基于资源的策略是内联策略，没有基于资源的托管策略。要启用跨账户访问，您可以将整个账户或其他账户中的 IAM 实体指定为基于资源的策略中的委托人。
+
+IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策略），这种策略附加到 IAM 角色。由于 IAM 角色同时是支持基于资源的策略的身份和资源，因此，您必须同时将信任策略和基于身份的策略附加到 IAM 角色。信任策略定义哪些委托人实体（账户、用户、角色和联合身份用户）可以代入该角色。要了解 IAM 角色如何与其他基于资源的策略不同，请参阅[IAM 角色与基于资源的策略有何不同](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_compare-resource-policies.html)。
+
+要了解哪些服务支持基于资源的策略，请参阅[使用IAM 的 AWS 服务](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)。要了解基于资源的策略的更多信息，请参阅[基于身份的策略和基于资源的策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_identity-vs-resource.html)。
+### IAM 外部的安全功能
+通过 IAM 可以控制对使用 AWS 管理控制台、AWS 命令行工具或服务 API 操作（通过使用 AWS 开发工具包）执行的任务的访问。某些 AWS 产品还有其他方法来保护其资源。以下列表提供了一些示例，不过并不详尽。
+- Amazon EC2
+   在 Amazon Elastic Compute Cloud 中，需要使用密钥对 (对于 Linux 实例) 或使用用户名称和密码 (对于 Windows 实例) 来登录实例。
+- Amazon RDS
+   在 Amazon Relational Database Service 中，需要使用与数据库关联的用户名称和密码来登录数据库引擎。
+- Amazon EC2 和 Amazon RDS
+   在 Amazon EC2 和 Amazon RDS 中，需要使用安全组来控制发送到实例或数据库的流量。
+- Amazon WorkSpaces
+   在 Amazon WorkSpaces 中，用户使用用户名称和密码登录桌面。
+- Amazon WorkDocs
+在 Amazon WorkDocs 中，用户通过使用用户名称和密码进行登录来访问共享文档。
+这些访问控制方法不属于 IAM。通过 IAM 可以控制如何管理这些 AWS 产品 — 创建或终止 Amazon EC2 实例、设置新 Amazon WorkSpaces 桌面等。也就是说，IAM 可帮助您控制通过向 Amazon Web Services 进行请求来执行的任务，并且可帮助您控制对 AWS 管理控制台的访问。但是，IAM 不会帮助您管理诸如登录操作系统 (Amazon EC2)、数据库 (Amazon RDS)、桌面 (Amazon WorkSpaces) 或协作站点 (Amazon WorkDocs) 等任务的安全性。
+
+当您使用特定 AWS 产品时，请务必阅读相应文档，了解属于该产品的所有资源的安全选项。
+## 入门
 
 ## Reference
 - [IAM](https://docs.amazonaws.cn/IAM/latest/UserGuide/introduction.html)
