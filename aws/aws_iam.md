@@ -369,8 +369,10 @@ PowerUser 组的成员可以完全访问除提供用户管理操作（如 IAM �
     }
    ```
 4. 要进一步减少策略对特定操作和资源的权限，请在 CloudTrail Event history (事件历史记录) 中查看您的事件。在此处，您可以查看有关用户已访问的特定操作和资源的详细信息。有关更多信息，请参阅 AWS CloudTrail 用户指南 中的[在 CloudTrail 控制台中查看 CloudTrail 事件](https://docs.amazonaws.cn/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html)。
-
 ### 用户如何登录您的账户
+在您创建 IAM 用户（带有密码）后，这些用户可使用您的账户 ID 或别名登录到 AWS 管理控制台，或从一个包含您的账户 ID 的自定义 URL 进行登录。
+
+> 注意：如果贵公司现在有一个身份系统，您可能需要创建单一登录 (SSO) 选项。SSO 向用户提供对 AWS 管理控制台 的访问权限，而不要求他们具有 IAM 用户身份。SSO 也无需用户单独登录您的组织的网站和 AWS。有关更多信息，请参阅[创建一个使联合用户能够访问 AWS 管理控制台（自定义联合代理）的 URL](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html)。
 
 ## Reference
 - [IAM](https://docs.amazonaws.cn/IAM/latest/UserGuide/introduction.html)
