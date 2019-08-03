@@ -172,8 +172,8 @@ IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策�
     > 注意：强烈建议您遵守以下使用 Administrator IAM 用户的最佳实践，妥善保存根用户凭证。只在执行少数[账户和服务管理任务](https://docs.amazonaws.cn/general/latest/gr/aws_tasks-that-require-root.html)时才作为根用户登录。
 2. 启用对你创建的IAM管理员账号的账单数据的访问权限
    + 在导航窗格中，选中你的账号名，然后选择My Account（我的账号）
-   + 接下来“IAM用户和角色账单信息”，选中Edit（编辑）
-   + 选中“激活IAM访问”的单选框，然后点击Update（更新）
+   + 接下来“IAM 用户和角色访问账单信息的权限”，选中Edit（编辑）
+   + 选中“激活 IAM 访问权限”的单选框，然后点击Update（更新）
    + 在导航窗格中，选择服务，然后IAM回到IAM控制页面。
 3. 在导航窗格中，选择 Users (用户)，然后选择Add user (添加用户)。
 4. 对于 User name，键入 Administrator。
@@ -182,7 +182,7 @@ IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策�
 7. 在设置权限页面上，选择将用户添加到组。
 8. 选择 Create group。
 9.  在 Create group (创建组) 对话框中，对于 Group name (组名称)，键入 Administrators。
-10. 选择 Policy Type (策略类型)，然后选择 Job function (作业功能) 以筛选表内容。
+10. 选择 Policy Type (策略类型)，然后选择 AWS托管以筛选表内容。
 11. 在策略列表中，选中 AdministratorAccess 的复选框。然后选择 Create group。
 12. 返回到组列表中，选中您的新组所对应的复选框。如有必要，选择 Refresh 以在列表中查看该组。
 13. 选择 Next: Tagging (下一步: 标记)。
@@ -191,6 +191,116 @@ IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策�
 
 您可使用此相同的流程创建更多的组和用户，并允许您的用户访问 AWS 账户资源。要了解有关使用限制用户对特定 AWS 资源的权限的策略的信息，请参阅[访问控制](https://docs.amazonaws.cn/IAM/latest/UserGuide/access.html)和[IAM 基于身份的策略示例](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_examples.html)。要在创建组之后向其中添加其他用户，请参阅[在IAM 组中添加和删除用户](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_groups_manage_add-remove-users.html)。
 
+#### 创建 IAM 用户和组 (AWS CLI)
+如果执行了上一节中的步骤，则您已使用 AWS 管理控制台 设置了一个管理员组，同时在您的 AWS 账户中创建了 IAM 用户。此过程显示创建组的替代方法。
+
+概述：设置管理员组
+1. 创建一个组并为其提供名称 (例如 Admins)。有关更多信息，请参阅创建组 (AWS CLI)。
+2. 附加一个策略以便为组提供管理权限（对所有 AWS 操作和资源的访问权限）。有关更多信息，请参阅将策略附加到组 (AWS CLI)。
+3. 向组至少添加一个用户。有关更多信息，请参阅[在您的 AWS 账户中创建 IAM 用户](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_users_create.html)。
+##### 创建组 (AWS CLI)
+1. 键入 [aws iam create-group](https://docs.amazonaws.cn/cli/latest/reference/iam/create-group.html)命令，并使用您为组选择的名称。（可选）您可以包含路径作为该群组名的一部分。有关路径的更多信息，请参阅 易记名称和路径。名称可包含字母、数字以及以下字符：加号 (+)、等号 (=)、逗号 (,)、句点 (.)、at 符号 (@)、下划线 (_) 和连字符 (-)。名称不区分大小写，且最大长度可为 128 个字符。
+
+在此示例中，您将创建名为 Admins 的组。
+```
+aws iam create-group --group-name Admins
+{
+    "Group": {
+        "Path": "/", 
+        "CreateDate": "2014-06-05T20:29:53.622Z", 
+        "GroupId":"ABCDEFGHABCDEFGHABCDE",
+        "Arn": "arn:aws-cn:iam::123456789012:group/Admins", 
+        "GroupName": "Admins"
+    }
+}
+```
+2. 键入[aws iam list-groups](https://docs.amazonaws.cn/cli/latest/reference/iam/list-groups.html) 命令以列出您的 AWS 账户中的组并确认该组已创建。
+```
+aws iam list-groups
+{
+    "Groups": [
+        {
+            "Path": "/", 
+            "CreateDate": "2014-06-05T20:29:53.622Z", 
+            "GroupId":"ABCDEFGHABCDEFGHABCDE", 
+            "Arn": "arn:aws-cn:iam::123456789012:group/Admins", 
+            "GroupName": "Admins"
+        }
+    ]
+}
+```
+响应中包括您的新群组的 Amazon 资源名称 (ARN)。ARN 是 AWS 用于识别资源的标准格式。ARN 中的 12 位数字是您的 AWS 账户 ID。您分配至组 (Admins) 的易记名称将在组 ARN 的末尾显示。
+##### 将策略附加到组 (AWS CLI)
+添加提供了完整管理员权限的策略 (AWS CLI)
+1. 键入 aws iam attach-group-policy 命令以将名为 AdministratorAccess 的策略附加到 Admins 组。该命令使用名为 AdministratorAccess 的 AWS 托管策略的 ARN。
+   ```
+   aws iam attach-group-policy --group-name Admins --policy-arn arn:aws-cn:iam::aws:policy/AdministratorAccess
+   ```
+   如果命令执行成功，则没有应答。
+2. 键入 aws iam list-attached-group-policies 命令以确认该策略已附加到 Admins 组。
+```
+aws iam list-attached-group-policies --group-name Admins
+```
+在响应中列出附加到 Admins 组的策略名称。类似如下的响应告诉您名为 AdministratorAccess 的策略已附加到 Admins 组：
+```
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "AdministratorAccess",
+            "PolicyArn": "arn:aws-cn:iam::aws:policy/AdministratorAccess"
+        }
+    ],
+    "IsTruncated": false
+}
+```
+您可使用 [aws iam get-policy](https://docs.amazonaws.cn/cli/latest/reference/iam/get-policy.html) 命令来确认特定策略的内容。
+> 重要：在您完成管理员群组的设置后，您必须在该群组中至少添加一位用户。有关向组中添加用户的更多信息，请参阅[在您的 AWS 账户中创建 IAM 用户](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_users_create.html)。
+##### 创建 IAM 用户（AWS CLI）
+1. 创建用户：[aws iam create-user](https://docs.amazonaws.cn/cli/latest/reference/iam/create-user.html)
+    ```
+    wangbb@wangbb-ThinkPad-T420:~/git/blogs$ aws iam create-user --user-name "admin"
+    {
+        "User": {
+            "UserName": "admin", 
+            "Path": "/", 
+            "CreateDate": "2019-08-03T01:32:54Z", 
+            "UserId": "AIDAQCVPU47ABPOFBEDIN", 
+            "Arn": "arn:aws:iam::005737080768:user/admin"
+        }
+    }
+    ```
+2. （可选）向用户提供对 AWS 管理控制台的访问权限。这需要密码。您必须还向用户提供您的账户登录页的 URL：
+     [aws iam create-login-profile](https://docs.amazonaws.cn/cli/latest/reference/iam/create-login-profile.html)
+    ```
+    wangbb@wangbb-ThinkPad-T420:~/git/blogs$ aws iam create-login-profile --user-name "admin" --password "XXXX"
+    {
+        "LoginProfile": {
+            "UserName": "admin", 
+            "CreateDate": "2019-08-03T01:34:09Z", 
+            "PasswordResetRequired": false
+        }
+    }
+    ```
+3. （可选）向用户提供编程访问。这需要访问密钥：[aws iam create-access-key](https://docs.amazonaws.cn/cli/latest/reference/iam/create-access-key.html)
+   ```
+    wangbb@wangbb-ThinkPad-T420:~/git/blogs$ aws iam create-access-key --user-name "admin"
+    {
+        "AccessKey": {
+            "UserName": "admin", 
+            "Status": "Active", 
+            "CreateDate": "2019-08-03T01:37:14Z", 
+            "SecretAccessKey": "I4EKl9sZfk29uTa6PbWtZY+XBSdJ0qFP7ZzNnUHy", 
+            "AccessKeyId": "AKIAQCVPU47AIQNHHJFQ"
+        }
+    }
+   ```
+4. 将该用户添加到一个或多个组。您指定的组应具有用于向用户授予适当的权限的附加策略：[aws iam add-user-to-group](https://docs.amazonaws.cn/cli/latest/reference/iam/add-user-to-group.html)
+5. （可选）向用户附加策略，此策略用于定义该用户的权限。注意：建议您通过将用户添加到一个组并向该组附加策略（而不是直接向用户附加策略）来管理用户权限：[aws iam attach-user-policy](https://docs.amazonaws.cn/cli/latest/reference/iam/attach-user-policy.html)
+6. （可选）通过附加标签来向用户添加自定义属性。有关更多信息，请参阅[管理 IAM 实体的标签（AWS CLI 或 AWS API）](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_tags.html#id_tags_procs-cli-api)。
+7. （可选）向用户授予用于管理其自身的安全凭证的权限。有关更多信息，请参阅AWS：[允许经过 MFA 身份验证的 IAM 用户在“My Security Credentials (我的安全凭证)”页面上管理自己的凭证](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_policies_examples_aws_my-sec-creds-self-manage.html)。
+
+### 创建委派用户
+### 用户如何登录您的账户
 
 ## Reference
 - [IAM](https://docs.amazonaws.cn/IAM/latest/UserGuide/introduction.html)
