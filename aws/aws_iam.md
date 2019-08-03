@@ -160,7 +160,37 @@ IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策�
 - 创建管理员组并向该组提供访问您 AWS 账户的所有资源的权限。
 - 为您自己创建一个用户并将该用户添加到管理员组。
 - 为您的用户创建密码，以便可以登录 AWS 管理控制台。
-您需要授予管理员组权限，以访问 AWS 账户内所有可用的资源。可用的资源是指您使用或注册的任何 AWS 产品。管理员组中的用户也可以访问您的 AWS 账户信息，AWS 账户的安全证书除外。
+您需要授予管理员组权限，以访问 AWS 账户内所有可用的源。可用的资源是指您使用或注册的任何 AWS 产品。管理员组中的用户也可以访问您的 AWS 账户信息，AWS 账户的安全证书除外。
+### 建您的第一个 IAM 管理员用户和组
+作为[最佳实践](https://docs.amazonaws.cn/IAM/latest/UserGuide/best-practices.html#lock-away-credentials)，请勿在不必要时使用 AWS 账户根用户 执行任务。而是应为需要管理员访问权限的每个人创建新的 IAM 用户。然后，通过将这些用户放入到一个您附加了 AdministratorAccess 托管策略的“管理员”组中，使这些用户成为管理员。
+
+#### 创建管理员 IAM 用户和组（控制台）：
+此过程将介绍如何使用 AWS 管理控制台 自行创建 IAM 用户，并将该用户添加到具有已附加托管策略中的管理权限的组。
+
+自行创建管理员用户并将该用户添加到管理员组（控制台）
+1. 使用 AWS 账户电子邮件地址和密码，以 AWS 账户根用户 身份登录到[IAM 控制台](https://console.aws.amazon.com/iam/) 
+    > 注意：强烈建议您遵守以下使用 Administrator IAM 用户的最佳实践，妥善保存根用户凭证。只在执行少数[账户和服务管理任务](https://docs.amazonaws.cn/general/latest/gr/aws_tasks-that-require-root.html)时才作为根用户登录。
+2. 启用对你创建的IAM管理员账号的账单数据的访问权限
+   + 在导航窗格中，选中你的账号名，然后选择My Account（我的账号）
+   + 接下来“IAM用户和角色账单信息”，选中Edit（编辑）
+   + 选中“激活IAM访问”的单选框，然后点击Update（更新）
+   + 在导航窗格中，选择服务，然后IAM回到IAM控制页面。
+3. 在导航窗格中，选择 Users (用户)，然后选择Add user (添加用户)。
+4. 对于 User name，键入 Administrator。
+5. 选中 AWS 管理控制台 access (AWS 管理控制台访问) 旁边的复选框，选择 Custom password (自定义密码)，然后在文本框中键入新密码。默认情况下，AWS 将强制新用户在首次登录时创建新密码。您可以选择清除 User must create a new password at next sign-in (用户必须在下次登录时创建新密码) 旁边的复选框，以允许新用户在登录后重置其密码。
+6. 选择 Next: Permissions (下一步: 权限)。
+7. 在设置权限页面上，选择将用户添加到组。
+8. 选择 Create group。
+9.  在 Create group (创建组) 对话框中，对于 Group name (组名称)，键入 Administrators。
+10. 选择 Policy Type (策略类型)，然后选择 Job function (作业功能) 以筛选表内容。
+11. 在策略列表中，选中 AdministratorAccess 的复选框。然后选择 Create group。
+12. 返回到组列表中，选中您的新组所对应的复选框。如有必要，选择 Refresh 以在列表中查看该组。
+13. 选择 Next: Tagging (下一步: 标记)。
+14. （可选）通过以键值对的形式附加标签来向用户添加元数据。有关在 IAM 中使用标签的更多信息，请参阅[标记 IAM 实体](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_tags.html)。
+15. 选择 Next: Review 以查看要添加到新用户的组成员资格的列表。如果您已准备好继续，请选择 Create user。
+
+您可使用此相同的流程创建更多的组和用户，并允许您的用户访问 AWS 账户资源。要了解有关使用限制用户对特定 AWS 资源的权限的策略的信息，请参阅[访问控制](https://docs.amazonaws.cn/IAM/latest/UserGuide/access.html)和[IAM 基于身份的策略示例](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_examples.html)。要在创建组之后向其中添加其他用户，请参阅[在IAM 组中添加和删除用户](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_groups_manage_add-remove-users.html)。
+
 
 ## Reference
 - [IAM](https://docs.amazonaws.cn/IAM/latest/UserGuide/introduction.html)
