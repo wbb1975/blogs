@@ -96,6 +96,7 @@ $ which aws
 您可以使用 deactivate 命令退出虚拟环境。不管何时启动新会话，都必须重新激活环境。
 
 要升级到最新版本，请重新运行安装命令。
+
 ```
 (cli-ve)~$ pip install --upgrade awscli
 ```
