@@ -90,13 +90,12 @@ $ which aws
 5. 验证 AWS CLI 是否已正确安装。
    ```
    $ aws --version
-  aws-cli/1.16.116 Python/3.6.8 Linux/4.14.77-81.59-amzn2.x86_64 botocore/1.12.106
+   aws-cli/1.16.116 Python/3.6.8 Linux/4.14.77-81.59-amzn2.x86_64 botocore/1.12.106
    ```
 
 您可以使用 deactivate 命令退出虚拟环境。不管何时启动新会话，都必须重新激活环境。
 
 要升级到最新版本，请重新运行安装命令。
-
 ```
 (cli-ve)~$ pip install --upgrade awscli
 ```
