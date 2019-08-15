@@ -365,4 +365,64 @@ for bucket in s3_resource.buckets.all():
     print(bucket.name)
 ```
 
-### 创建客户托管策略
+### 创建客户托管策略 (Create and Attach Your First Customer Managed Policy)
+在本教程中，您将使用 AWS 管理控制台创建一个[客户托管策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_managed-vs-inline.html#customer-managed-policies)，然后将该策略附加到您的 AWS 账户中的一个 IAM 用户。您创建的策略允许具有只读权限的 IAM 测试用户直接登录 AWS 管理控制台。
+
+此工作流程具有三个基本步骤：
+
+![Create Managed Policy](https://github.com/wbb1975/blogs/blob/master/aws/images/tutorial-managed-policies.png)
+#### 先决条件
+要执行本教程中的步骤，您必须已具备以下内容：
++ 可使用 IAM 用户身份登录的具有管理权限的 AWS 账户。
++ 未分配有如下权限或组成员资格的测试 IAM 用户：  
+  用户名称|组|权限
+   --|--|--
+  PolicyUser|<无>|无>
+#### 步骤 1：创建策略
+在该步骤中，您创建一个允许任何附加用户（具有 IAM 数据的只读访问权限）登录到 AWS 管理控制台的客户托管策略。
+1. 使用具有管理员权限的用户身份通过 https://console.amazonaws.cn/iam/ 登录 IAM 控制台。
+2. 在导航窗格中，选择 Policies。
+3. 在内容窗格中，选择创建策略。
+4. 选择 JSON 选项卡，然后复制以下 JSON 策略文档中的文本。将该文本粘贴到 JSON 文本框中。
+     ```
+     {
+        "Version": "2012-10-17",
+        "Statement": [ {
+            "Effect": "Allow",
+            "Action": [
+                "iam:GenerateCredentialReport",
+                "iam:Get*",
+                "iam:List*"
+            ],
+            "Resource": "*"
+        } ]
+    }
+     ```
+5. 完成后，选择查看策略。策略验证程序将报告任何语法错误。
+6. 在 Review (查看) 页面上，键入 UsersReadOnlyAccessToIAMConsole 作为策略名称。查看策略摘要以查看您的策略授予的权限，然后选择创建策略以保存您的工作。
+
+将在托管策略列表中显示新策略，并已准备好附加该策略。
+#### 步骤 2：附加策略
+1. 在 IAM 控制台的导航窗格中，选择 Policies。
+2. 在策略列表顶部的搜索框中，开始键入 UsersReadOnlyAccesstoIAMConsole，直到显示您的策略为止，然后选中列表中 UsersReadOnlyAccessToIAMConsole 旁边的框。
+3. 选择 Policy Actions 按钮，然后选择 Attach。
+4. 对于 Filter，选择 Users。
+5. 在搜索框中开始键入 PolicyUser，直到该用户在列表上显示为止，然后选中列表中该用户旁边的框。
+6. 选择 Attach Policy。
+
+您已将策略挂载到 IAM 测试用户，这意味着现在该用户具有 IAM 控制台的只读访问权限。
+#### 步骤 3：测试用户访问权限
+对于本教程，我们建议您以测试用户身份登录来测试访问权限，这样可以观察结果并了解用户体验。
+1. 使用您的 PolicyUser 测试用户通过 https://console.amazonaws.cn/iam/ 登录 IAM 控制台。
+   
+    ![IAM Alias Login](https://github.com/wbb1975/blogs/blob/master/aws/images/AccountAlias.console.png)
+2. 浏览控制台的各个页面并尝试创建新的用户或组。请注意，PolicyUser 可以显示数据，但无法创建或修改现有 IAM 数据。
+### 让您的用户能够配置他们自己的凭证和 MFA 设置(Enable Your Users to Configure Their Own Credentials and MFA Settings)
+您可以允许您的用户在 My Security Credentials (我的安全凭证) 页面上自行管理他们自己的多重验证 (MFA) 设备和凭证。您可以使用 AWS 管理控制台为少量用户配置凭证 (访问密钥、密码、签名证书和 SSH 公有密钥) 和 MFA 设备。但随着用户数增加，这个任务很快会变得非常耗时。安全最佳实践指定用户应定期更改其密码并轮换其访问密钥。他们还应该删除或停用不再需要的凭证。我们还强烈建议他们使用 MFA 进行敏感操作。本教程旨在介绍如何实现这些最佳实践，而不给您的管理员带来负担。
+
+本教程介绍如何允许用户访问 AWS 服务，不过此操作仅限于用户使用 MFA 登录的情况。如果未使用 MFA 设备登录，则用户无法访问其他服务。
+
+此工作流程具有三个基本步骤。
+
+![MFA](https://github.com/wbb1975/blogs/blob/master/aws/images/tutorial-mfa.png)
+#### 步骤 1：创建策略以实施 MFA 登录
