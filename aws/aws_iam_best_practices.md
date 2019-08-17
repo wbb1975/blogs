@@ -127,11 +127,75 @@ AWS 工作职能托管策略可以跨越多项服务，并与 IT 行业的常见
 
 有关更多信息，请参阅 IAM 策略元素参考中的[IAM JSON 策略元素：Condition](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_policies_elements_condition.html)。
 ### 监控 AWS 账户中的活动
+您可以使用 AWS 中的日志记录功能来确定用户在您的账户中进行了哪些操作，以及使用了哪些资源。日志文件会显示操作的时间和日期、操作的源 IP、哪些操作因权限不足而失败等。
+
+日志记录功能在以下 AWS 服务中可用：
++ [Amazon CloudFront](http://www.amazonaws.cn/cloudfront/) – 记录 CloudFront 收到的用户请求。有关更多信息，请参阅 Amazon CloudFront 开发人员指南 中的[访问日志](https://docs.amazonaws.cn/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html)。
++ [AWS CloudTrail](http://www.amazonaws.cn/cloudtrail/) – 记录由某个 AWS 账户发出或代表该账户发出的 AWS API 调用和相关事件。有关更多信息，请参阅[AWS CloudTrail User Guide](https://docs.amazonaws.cn/awscloudtrail/latest/userguide/)。
++ [Amazon CloudWatch](http://www.amazonaws.cn/cloudwatch/) – 监控您的 AWS 云资源以及您在 AWS 上运行的应用程序。您可以在 CloudWatch 中基于您定义的指标设置警报。有关更多信息，请参见[Amazon CloudWatch 用户指南](https://docs.amazonaws.cn/AmazonCloudWatch/latest/DeveloperGuide/)。
++ [AWS Config](http://www.amazonaws.cn/config/) – 提供有关您的 AWS 资源（包括您的 IAM 用户、组、角色和策略）的配置的详细历史信息。例如，您可以使用 AWS Config 确定在某个特定时间属于某个用户或组的权限。有关更多信息，请参见[AWS Config Developer Guide](https://docs.amazonaws.cn/config/latest/developerguide/)。
++ [Amazon Simple Storage Service (Amazon S3)](http://www.amazonaws.cn/s3/) – 记录发送到您的 Amazon S3 存储桶的访问请求。有关更多信息，请参阅Amazon Simple Storage Service 开发人员指南中的[服务器访问日志记录](https://docs.amazonaws.cn/AmazonS3/latest/dev/ServerLogs.html)。
 ### 关于 IAM 最佳实践的视频演示
+下列视频中包含一份会议报告，其中涵盖了这些最佳实践，并介绍了如何使用上述功能的更多详细信息。
 
-### 创建单独的 IAM 用户
-
+[IAW Vedio](https://www.youtube.com/embed/_wiGpBQGCjU)
 ## 商用案例
+IAM 的简单商用案例可帮助您了解使用该服务来控制您的用户所拥有的 AWS 访问权限的基本方法。此使用案例只是粗略介绍，并未涵盖您使用 IAM API 来实现所需结果的技术性细节。
+
+此使用案例将探讨一家名为 Example Corp 的虚构公司可能使用 IAM 的两种典型方式。第一个场景考虑 Amazon Elastic Compute Cloud (Amazon EC2)。第二个场景考虑 Amazon Simple Storage Service (Amazon S3)。
+
+有关通过 AWS 的其他服务使用 IAM 的更多信息，请参阅使用[IAM 的 AWS 服务](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)。
+### Example Corp 的初始设置
+John 是 Example Corp 创始人。在公司成立之初，他创建了自己的 AWS 账户，他本人使用 AWS 产品。之后，他雇佣了员工，担任开发人员、管理员、测试人员、经理及系统管理员。
+
+John 通过 AWS 账户根用户 凭证使用 AWS 管理控制台，为自己创建了名为 John 的用户以及名为 Admins 的组。他使用 AWS 托管策略 [AdministratorAccess](https://console.amazonaws.cn/iam/home#policies/arn:aws:iam::aws:policy/AdministratorAccess) 向 Admins 组授予了对所有 AWS 账户的资源执行所有操作的权限。然后，他将 John 用户添加到了 Admins 组中。有关为您自己创建管理员组和 IAM 用户，然后将用户添加至管理员组的分步指南，请参阅[创建您的第一个 IAM 管理员用户和组](https://docs.amazonaws.cn/IAM/latest/UserGuide/getting-started_create-admin-group.html)。
+
+此时，John 可以停止使用 根用户 的凭证与 AWS 交互，他开始只使用自己的用户凭证。
+
+John 还创建了一个名为 AllUsers 的组，这样他就可以将任何账户范围内的权限轻松应用于 AWS 账户内的所有用户。他将本人添加至该群组。随后，他又创建了名为 Developers、Testers、Managers 及 SysAdmins 的群组。他为每位员工创建了用户，并将这些用户归入各自的群组。他还将所有用户添加至 AllUsers 群组。有关创建组的信息，请参阅[创建 IAM 组](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_groups_create.html)。有关创建用户的信息，请参阅[在您的 AWS 账户中创建 IAM 用户](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_users_create.html)。有关向组中添加用户的信息，请参阅[管理 IAM 组](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_groups_manage.html)。
+### IAM 与 Amazon EC2 结合使用的使用案例
+类似 Example Corp 的公司通常使用 IAM 与类似 Amazon EC2 的服务互动。如要理解使用案例的这一部分，您需要对 Amazon EC2 有基本的了解。有关 Amazon EC2 的更多信息，请访问[Amazon EC2 用户指南（适用于 Linux 实例）](https://docs.amazonaws.cn/AWSEC2/latest/UserGuide/)。
+#### 用于组的 Amazon EC2 许可
+为提供“周边(perimeter)”控制，John 对 AllUsers 组附加了一个策略。如果来源 IP 地址位于 Example Corp 企业网络外部，则该策略拒绝用户的任何 AWS 请求。
+
+在 Example Corp.，不同的组需要不同的权限：
+- **System administrators** – 需要创建和管理 AMI、实例、快照、卷、安全组等的权限。John 向 SysAdmins 组附加了一个策略，以为该组成员授予使用所有 Amazon EC2 操作的权限。
+- **Developers** – 只需能够使用实例即可。因此，John 向 Developers 组附加了策略，以允许开发人员调用 DescribeInstances、RunInstances、StopInstances、StartInstances 及 TerminateInstances。
+  > Amazon EC2 使用 SSH 密钥、Windows 密码及安全组来控制哪些人能够访问特定 Amazon EC2 实例的操作系统。在 IAM 系统中，无法允许或拒绝访问特定实例的操作系统。
+- **Managers** – 无法执行任何 Amazon EC2 操作，但可列出当前可用的 Amazon EC2 资源。因此，John 向 Managers 组附加了一个策略，以便仅允许该组成员调用 Amazon EC2 "Describe" API 操作。
+
+如需有关上述策略具体形式的示例，请参阅Amazon EC2 用户指南（适用于 Linux 实例）中的[IAM 基于身份的策略示例](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_examples.html)和[使用 AWS Identity and Access Management](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_examples.html)。
+#### 用户的角色转换
+此时，其中一位开发人员 Paulo 的角色发生转变，成为一名管理人员。John 将 Paulo 从 Developers 组移至 Managers 组。现在，Paulo 位于 Managers 组，因此他与 Amazon EC2 实例交互的能力受到限制。他无法启动或启用实例。即使他是启动或启用实例的用户，也无法停止或终止现有实例。他只能列出 Example Corp 用户已启动的实例。
+### IAM 与 Amazon S3 结合使用的使用案例
+类似 Example Corp 的公司通常还通过 Amazon S3 使用 IAM。John 已为公司创建了 Amazon S3 存储桶，并将其命名为 example_bucket。
+#### 创建其他用户和群组
+作为员工，Zhang 和 Mary 都需要能够在公司的存储桶中创建自己的数据。他们还需要读取和写入所有开发人员都要处理的共享数据。为做到这一点，John 采用 Amazon S3 密钥前缀方案，在 example_bucket 中按照逻辑方式排列数据，如下图所示。
+```
+/example_bucket
+    /home
+        /zhang
+        /mary
+    /share
+        /developers
+        /managers
+```
+John 针对每位员工将主 /example_bucket 分隔成一系列主目录，并为开发人员和管理人员组留出一个共享区域。
+
+现在，John 创建一组策略，以便向用户和组分配权限：
++ **Zhang 的主目录访问** – John 向 Zhang 附加的策略允许后者读取、写入和列出带 Amazon S3 密钥前缀 /example_bucket/home/Zhang/ 的任何对象
++ **Mary 的主目录访问** – John 向 Mary 附加的策略允许后者读取、写入和列出带 Amazon S3 键前缀 /example_bucket/home/mary/ 的任何对象
++ **Developers 组的共享目录访问** – John 向该组附加的策略允许开发人员读取、写入和列出 /example_bucket/share/developers/ 中的任何对象
++ **Managers 组的共享目录访问** – John 向该组附加的策略允许管理人员读取、写入和列出 /example_bucket/share/managers/ 中的对象
+> **注意**：对于创建存储段或对象的用户，Amazon S3 不会自动授予其对存储段或对象执行其他操作的许可。因此，在您的 IAM 策略中，您必须显式授予用户使用他们所创建的 Amazon S3 资源的许可。
+
+如需有关上述策略具体形式的示例，请参见 Amazon Simple Storage Service 开发人员指南 中的[Access Control](https://docs.amazonaws.cn/AmazonS3/latest/dev/UsingAuthAccess.html)。有关如何在运行时对策略进行评估的信息，请参阅[策略评估逻辑](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)。
+#### 用户的角色转换
+此时，其中一位开发人员 Zhang 的角色发生转变，成为一名管理人员。我们假设他不再需要访问 share/developers 目录中的文档。作为管理员，John 将 Zhang 从 Managers 组移至 Developers 组。通过简单的重新分配，Zhang 将自动获得所有授予给 Managers 组的权限，但将无法再访问 share/developers 目录中的数据。
+#### 与第三方企业集成
+组织经常与合作公司、顾问及承包商合作。Example Corp 是 Widget Company 的合作伙伴，而 Widget Company 的员工 Shirley 需要将数据放入存储桶中，以供 Example Corp 使用。John 创建了一个名为 WidgetCo 的组和名为 Shirley 的用户，并将 Shirley 添加至 WidgetCo 组。John 还创建了一个名为 example_partner_bucket 的专用存储桶，以供 Shirley 使用。
+
+John 更新现有策略或添加新的策略来满足合作伙伴 Widget Company 的需求。例如，John 可新建用于拒绝 WidgetCo 组成员使用任何操作 (写入操作除外) 的策略。除非有一个广泛的策略，授予所有用户访问大量 Amazon S3 操作的许可，否则此策略将非常必要。
 
 ## 参考
 - [IAM 最佳实践和使用案例](https://docs.amazonaws.cn/IAM/latest/UserGuide/IAMBestPracticesAndUseCases.html)
