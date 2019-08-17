@@ -136,9 +136,7 @@ AWS 工作职能托管策略可以跨越多项服务，并与 IT 行业的常见
 + [AWS Config](http://www.amazonaws.cn/config/) – 提供有关您的 AWS 资源（包括您的 IAM 用户、组、角色和策略）的配置的详细历史信息。例如，您可以使用 AWS Config 确定在某个特定时间属于某个用户或组的权限。有关更多信息，请参见[AWS Config Developer Guide](https://docs.amazonaws.cn/config/latest/developerguide/)。
 + [Amazon Simple Storage Service (Amazon S3)](http://www.amazonaws.cn/s3/) – 记录发送到您的 Amazon S3 存储桶的访问请求。有关更多信息，请参阅Amazon Simple Storage Service 开发人员指南中的[服务器访问日志记录](https://docs.amazonaws.cn/AmazonS3/latest/dev/ServerLogs.html)。
 ### 关于 IAM 最佳实践的视频演示
-下列视频中包含一份会议报告，其中涵盖了这些最佳实践，并介绍了如何使用上述功能的更多详细信息。
-
-[IAW Vedio](https://www.youtube.com/embed/_wiGpBQGCjU)
+下列视频中包含一份会议报告，其中涵盖了这些最佳实践，并介绍了如何使用上述功能的更多详细信息。[IAW Vedio](https://www.youtube.com/embed/_wiGpBQGCjU)
 ## 商用案例
 IAM 的简单商用案例可帮助您了解使用该服务来控制您的用户所拥有的 AWS 访问权限的基本方法。此使用案例只是粗略介绍，并未涵盖您使用 IAM API 来实现所需结果的技术性细节。
 
