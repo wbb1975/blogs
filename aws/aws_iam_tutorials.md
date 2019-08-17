@@ -379,7 +379,7 @@ for bucket in s3_resource.buckets.all():
   用户名称|组|权限
    --|--|--
   PolicyUser|<无>|无>
-  
+
 #### 步骤 1：创建策略
 在该步骤中，您创建一个允许任何附加用户（具有 IAM 数据的只读访问权限）登录到 AWS 管理控制台的客户托管策略。
 1. 使用具有管理员权限的用户身份通过 https://console.amazonaws.cn/iam/ 登录 IAM 控制台。
@@ -427,4 +427,57 @@ for bucket in s3_resource.buckets.all():
 此工作流程具有三个基本步骤。
 
 ![MFA](https://github.com/wbb1975/blogs/blob/master/aws/images/tutorial-mfa.png)
+#### 先决条件
+要执行本教程中的步骤，您必须已具备以下内容：
+- 可使用 IAM 用户身份登录的具有管理权限的 AWS 账户。
+- 您在步骤 1 的策略中键入的账户 ID 号。
+- [虚拟（基于软件的）MFA 设备](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_credentials_mfa_enable_virtual.html)、[U2F 安全密钥](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_credentials_mfa_enable_u2f.html)或[基于硬件的 MFA 设备](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_credentials_mfa_enable_physical.html)。
+- 一个作为组成员的测试 IAM 用户，如下所示：
+
+创建用户账户|创建和配置组账户
+用户名称|其他说明|组名|将用户添加为成员|其他说明
+--|--|--|--|--
+MFAUser|仅选择 AWS 管理控制台 access (AWS 管理控制台访问) 选项，然后分配密码。|EC2MFA|MFAUser|请勿向此组附加任何策略或授予任何权限。
 #### 步骤 1：创建策略以实施 MFA 登录
+首先创建一个 IAM 客户托管策略，除 IAM 用户管理其自有凭证和 MFA 设备所需的权限外，该策略拒绝其他所有权限。
+1. 使用具有管理员凭证的用户身份登录 AWS 管理控制台。根据 IAM 最佳实践，请勿使用 AWS 账户根用户凭证登录。有关更多信息，请参阅创建单独的 [IAM 用户](http://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#create-iam-users)。
+2. 通过以下网址打开 IAM 控制台：https://console.amazonaws.cn/iam/。
+3. 在导航窗格中选择 Policies，然后选择 Create policy。
+4. 选择 JSON 选项卡，然后复制以下 JSON 策略文档中的文本：[AWS：允许经过 MFA 身份验证的 IAM 用户在“My Security Credentials (我的安全凭证)”页面上管理自己的凭证](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_policies_examples_aws_my-sec-creds-self-manage.html)。
+5. 将策略文本粘贴到 JSON 文本框中，然后选择 Review policy (查看策略)。策略验证程序将报告任何语法错误。
+6. 在 Review (查看) 页面上，键入 Force_MFA 作为策略名称。对于策略说明，键入 This policy allows users to manage their own passwords and MFA devices but nothing else unless they authenticate with MFA.。查看策略 Summary (摘要) 以查看您的策略授予的权限，然后选择 Create policy (创建策略) 以保存您的工作。
+
+将在托管策略列表中显示新策略，并已准备好附加该策略。
+#### 步骤 2：将策略附加到您的测试组
+接下来，您将**两个策略**附加到测试 IAM 组，将使用该组授予受 MFA 保护的权限。
+1. 在导航窗格中，选择 Groups。
+2. 在搜索框中键入 EC2MFA，然后在列表中选择组名称 (而不是选中复选框)。
+3. 在 Permissions 选项卡上，单击 Attach Policy。
+4. 在 Attach Policy (附加策略) 页上的搜索框中键入 EC2Full，然后选中列表中 AmazonEC2FullAccess 旁的复选框。暂不保存您的更改。
+5. 在搜索框中键入 Force，然后选中列表中 Force_MFA 旁的复选框。
+6. 选择 Attach Policy。
+#### 步骤 3：测试您的用户的访问权限
+在本教程的这一部分中，您以测试用户身份登录并验证策略是否正常工作。
+1. 使用上一部分中分配给您的密码，以 MFAUser 身份登录您的 AWS 账户。使用 URL：https://<alias or account ID number>.signin.www.amazonaws.cn/console
+2. 选择 EC2 打开 Amazon EC2 控制台，验证此用户没有执行任何操作的权限。
+3. 在导航栏上，选择 Services (服务)，然后选择 IAM 以打开 IAM 控制台。
+4. 在导航窗格中，选择 Users，然后选择用户（不是复选框）MFAUser。如果默认显示组选项卡，请注意，这表示您无权查看您的组成员。
+5. 现在添加一个 MFA 设备。选择 Security Credentials 选项卡。在 Assigned MFA device (已分配 MFA 设备) 旁边，选择 Manage (管理)。
+6. 对于本教程，我们使用一个虚拟 (基于软件的) MFA 设备，例如，手机上的 Google Authenticator 应用程序。选择 Virtual MFA device (虚拟 MFA 设备)，然后单击 Continue (继续)。
+     
+     IAM 将生成并显示虚拟 MFA 设备的配置信息，包括 QR 代码图形。此图形是秘密配置密钥的表示形式，适用于不支持 QR 代码的设备上的手动输入。
+7. 打开您的虚拟 MFA 应用程序。（有关可以用作托管虚拟 MFA 设备的应用程序的列表，请参阅[虚拟 MFA 应用程序](http://www.amazonaws.cn/iam/details/mfa/#Virtual_MFA_Applications)。） 如果虚拟 MFA 应用程序支持多个账户 (多个虚拟 MFA 设备)，请选择相应的选项以创建新账户 (新的虚拟 MFA 设备)。
+8. 确定 MFA 应用程序是否支持 QR 代码，然后执行以下操作之一：
+    + 在向导中，选择 Show QR code (显示 QR 代码)。使用此应用程序扫描 QR 代码。例如，您可选择摄像头图标或选择类似于 Scan code 的选项，然后使用设备的摄像头扫描此代码。
+    + 在 Manage MFA Device (管理 MFA 设备) 向导中，选择 Show secret key (显示私有密钥)，然后在您的 MFA 应用程序中键入私有密钥。
+  
+    完成操作后，虚拟 MFA 设备会开始生成一次性密码。
+9.  在 Manage MFA Device (管理 MFA 设备) 向导的 MFA Code 1 (MFA 代码 1) 框中，键入虚拟 MFA 设备上当前显示的一次性密码。请等候 30 秒，以便设备生成新的一次性密码。然后在 MFA Code 2 (MFA 代码 2) 框中键入第二个一次性密码。选择 Assign MFA (分配 MFA)。
+    > 重要：生成代码之后立即提交您的请求。如果在生成代码后等待很长时间才提交请求，MFA 设备将成功与用户关联，但 MFA 设备不同步。这是因为基于时间的一次性密码 (TOTP) 很快会过期。这种情况下，您可以重新同步设备。
+
+    虚拟 MFA 设备现已准备好与 AWS 一起使用。
+10. 从控制台注销，然后重新以 MFAUser 身份登录。此时 AWS 会提示输入您手机中的 MFA 代码。收到该代码后，请将代码键入框中，然后选择 Submit。
+11. 选择 EC2 以再次打开 Amazon EC2 控制台。请注意，这次您可以看到所有信息，并且可以执行所需的任何操作。如果以该用户身份访问任何其他控制台，将会看到“访问被拒绝”消息，因为本教程中的策略仅授予对 Amazon EC2 的访问权限。
+
+## 参考
+- [IAW教程](https://docs.amazonaws.cn/IAM/latest/UserGuide/tutorials.html)
