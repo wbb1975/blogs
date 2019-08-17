@@ -148,13 +148,13 @@ IAM 控制台搜索功能可查找以下所有项目：
 
 图标|描述
 --|--
-![IAM 用户]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_user.png)|IAM 用户
-![IAM 组]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_group.png)|IAM 组
-![IAM 角色]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_role.png)|IAM 角色
-![IAM 策略]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_policy.png)|IAM 策略
-![“创建任务”或“附加策略”等任务]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_action.png)|创建任务”或“附加策略”等任务
-![使用关键字 delete 搜索到的结果]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_delete.png)|使用关键字 delete 搜索到的结果
-![IAM 文档]((https://github.com/wbb1975/blogs/blob/master/aws/images/search_help.png)|IAM 文档
+![IAM 用户](https://github.com/wbb1975/blogs/blob/master/aws/images/search_user.png)|IAM 用户
+![IAM 组](https://github.com/wbb1975/blogs/blob/master/aws/images/search_group.png)|IAM 组
+![IAM 角色](https://github.com/wbb1975/blogs/blob/master/aws/images/search_role.png)|IAM 角色
+![IAM 策略](https://github.com/wbb1975/blogs/blob/master/aws/images/search_policy.png)|IAM 策略
+![“创建任务”或“附加策略”等任务](https://github.com/wbb1975/blogs/blob/master/aws/images/search_action.png)|创建任务”或“附加策略”等任务
+![使用关键字 delete 搜索到的结果](https://github.com/wbb1975/blogs/blob/master/aws/images/search_delete.png)|使用关键字 delete 搜索到的结果
+![IAM 文档](https://github.com/wbb1975/blogs/blob/master/aws/images/search_help.png)|IAM 文档
 ### 搜索短语示例
 您可以在 IAM 搜索中使用以下短语。将各个斜体词分别替换为您要查找的实际 IAM 用户、组、角色、访问密钥、策略或标识提供程序的名称。
 - ***user_name*** 或 ***group_name*** 或 ***role_name*** 或 ***policy_name*** 或 ***identity_provider_name***
