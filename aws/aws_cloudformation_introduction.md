@@ -144,7 +144,7 @@ AWS CloudFormation 通过调用您的模板中描述的 AWS 服务来配置资�
 #### 使用更改集更新堆栈
 在需要更新堆栈的资源时，您可以修改堆栈的模板。您不需要创建新堆栈和删除旧堆栈。要更新堆栈，请提交修改的原始堆栈模板版本和/或不同的输入参数值以创建一个更改集。AWS CloudFormation 将修改的模板与原始模板进行比较并生成一个更改集。更改集列出了建议的更改。在审核更改后，您可以执行更改集以更新堆栈，也可以创建新的更改集。以下示意图概述了用于更新堆栈的工作流程
 
-![Stack Update Process](https://github.com/wbb1975/blogs/blob/master/aws/update-stack-diagram.png)!
+![Stack Update Process](https://github.com/wbb1975/blogs/blob/master/aws/images/update-stack-diagram.png)!
 
 > **重要**  更新可能会导致中断。根据您所更新的资源和属性，更新可能会中断或者甚至替换现有资源。有关更多信息，请参阅[AWS CloudFormation 堆栈更新](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks.html)。
 1. 您可以使用 [AWS CloudFormation Designer](https://console.aws.amazon.com/cloudformation/designer) 或文本编辑器修改 AWS CloudFormation 堆栈模板。例如，如果您需要更改 EC2 实例的实例类型，可更改原始堆栈模板中的 InstanceType 属性的值。
