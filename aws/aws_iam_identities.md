@@ -17,9 +17,45 @@
 - **临时证书**
   
    临时凭证主要用于 IAM 角色，但也有其他用途。您可以请求权限集比标准 IAM 用户限制更严格的临时凭证。这可以防止您意外执行限制更严格的凭证不允许执行的任务。临时凭证的一个好处是会在设定的时间段后自动过期。您可以控制这些凭证的有效期。
-- **何时创建 IAM 用户 (而不是角色)**
-- **何时创建 IAM 角色 (而不是用户)**
+### **何时创建 IAM 用户 (而不是角色)**
+由于 IAM 用户只是您的账户中一个具有特定权限的身份，因此可能不需要为每个需要凭证的场合都创建 IAM 用户。在许多情况下，可利用 IAM 角色及其临时安全凭证来代替使用与 IAM 用户关联的长期凭证。
+- **您创建了 AWS 账户，您是唯一使用您的账户的人员。**
+
+  可通过您的 AWS 账户的根用户凭证使用 AWS，但我们建议不要这样做。相反，强烈建议您为自己创建一个 IAM 用户，并通过该用户的凭证使用 AWS。有关更多信息，请参阅IAM 最佳实践。
+
+- **您所在组中的其他人需要在您的 AWS 账户中工作，而您的组不使用其他身份机制。**
+
+  为需要访问您的 AWS 资源的个人创建 IAM 用户，向每个用户分配相应的权限，然后为每个用户提供他们的凭证。强烈建议您不要在多个用户间共享凭证。
+
+- **您需要通过命令行界面 (CLI) 使用 AWS。**
+
+  CLI 需要借助凭证才能调用 AWS。创建一个 IAM 用户，然后向该用户授予相应的权限，用于运行您需要的 CLI 命令。然后，将计算机上的 CLI 配置为使用与 IAM 用户关联的访问密钥凭证。
+### **何时创建 IAM 角色 (而不是用户)**
+在以下情况下创建 IAM 角色：
+- **您要创建一个在 Amazon Elastic Compute Cloud (Amazon EC2) 实例上运行的应用程序，该应用程序向 AWS 提出请求。**
+  
+   请勿创建 IAM 用户并将该用户的凭证传递给该应用程序，也不要在该应用程序中嵌入凭证。相反，可创建附加到 EC2 实例的 IAM 角色来向实例上运行的应用程序提供临时安全凭证。这些凭证拥有附加到角色的策略中指定的权限。有关详细信息，请参阅[使用 IAM角色向在 Amazon EC2 实例上运行的应用程序授予权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html)。
+- **您正在创建一个应用程序，该应用程序在手机上运行，并向 AWS 发出请求。**
+  
+   请勿创建 IAM 用户并用该应用程序分发该用户的访问密钥。相反，请使用身份提供商 (如 Login with Amazon、Amazon Cognito、Facebook 或 Google) 验证用户的身份并将该用户映射到 IAM 角色。应用程序可使用角色获取临时安全凭证，这些凭证拥有附加到该角色的策略中指定的权限。有关更多信息，请参阅下列内容：
+    + 适用于 Android 的 AWS 移动软件开发工具包 Developer Guide 中的[Amazon Cognito 概述](https://docs.amazonaws.cn/mobile/sdkforandroid/developerguide/cognito-auth.html#d0e840)
+    + AWS Mobile SDK for iOS Developer Guide 中的[Amazon Cognito 概述](https://docs.amazonaws.cn/mobile/sdkforios/developerguide/cognito-auth.html#d0e664)
+    + [关于 Web 联合身份验证](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_oidc.html)
+- **您公司中的用户在企业网络中进行身份验证，需要能够使用 AWS 而不必重新登录 — 即，您需要允许用户向 AWS 进行联合身份验证。**
+  不要创建 IAM 用户。在您的企业身份系统和 AWS 之间配置联合关系。您可以通过两种方式执行此操作：
+    + 如果您公司的身份系统与 SAML 2.0 兼容，则可在您公司的身份系统与 AWS 之间建立信任。有关更多信息，请参阅[关于基于 SAML 2.0 的联合身份验证](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_saml.html)。
+    + 创建并使用将企业中的用户身份转换为 IAM 角色以及提供临时 AWS 安全凭证的自定义代理服务器。有关更多信息，请参阅[创建一个使联合用户能够访问 AWS 管理控制台（自定义联合代理）的 URL](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html)。
 ## 用户
+AWS Identity and Access Management (IAM) 用户 是您在 AWS 中创建的一个实体，该实体代表使用它与 AWS 进行交互的人员或应用程序。AWS 中的用户包括名称和凭证。
+
+具备管理员权限的 IAM 用户与账户 AWS 账户根用户并不是一回事。有关 根用户 的更多信息，请参阅[AWS 账户根用户](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_root-user.html)。
+- **AWS 如何标识 IAM 用户**
+- **用户和凭证**
+- **用户和权限**
+- **用户和账户**
+- **作为账户服务的用户**
+
+### 添加用户
 ## 组
 ## 角色
 ## 标记实体
