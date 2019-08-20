@@ -49,7 +49,7 @@ AWS CloudFormation 支持以下 JSON 和 YAML 规范：
      - 哈希合并
 
    有关 YAML 的更多信息，请访问 http://www.yaml.org。
-## 模板剖析
+## 模板剖析 (Template Anatomy)
 模板是一个 JSON 或 YAML 格式的文本文件，该文件描述您的 AWS 基础设施。以下示例显示 AWS CloudFormation 模板结构和各个部分。
 ### JSON
 以下示例显示 JSON 格式的模板片段：
@@ -168,6 +168,307 @@ AWSTemplateFormatVersion 部分 (可选) 标识模板的功能。最新的模板
 AWSTemplateFormatVersion: "2010-09-09"
 ```
 ### Description
+Description 部分（可选）使您能够包含有关您的模板的评论。Description 必须紧随 AWSTemplateFormatVersion 部分之后。
+
+描述声明的值必须是长度介于 0 和 1024 个字节之间的文字字符串。您无法使用参数或函数来指定描述。以下代码段是描述声明的示例：
+
+**JSON**
+
+```
+"Description" : "Here are some details about the template."
+```
+
+**YAML**
+
+```
+Description: >
+  Here are some
+  details about
+  the template.
+```
+### 元数据
+您可以使用可选的 Metadata 部分包括任意 JSON 或 YAML 对象，用于提供模板详细信息。例如，可以包括有关特定资源的模板实现详细信息，如以下代码段所示：
+> **重要**  堆栈更新期间，您无法更新 Metadata 部分本身。您只能在包括添加、修改或删除资源的更改时更新它。
+
+**JSON**
+
+```
+"Metadata" : {
+  "Instances" : {"Description" : "Information about the instances"},
+  "Databases" : {"Description" : "Information about the databases"}
+```
+
+**YAML**
+
+```
+Metadata:
+  Instances:
+    Description: "Information about the instances"
+  Databases: 
+    Description: "Information about the databases"
+```
+
+#### 元数据键
+某些 AWS CloudFormation 功能可在 Metadata 部分中检索您定义的设置或配置信息。您可在以下特定于 AWS CloudFormation 的元数据键中定义此信息：
+##### AWS::CloudFormation::Init
+为 cfn-init 帮助程序脚本定义配置任务。要在 EC2 实例上配置和安装应用程序，此脚本很有用。有关更多信息，请参阅 [AWS::CloudFormation::Init](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/aws-resource-init.html)。
+##### AWS::CloudFormation::Interface
+定义在 AWS CloudFormation 控制台中显示输入参数时的分组和排序。默认情况下，AWS CloudFormation 控制台根据参数的逻辑 ID 按照字母顺序排序。有关更多信息，请参阅[AWS::CloudFormation::Interface](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-interface.html)。
+##### AWS::CloudFormation::Designer
+描述您的资源在 AWS CloudFormation Designer (Designer) 中如何排列。当您使用它创建和更新模板时，Designer 会自动添加此信息。有关更多信息，请参阅 [什么是 AWS CloudFormation Designer？](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/working-with-templates-cfn-designer.html)
+### 参数
+使用可选的 Parameters 部分来自定义模板。利用参数，您能够在每次创建或更新堆栈时将自定义值输入模板。
+#### 在模板中定义参数
+以下示例声明名为 InstanceTypeParameter 的参数。利用此参数，您可以为堆栈指定 Amazon EC2 实例类型以在创建或更新堆栈时使用。
+
+请注意，InstanceTypeParameter 具有默认值 t2.micro。除非提供有其他值，否则这是 AWS CloudFormation 用于预置堆栈的值。
+
+**JSON**
+```
+"Parameters" : {
+  "InstanceTypeParameter" : {
+    "Type" : "String",
+    "Default" : "t2.micro",
+    "AllowedValues" : ["t2.micro", "m1.small", "m1.large"],
+    "Description" : "Enter t2.micro, m1.small, or m1.large. Default is t2.micro."
+  }
+}
+```
+
+**YAML**
+
+```
+Parameters: 
+  InstanceTypeParameter: 
+    Type: String
+    Default: t2.micro
+    AllowedValues: 
+      - t2.micro
+      - m1.small
+      - m1.large
+    Description: Enter t2.micro, m1.small, or m1.large. Default is t2.micro.
+```
+#### 在模板中引用参数
+您使用 Ref 内部函数来引用某个参数，AWS CloudFormation 使用该参数的值来预置堆栈。您可以引用同一模板的 Resources 和 Outputs 部分中的参数。
+
+在以下示例中，EC2 实例资源的 InstanceType 属性引用了 InstanceTypeParameter 参数值：
+
+**JSON**
+```
+"Ec2Instance" : {
+  "Type" : "AWS::EC2::Instance",
+  "Properties" : {
+    "InstanceType" : { "Ref" : "InstanceTypeParameter" },
+    "ImageId" : "ami-0ff8a91507f77f867"
+  }
+}"Ec2Instance" : {
+  "Type" : "AWS::EC2::Instance",
+  "Properties" : {
+    "InstanceType" : { "Ref" : "InstanceTypeParameter" },
+    "ImageId" : "ami-0ff8a91507f77f867"
+  }
+}
+```
+
+**YAML**
+
+```
+Ec2Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    InstanceType:
+      Ref: InstanceTypeParameter
+    ImageId: ami-0ff8a91507f77f867
+```
+#### 参数的一般要求
+- 一个 AWS CloudFormation 模板中最多可包含 60 个参数。
+- 必须为每个参数提供一个逻辑名称 (也称为逻辑 ID)，该名称必须是字母数字，并且在模板内的所有逻辑名称中必须是唯一的。
+- 必须向每个参数分配一个受 AWS CloudFormation 支持的参数类型。有关更多信息，请参阅[类型](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#parameters-section-structure-properties-type)。
+- 必须向每个参数分配一个运行时的值，使 AWS CloudFormation 能够成功预置堆栈。您可以选择为要使用的 AWS CloudFormation 指定默认值，除非提供有其他值。
+- 必须在同一模板内声明和引用参数。您可以引用模板的 Resources 和 Outputs 部分中的参数。
+
+**JSON**
+
+```
+"Parameters" : {
+  "ParameterLogicalID" : {
+    "Type" : "DataType",
+    "ParameterProperty" : "value"
+  }
+}
+```
+
+**YAML**
+
+```
+Parameters:
+  ParameterLogicalID:
+    Type: DataType
+    ParameterProperty: value
+```
+#### 属性
+- AllowedPattern
+  
+   一个正则表达式，表示要允许 String 类型使用的模式。
+
+   Required: No
+- AllowedValues
+  
+   包含参数允许值列表的阵列。
+
+   Required: No
+- ConstraintDescription
+
+   用于在违反约束时说明该约束的字符串。例如，在没有约束条件描述的情况下，具有允许的 [A-Za-z0-9]+ 模式的参数会在用户指定无效值时显示以下错误消息：
+
+   Malformed input-Parameter MyParameter must match pattern [A-Za-z0-9]+
+
+   通过添加约束描述（如 must only contain letters (uppercase and lowercase) and numbers），您可以显示以下自定义的错误消息：
+
+   Malformed input-Parameter MyParameter must only contain uppercase and lowercase letters and numbers
+
+   Required: No
+- Default
+  
+   模板适当类型的值，用于在创建堆栈时未指定值的情况下。如果您定义参数的约束，则必须指定一个符合这些约束的值。
+
+   Required: No
+- Description
+  
+   用于描述参数的长度最多为 4000 个字符的字符串。
+
+   Required: No
+- MaxLength
+  
+   一个整数值，确定要允许 String 类型使用的字符的最大数目。
+
+   Required: No
+- MaxValue
+  
+   一个数字值，确定要允许 Number 类型使用的最大数字值。
+
+   Required: No
+- MinLength
+
+   一个整数值，确定要允许 String 类型使用的字符的最小数目。
+
+   Required: No
+- MinValue
+   
+   一个数字值，确定要允许 Number 类型使用的最小数字值。
+
+   Required: No
+- NoEcho
+
+   在发出描述堆栈的调用时是否掩蔽参数值。如果将值设置为 true，则使用星号 (*****) 掩蔽参数值。
+
+   Required: No
+- Type
+
+   参数 (DataType) 的数据类型。
+
+   Required: Yes
+
+   AWS CloudFormation 支持以下参数类型：
+
+   String
+
+      一个文字字符串。
+
+      例如，用户可指定 "MyUserName"。
+
+   Number
+
+      整数或浮点数。AWS CloudFormation 将参数值验证为数字；但当您在模板中的其他位置使用该参数时（例如，通过使用 Ref 内部函数），该参数值将变成字符串。
+
+      例如，用户可指定 "8888"。
+
+   List<Number>
+  
+      一组用逗号分隔的整数或浮点数。AWS CloudFormation 将参数值验证为数字，但当您在模板中的其他位置使用该参数时（例如，通过使用 Ref 内部函数），该参数值将变成字符串列表。
+
+      例如，用户可指定 "80,20"，并且 Ref 将生成 ["80","20"]。
+
+   CommaDelimitedList
+
+      一组用逗号分隔的文本字符串。字符串的总数应比逗号总数多 1。此外，会对每个成员字符串进行空间修剪。
+
+      例如，用户可指定 "test,dev,prod"，并且 Ref 将生成 ["test","dev","prod"]。
+
+   AWS 特定的参数类型
+
+      AWS 值，例如 Amazon EC2 密钥对名称和 VPC ID。有关更多信息，请参阅[AWS 特定的参数类型](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)。
+
+   SSM 参数类型
+
+      与 Systems Manager Parameter Store 中的现有参数对应的参数。您指定 Systems Manager 参数键作为 SSM 参数的值，并且 AWS CloudFormation 从 Parameter Store 提取最新值来用于堆栈。有关更多信息，请参阅 [SSM 参数类型](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-ssm-parameter-types。)
+
+      > **注意**  AWS CloudFormation 目前不支持 SecureString Systems Manager 参数类型。
+#### AWS 特定的参数类型
+要在开始创建或更新堆栈时捕获无效值，特定于 AWS 的参数类型很有帮助。要使用特定于 AWS 的类型指定参数，模板用户必须输入其 AWS 账户中的现有 AWS 值。AWS CloudFormation 针对该账户中的现有值来验证这些输入值。例如，对于 AWS::EC2::VPC::Id 参数类型，用户必须[输入在其中创建堆栈的账户和区域中的现有 VPC ID](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/cfn-using-console-create-stack-parameters.html)。
+
+如果要允许模板用户输入来自不同 AWS 账户的输入值，请不要使用特定于 AWS 的类型来定义参数；相反，定义类型为 String（或 CommaDelimitedList）的参数。
+
+支持的特定于 AWS 的参数类型：
+- AWS::EC2::AvailabilityZone::Name
+
+   可用区，如 us-west-2a。
+- AWS::EC2::Image::Id
+
+   Amazon EC2 映像 ID，如 ami-0ff8a91507f77f867。请注意，AWS CloudFormation 控制台不会显示此参数类型的值的下拉列表。
+- AWS::EC2::Instance::Id
+
+   Amazon EC2 实例 ID，如 i-1e731a32。
+- AWS::EC2::KeyPair::KeyName
+   
+   Amazon EC2 密钥对名称。
+- AWS::EC2::SecurityGroup::GroupName
+
+   EC2-Classic 或默认 VPC 安全组名称，如 my-sg-abc。
+- AWS::EC2::SecurityGroup::Id
+
+   安全组 ID，如 sg-a123fd85。
+- AWS::EC2::Subnet::Id
+
+   子网 ID，如 subnet-123a351e。
+- AWS::EC2::Volume::Id
+
+   Amazon EBS 卷 ID，如 vol-3cdd3f56。
+- AWS::EC2::VPC::Id
+
+   VPC ID，如 vpc-a123baa3。
+- AWS::Route53::HostedZone::Id
+
+   Amazon Route 53 托管区域 ID，如 Z23YXV4OVPL04A。
+- List<<AWS::EC2::AvailabilityZone::Name>>
+
+   针对某个区域的一组可用区，如 us-west-2a, us-west-2b。
+- List<<AWS::EC2::Image::Id>>
+
+   一组 Amazon EC2 映像 ID，如 ami-0ff8a91507f77f867, ami-0a584ac55a7631c0c。请注意，AWS CloudFormation 控制台不会显示此参数类型的值的下拉列表。
+- List<<AWS::EC2::Instance::Id>>
+
+   一组 Amazon EC2 实例 ID，如 i-1e731a32, i-1e731a34。
+- List<<AWS::EC2::SecurityGroup::GroupName>>
+
+   一组 EC2-Classic 或默认 VPC 安全组名称，如 my-sg-abc, my-sg-def。
+- List<<AWS::EC2::SecurityGroup::Id>>
+
+   一组安全组 ID，如 sg-a123fd85, sg-b456fd85。
+- List<<AWS::EC2::Subnet::Id>>
+
+   一组子网 ID，如 subnet-123a351e, subnet-456b351e。
+- List<<AWS::EC2::Volume::Id>>
+
+   一组 Amazon EBS 卷 ID，如 vol-3cdd3f56, vol-4cdd3f56。
+- List<<AWS::EC2::VPC::Id>>
+
+   一组 VPC ID，如 vpc-a123baa3, vpc-b456baa3。
+- List<<AWS::Route53::HostedZone::Id>>
+
+   一组 Amazon Route 53 托管区域 ID，如 Z23YXV4OVPL04A, Z23YXV4OVPL04B。
+#### SSM 参数类型
+#### 在 AWS CloudFormation 控制台中对参数进行分组和排序
 ## 什么是 AWS CloudFormation Designer？
 ## 演练
 ## 模板代码段
