@@ -468,7 +468,59 @@ Parameters:
 
    一组 Amazon Route 53 托管区域 ID，如 Z23YXV4OVPL04A, Z23YXV4OVPL04B。
 #### SSM 参数类型
+SSM 参数类型与 Systems Manager Parameter Store 中的现有参数对应。您指定 Systems Manager 参数键作为 SSM 参数的值，并且 AWS CloudFormation 从 Parameter Store 提取最新值来用于堆栈。有关 Systems Manager 参数的更多信息，请参阅AWS Systems Manager 用户指南中的 [Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)。
+
+您也可以使用 ssm 或 ssm-secure 动态参数模式在模板中指定参数值。有关更多信息，请参阅[使用动态引用以指定模板值](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/dynamic-references.html)。
+
+当您创建或更新堆栈并创建更改集时，AWS CloudFormation 会在此操作运行时使用 Parameter Store 中存在的任何值。如果某个指定的参数在调用方的 AWS 账户下的 Parameter Store 中不存在，AWS CloudFormation 会返回验证错误。
+
+当您执行更改集时，AWS CloudFormation 将使用在更改集中指定的值。您应在执行更改集前检查这些值，因为在您创建更改集和运行更改集之间的时间内，它们可能会在 Parameter Store 中发生更改。
+   > **提示**  您可以在控制台中或通过运行 describe-stacks 或 describe-change-set 来查看堆栈的 Parameters 选项卡上 SSM 参数的解析值。这些是目前在堆栈定义中用于相应的 Systems Manager 参数键的值。请注意，这些值是在创建或更新堆栈时设置的，因此它们可能与 Parameter Store 中的最新值不同。
+   > 
+   > 如果您使用 ssm-secure 模式指定参数值作为安全字符串，AWS CloudFormation 不会存储安全字符串值或将其显示在控制台中或 API 调用的结果中。
+
+由于 SSM 参数的值是 Systems Manager 参数键，因此您应了解以下行为：
+   - 对于堆栈更新，控制台中的 Use existing value (使用现有值) 选项和[update-stack](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/update-stack.html) 的 UsePreviousValue 属性告诉 AWS CloudFormation 使用现有 Systems Manager 参数键，而不是其值。AWS CloudFormation 在更新堆栈时始终从 Parameter Store 中提取最新值。
+
+     但是，如果您使用 ssm 或 ssm-secure 动态参数模式来指定参数值，您必须指定 Systems Manager 参数的版本以便 AWS CloudFormation 使用。
+   - AWS CloudFormation 可以对 Systems Manager 参数键执行验证，但不能对其对应的值执行验证。为了进行验证，您可以将参数键视为字符串。您应为 Parameter Store 中的 Systems Manager 参数值执行任何验证。
+
+有关使用 SSM 参数类型的示例，请参阅[SSM 参数类型](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#parameters-section-ssm-examples)。
+
+AWS CloudFormation 支持以下 SSM 参数类型：
++ AWS::SSM::Parameter::Name
+ 
+    Systems Manager 参数键的名称。
+
+   请在您要传递参数键时使用此参数。例如，您可以使用此类型验证此参数是否存在。
++ AWS::SSM::Parameter::Value<String>
+
+   其值是字符串的 Systems Manager 参数。这与 Parameter Store 中的 String 参数对应。
++ AWS::SSM::Parameter::Value<List<String>> 或者 AWS::SSM::Parameter::Value<CommaDelimitedList>
+
+   其值是字符串列表的 Systems Manager 参数。这与 Parameter Store 中的 StringList 参数对应。
++ AWS::SSM::Parameter::Value<AWS-specific parameter type>
+  
+   其值是[特定于 AWS 的参数类型](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types)的 Systems Manager 参数。例如，下面指定了 AWS::EC2::KeyPair::KeyName 类型：
+
+   AWS::SSM::Parameter::Value<AWS::EC2::KeyPair::KeyPairName>
++ AWS::SSM::Parameter::Value<List<AWS-specific parameter type>>
+
+   其值是特定于 AWS 的参数类型的列表的 Systems Manager 参数。例如，下面指定了 AWS::EC2::KeyPair::KeyName 类型的列表：
+
+   AWS::SSM::Parameter::Value<List<AWS::EC2::KeyPair::KeyPairName>>
+
+不支持的 SSM 参数类型：
+  - SSM 参数类型的列表，例如：List<AWS::SSM::Parameter::Value<String>>
+
+此外，AWS CloudFormation 不支持将模板参数定义为 SecureString Systems Manager 参数类型。但是，您可以使用动态参数模式为某些资源指定安全字符串作为参数值。有关更多信息，请参阅[使用动态引用以指定模板值](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/dynamic-references.html)。
 #### 在 AWS CloudFormation 控制台中对参数进行分组和排序
+使用 AWS CloudFormation 控制台创建或更新堆栈时，控制台根据输入参数的逻辑 ID 按照字母顺序列出输入参数。要覆盖默认排序方式，您可以使用 AWS::CloudFormation::Interface 元数据键。通过对参数进行分组和排序，用户可更轻松地指定参数值。例如，您可以将所有 VPC 相关参数放到一个组中，免得它们散落在按字母排序的列表中而难以查找。
+
+在元数据键中，您可以指定要创建的组、每个组包含的参数以及控制台在其分组中显示各个参数时的顺序。此外，您还可以定义易记参数名称，以便控制台显示描述性名称而不是逻辑 ID。在元数据键中引用的所有参数都必须在模板的 Parameters 部分中声明。
+
+有关更多信息和 AWS::CloudFormation::Interface 元数据键的示例，请参阅[AWS::CloudFormation::Interface](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-interface.html)。
+#### 示例
 ## 什么是 AWS CloudFormation Designer？
 ## 演练
 ## 模板代码段
