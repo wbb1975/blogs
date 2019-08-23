@@ -521,6 +521,242 @@ AWS CloudFormation 支持以下 SSM 参数类型：
 
 有关更多信息和 AWS::CloudFormation::Interface 元数据键的示例，请参阅[AWS::CloudFormation::Interface](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-interface.html)。
 #### 示例
+##### 基本输入参数
+以下示例 Parameters 部分声明有两个参数。DBPort 参数属于 Number 类型，默认值为 3306。可指定的最小值为 1150，可指定的最大值为 65535。DBPwd 参数属于 String 类型，无默认值。NoEcho 属性设置为 true，以阻止描述堆栈调用（如 aws cloudformation describe-stacks AWS CLI 命令）返回参数值。可指定的最小长度为 1，可指定的最大长度为 41。该模式允许小写和大写字母字符和数字。
+
+**JSON**
+```
+"Parameters" : {
+  "DBPort" : {
+    "Default" : "3306",
+    "Description" : "TCP/IP port for the database",
+    "Type" : "Number",
+    "MinValue" : "1150",
+    "MaxValue" : "65535"
+  },
+  "DBPwd" : {
+    "NoEcho" : "true",
+    "Description" : "The database admin account password",
+    "Type" : "String",
+    "MinLength" : "1",
+    "MaxLength" : "41",
+    "AllowedPattern" : "^[a-zA-Z0-9]*$"
+  }
+}
+```
+
+**YAML**
+```
+Parameters: 
+  DBPort: 
+    Default: 3306
+    Description: TCP/IP port for the database
+    Type: Number
+    MinValue: 1150
+    MaxValue: 65535
+  DBPwd: 
+    NoEcho: true
+    Description: The database admin account password
+    Type: String
+    MinLength: 1
+    MaxLength: 41
+    AllowedPattern: ^[a-zA-Z0-9]*$
+```
+##### AWS 特定的参数类型
+当您使用 AWS 特定的参数类型时，使用您的模板创建或更新堆栈的用户必须指定其账户中和当前堆栈所在的区域中的现有 AWS 值。AWS 特定的参数类型可帮助确保在 AWS CloudFormation 创建或更新任何资源之前，这些类型的输入值存在且正确。例如，如果使用 AWS::EC2::KeyPair::KeyName 参数类型，AWS CloudFormation 在创建任何资源（如 Amazon EC2 实例）之前，将针对用户的现有密钥对名称验证输入值。
+
+如果用户使用 AWS 管理控制台，则 AWS CloudFormation [向 AWS 特定的参数类型预填充有效值](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/cfn-using-console-create-stack-parameters.html)。这样一来，用户便无需记住和正确输入特定的名称或 ID，而只需从下拉列表中选择一个或多个值。此外，根据参数类型，用户还可以按 ID、名称或名称标签值来搜索值。有关更多信息，请参阅[指定堆栈名称和参数](https://docs.aws.amazon.com/zh_cn/AWSCloudFormation/latest/UserGuide/cfn-using-console-create-stack-parameters.html)。
+
+以下示例声明类型 AWS::EC2::KeyPair::KeyName 和 AWS::EC2::Subnet::Id 的两个参数。这些类型限制现有密钥对名称和子网 ID 的有效值。因为将 mySubnetIDs 参数指定为列表，所以用户可指定一个或多个子网 ID。
+
+**JSON**
+```
+"Parameters" : {
+  "myKeyPair" : {
+    "Description" : "Amazon EC2 Key Pair",
+    "Type" : "AWS::EC2::KeyPair::KeyName"
+  },
+  "mySubnetIDs" : {
+    "Description" : "Subnet IDs",
+    "Type" : "List<AWS::EC2::Subnet::Id>"
+  }
+}
+```
+
+**YAML**
+```
+Parameters: 
+  myKeyPair: 
+    Description: Amazon EC2 Key Pair
+    Type: "AWS::EC2::KeyPair::KeyName"
+  mySubnetIDs: 
+    Description: Subnet IDs
+    Type: "List<AWS::EC2::Subnet::Id>"
+```
+
+***AWS CLI 和 API 支持***
+目前，用户无法使用 AWS CLI 或 AWS CloudFormation API 查看 AWS 特定的参数的有效值列表。但用户可通过使用 [aws cloudformation get-template-summary](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/get-template-summary.html) 命令或 [GetTemplateSummary API](https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_GetTemplateSummary.html) 来查看有关每个参数的信息，如参数类型。
+##### 逗号分隔列表参数类型
+您可使用 CommaDelimitedList 参数类型在一个参数中指定多个字符串值。这样一来，您可使用一个参数而不是许多不同的参数来指定多个值。例如，如果您使用各自不同的 CIDR 块分别创建三个不同子网，则可以使用三个不同参数指定三个不同 CIDR 块。不过更简单的方法是使用包括三个 CIDR 块的列表的单个参数，如以下代码段所示：
+
+**JSON**
+```
+"Parameters" : {
+  "DbSubnetIpBlocks": {
+    "Description": "Comma-delimited list of three CIDR blocks",
+    "Type": "CommaDelimitedList",
+    "Default": "10.0.48.0/24, 10.0.112.0/24, 10.0.176.0/24"
+  }
+}
+```
+
+**YMAL**
+```
+Parameters: 
+  DbSubnetIpBlocks: 
+    Description: "Comma-delimited list of three CIDR blocks"
+    Type: CommaDelimitedList
+    Default: "10.0.48.0/24, 10.0.112.0/24, 10.0.176.0/24"
+```
+##### *从逗号分隔列表参数返回值*
+要引用列表中的特定值，请在模板的 Fn::Select 部分中使用 Resources 内部函数。可传递所需对象的索引值和对象列表，如以下代码段所示：
+
+**JSON**
+```
+"DbSubnet1" : {
+  "Type" : "AWS::EC2::Subnet",
+  "Properties" : {
+    "AvailabilityZone" : {"Fn::Join" : ["",[ { "Ref" : "AWS::Region" }, { "Fn::Select" : [ "0", {"Ref" : "VpcAzs"} ] } ] ]} ,
+    "VpcId" :  { "Ref" : "VPC" },
+    "CidrBlock" : { "Fn::Select" : [ "0", {"Ref" : "DbSubnetIpBlocks"} ] }
+  }
+},
+"DbSubnet2" : {
+  "Type" : "AWS::EC2::Subnet",
+  "Properties" : {
+    "AvailabilityZone" : {"Fn::Join" : ["",[ { "Ref" : "AWS::Region" }, { "Fn::Select" : [ "1", {"Ref" : "VpcAzs"} ] } ] ]} ,
+    "VpcId" : { "Ref" : "VPC" },
+    "CidrBlock" : { "Fn::Select" : [ "1", {"Ref" : "DbSubnetIpBlocks"} ] }
+  }
+},
+"DbSubnet3" : {
+  "Type" : "AWS::EC2::Subnet",
+  "Properties" : {
+    "AvailabilityZone" : {"Fn::Join" : ["",[ { "Ref" : "AWS::Region" }, { "Fn::Select" : [ "2", {"Ref" : "VpcAzs"} ] } ] ]} ,
+    "VpcId" : { "Ref" : "VPC" },
+    "CidrBlock" : { "Fn::Select" : [ "2", {"Ref" : "DbSubnetIpBlocks"} ] }
+  }
+}
+```
+
+**YAML**
+```
+DbSubnet1:
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: !Sub
+      - "${AWS::Region}${AZ}"
+      - AZ: !Select [0, !Ref VpcAzs]
+    VpcId: !Ref VPC
+    CidrBlock: !Select [0, !Ref DbSubnetIpBlocks]
+DbSubnet2: 
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: !Sub
+      - "${AWS::Region}${AZ}"
+      - AZ: !Select [1, !Ref VpcAzs]
+    VpcId: !Ref VPC
+    CidrBlock: !Select [1, !Ref DbSubnetIpBlocks]
+DbSubnet3: 
+  Type: AWS::EC2::Subnet
+  Properties:
+    AvailabilityZone: !Sub
+      - "${AWS::Region}${AZ}"
+      - AZ: !Select [2, !Ref VpcAzs]
+    VpcId: !Ref VPC
+    CidrBlock: !Select [2, !Ref DbSubnetIpBlocks]
+```
+##### SSM 参数类型
+###### AWS::SSM::Parameter::Value<String> 类型
+以下模板声明 AWS::SSM::Parameter::Value<String> 参数类型。
+
+**JSON**
+```
+{
+  "Parameters": {
+    "InstanceType": {
+      "Type": "AWS::SSM::Parameter::Value<String>"
+    }
+  },
+  "Resources": {
+    "Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "InstanceType"
+        }
+      }
+    }
+  }
+}
+```
+
+**YAML**
+```
+Parameters: 
+  InstanceType: 
+    Type: 'AWS::SSM::Parameter::Value<String>'
+Resources: 
+  Instance: 
+    Type: 'AWS::EC2::Instance'
+    Properties: 
+      InstanceType: !Ref InstanceType
+```
+
+以下命令基于示例模板创建堆栈。它提供 Systems Manager 参数键 (myInstanceType) 作为 InstanceType 模板参数的值。这假定 myInstanceType 参数在调用方的 AWS 账户下的 Parameter Store 中存在。
+```
+aws cloudformation create-stack --stack-name S1 --template-body example template --parameters ParameterKey=InstanceType,ParameterValue=myInstanceType
+```
+###### AWS::SSM::Parameter::Value<AWS::EC2::Image::Id> 类型
+以下模板声明 AWS::SSM::Parameter::Value<AWS::EC2::Image::Id> 参数类型。
+
+**JSON**
+```
+{
+  "Parameters": {
+    "ImageId": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    }
+  },
+  "Resources": {
+    "Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "ImageId"
+        }
+      }
+    }
+  }
+}
+```
+
+**YAML**
+```
+Parameters: 
+  ImageId: 
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+Resources: 
+  Instance: 
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref ImageId
+```
+
+以下命令基于示例模板创建堆栈。它提供 Systems Manager 参数键 (myLatestAMI) 作为 ImageId 模板参数的值。这假定 myLatestAMI 参数在调用方的 AWS 账户下的 Parameter Store 中存在。
+```
+aws cloudformation create-stack --stack-name S2 --template-body example template --parameters ParameterKey=ImageId,ParameterValue=myLatestAMI
+```
 ## 什么是 AWS CloudFormation Designer？
 ## 演练
 ## 模板代码段
