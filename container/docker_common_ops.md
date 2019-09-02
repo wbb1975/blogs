@@ -48,7 +48,7 @@ Options:
       --help                           Print usage
   -h, --hostname string                Container host name
       --init                           Run an init inside the container that forwards signals and reaps processes
-  -i, --interactive                    Keep STDIN open even if not attached
+  -i, --interactive                    Keep STDIN open even if not attached               // 常用，开启输入终端
       --ip string                      IPv4 address (e.g., 172.30.100.104)
       --ip6 string                     IPv6 address (e.g., 2001:db8::33)
       --ipc string                     IPC mode to use
@@ -66,7 +66,7 @@ Options:
       --memory-swap bytes              Swap limit equal to memory plus swap: '-1' to enable unlimited swap
       --memory-swappiness int          Tune container memory swappiness (0 to 100) (default -1)
       --mount mount                    Attach a filesystem mount to the container
-      --name string                    Assign a name to the container
+      --name string                    Assign a name to the container     // 常用，给容器制定一个有意义的名字
       --network string                 Connect a container to a network (default "default")
       --network-alias list             Add network-scoped alias for the container
       --no-healthcheck                 Disable any container-specified HEALTHCHECK
@@ -89,7 +89,7 @@ Options:
       --storage-opt list               Storage driver options for the container
       --sysctl map                     Sysctl options (default map[])
       --tmpfs list                     Mount a tmpfs directory
-  -t, --tty                            Allocate a pseudo-TTY
+  -t, --tty                            Allocate a pseudo-TTY         // 常用，为容器分配一个伪tty终端，从而可以提供一个交互式shell
       --ulimit ulimit                  Ulimit options (default [])
   -u, --user string                    Username or UID (format: <name|uid>[:<group|gid>])
       --userns string                  User namespace to use
@@ -98,6 +98,47 @@ Options:
       --volume-driver string           Optional volume driver for the container
       --volumes-from list              Mount volumes from the specified container(s)
   -w, --workdir string                 Working directory inside the container
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run -i -t ubuntu:19.10 /bin/bash
+root@1d6986c6178d:/# wget
+bash: wget: command not found
+root@1d6986c6178d:/# apt install wget
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+E: Unable to locate package wget
+root@1d6986c6178d:/# exit
+exit
+```
+## 附着到容器上（docker）
+```
+# CONTAINER可以使容器名字或者容器ID
+Usage:	docker attach [OPTIONS] CONTAINER
+
+Attach local standard input, output, and error streams to a running container
+
+Options:
+      --detach-keys string   Override the key sequence for detaching a container
+      --no-stdin             Do not attach STDIN
+      --sig-proxy            Proxy all received signals to the process (default true)
+```
+
+**Example:**
+```
+# 在一个终端上
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run -i -t centos /bin/bash
+[root@3fec81b59db4 /]# 
+
+# 在另一个终端上
+wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker ps
+[sudo] wangbb 的密码： 
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS            NAMES
+3fec81b59db4        centos              "/bin/bash"         17 seconds ago      Up 5 seconds          elegant_varahamihira
+wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker attach 3fec81b59db4
+[root@3fec81b59db4 /]# 
 ```
 ## 删除docker images
 ```
@@ -119,7 +160,7 @@ wbb1975/tomcat7         latest              66b4aa67705a        2 months ago    
 wbb1975/fetcher         latest              776e991df81c        2 months ago        208MB
 <none>                  <none>              b8d8cdaa12a5        2 months ago        208MB
 <none>                  <none>              859a1b964ee1        2 months ago        447MB
-<none>                  <none>              492cf4d18cd8        2 months ago        208MB
+<none>                  <none>              492cf4d18cd8        2 months ago        20伪
 wbb1975/dockerjenkins   latest              483b7c1a6fd2        2 months ago        991MB
 wbb1975/nginx_static    v2                  314bde3dc9bc        2 months ago        220MB
 wbb1975/nginx           v2                  b79157a0498a        2 months ago        161MB
@@ -178,10 +219,10 @@ f244269f5a68        72c19dd55e99              "/bin/bash"              2 months 
 902be4af4179        ubuntu:19.10              "/bin/bash"              3 months ago        Exited (100) 3 months ago                              ubuntu_19_10
 8cceae8f8dd1        centos                    "/bin/bash"              3 months ago        Exited (0) 3 months ago                                unruffled_kilby
 
-**wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm 1d6986c6178d**
+wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm 1d6986c6178d
 1d6986c6178d
 
-**wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm db9c07f4a74f**
+wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm db9c07f4a74f
 Error response from daemon: You cannot remove a running container db9c07f4a74fcdc5b64613b8f597a04097548903a3a1085ddcf799c1b6a02b00. Stop the container before attempting removal or force remove
 ```
 ## 参考
