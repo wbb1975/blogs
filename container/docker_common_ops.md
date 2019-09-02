@@ -177,9 +177,11 @@ f244269f5a68        72c19dd55e99              "/bin/bash"              2 months 
 13967e69d717        da49a654f2d7              "/app"                   3 months ago        Exited (255) 3 months ago                              app
 902be4af4179        ubuntu:19.10              "/bin/bash"              3 months ago        Exited (100) 3 months ago                              ubuntu_19_10
 8cceae8f8dd1        centos                    "/bin/bash"              3 months ago        Exited (0) 3 months ago                                unruffled_kilby
-wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm 1d6986c6178d
+
+**wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm 1d6986c6178d**
 1d6986c6178d
-wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm db9c07f4a74f
+
+**wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm db9c07f4a74f**
 Error response from daemon: You cannot remove a running container db9c07f4a74fcdc5b64613b8f597a04097548903a3a1085ddcf799c1b6a02b00. Stop the container before attempting removal or force remove
 ```
 ## 参考
