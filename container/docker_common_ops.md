@@ -66,7 +66,7 @@ Options:
       --memory-swap bytes              Swap limit equal to memory plus swap: '-1' to enable unlimited swap
       --memory-swappiness int          Tune container memory swappiness (0 to 100) (default -1)
       --mount mount                    Attach a filesystem mount to the container
-      --name string                    Assign a name to the container     // 常用，给容器制定一个有意义的名字
+      --name string                    Assign a name to the container     // 常用，给容器指定一个有意义的名字
       --network string                 Connect a container to a network (default "default")
       --network-alias list             Add network-scoped alias for the container
       --no-healthcheck                 Disable any container-specified HEALTHCHECK
