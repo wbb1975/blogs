@@ -572,3 +572,6 @@ wangbb@wangbb-ThinkPad-T420:~$ sudo docker inspect 3fec81b59db4
 ```
 
 ## 参考
+- [Configure logging drivers](https://docs.docker.com/config/containers/logging/configure/)
+- [Docker日志收集最佳实践](https://www.cnblogs.com/jingjulianyi/p/6637801.html)
+- [Docker 生产环境之日志 - 配置日志驱动程序](https://blog.csdn.net/kikajack/article/details/79575286)
