@@ -1,5 +1,5 @@
 # docker常用操作汇总
-## 启动容器（docker）
+## 1. 启动容器（docker）
 ```
 Usage:	docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
 
@@ -22,7 +22,7 @@ Options:
       --cpus decimal                   Number of CPUs
       --cpuset-cpus string             CPUs in which to allow execution (0-3, 0,1)
       --cpuset-mems string             MEMs in which to allow execution (0-3, 0,1)
-  -d, --detach                         Run container in background and print container ID
+  -d, --detach                         Run container in background and print container ID   // 常用， 将容器放至后台运行
       --detach-keys string             Override the key sequence for detaching a container
       --device list                    Add a host device to the container
       --device-cgroup-rule list        Add a rule to the cgroup allowed devices list
@@ -58,7 +58,7 @@ Options:
       --label-file list                Read in a line delimited file of labels
       --link list                      Add link to another container
       --link-local-ip list             Container IPv4/IPv6 link-local addresses
-      --log-driver string              Logging driver for the container
+      --log-driver string              Logging driver for the container  // 常用，控制容器所用的日志驱动，默认为json-file。选项为syslog, none等
       --log-opt list                   Log driver options
       --mac-address string             Container MAC address (e.g., 92:d0:c6:0a:29:33)
   -m, --memory bytes                   Memory limit
@@ -78,7 +78,7 @@ Options:
   -p, --publish list                   Publish a container's port(s) to the host
   -P, --publish-all                    Publish all exposed ports to random ports
       --read-only                      Mount the container's root filesystem as read only
-      --restart string                 Restart policy to apply when a container exits (default "no")
+      --restart string                 Restart policy to apply when a container exits (default "no")  // 有用， 控制容器自动重启，可用选项包括:always,on-failure,no等
       --rm                             Automatically remove the container when it exits
       --runtime string                 Runtime to use for this container
       --security-opt list              Security Options
@@ -102,7 +102,7 @@ Options:
 
 **Example:**
 ```
-wangbb@wangbb-ThinkPad-T420:~$ sudo docker run -i -t ubuntu:19.10 /bin/bash
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run --restart=on-failure:5 -i -t ubuntu:19.10 /bin/bash
 root@1d6986c6178d:/# wget
 bash: wget: command not found
 root@1d6986c6178d:/# apt install wget
@@ -113,9 +113,8 @@ E: Unable to locate package wget
 root@1d6986c6178d:/# exit
 exit
 ```
-## 附着到容器上（docker）
+## 2. 附着到容器上（docker）
 ```
-# CONTAINER可以使容器名字或者容器ID
 Usage:	docker attach [OPTIONS] CONTAINER
 
 Attach local standard input, output, and error streams to a running container
@@ -140,7 +139,140 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker attach 3fec81b59db4
 [root@3fec81b59db4 /]# 
 ```
-## 删除docker images
+
+**注意**
+```
+由三种方式可以唯一指代容器：短UUID(3fec81b59db4)，长UUID以及容器名（如gray_cat）。
+```
+## 3. 查看容器运行日志
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help logs
+Usage:	docker logs [OPTIONS] CONTAINER
+
+Fetch the logs of a container
+
+Options:
+      --details        Show extra details provided to logs
+  -f, --follow         Follow log output        // 常用，跟踪容器的最新日志而非整个日志文件
+      --since string   Show logs since timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42 minutes)
+      --tail string    Number of lines to show from the end of the logs (default "all")
+  -t, --timestamps     Show timestamps  // 常用，为每条日志加上时间戳
+      --until string   Show logs before a timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42
+                       minutes)
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker logs -tf 3fec81b59db4
+[root@3fec81b59db4 /]# exit
+2019-09-02T23:21:29.735402684Z exit
+[root@3fec81b59db4 /]# ls -l
+2019-09-03T13:07:31.006119268Z total 12
+2019-09-03T13:07:31.049015874Z -rw-r--r--   1 root root 12082 Mar  5 17:36 anaconda-post.log
+2019-09-03T13:07:31.049055348Z lrwxrwxrwx   1 root root     7 Mar  5 17:34 bin -> usr/bin
+2019-09-03T13:07:31.049069061Z drwxr-xr-x   5 root root   360 Sep  3 13:07 dev
+2019-09-03T13:07:31.049080338Z drwxr-xr-x  47 root root    66 Sep  2 23:12 etc
+2019-09-03T13:07:31.049090264Z drwxr-xr-x   2 root root     6 Apr 11  2018 home
+2019-09-03T13:07:31.049100163Z lrwxrwxrwx   1 root root     7 Mar  5 17:34 lib -> usr/lib
+2019-09-03T13:07:31.049110092Z lrwxrwxrwx   1 root root     9 Mar  5 17:34 lib64 -> usr/lib64
+2019-09-03T13:07:31.049119902Z drwxr-xr-x   2 root root     6 Apr 11  2018 media
+2019-09-03T13:07:31.049129545Z drwxr-xr-x   2 root root     6 Apr 11  2018 mnt
+2019-09-03T13:07:31.049176074Z drwxr-xr-x   2 root root     6 Apr 11  2018 opt
+2019-09-03T13:07:31.049186550Z dr-xr-xr-x 377 root root     0 Sep  3 13:07 proc
+2019-09-03T13:07:31.049193363Z dr-xr-x---   2 root root    27 Sep  2 23:21 root
+2019-09-03T13:07:31.049203318Z drwxr-xr-x  11 root root   148 Mar  5 17:36 run
+2019-09-03T13:07:31.049212213Z lrwxrwxrwx   1 root root     8 Mar  5 17:34 sbin -> usr/sbin
+2019-09-03T13:07:31.049222250Z drwxr-xr-x   2 root root     6 Apr 11  2018 srv
+2019-09-03T13:07:31.049257994Z dr-xr-xr-x  13 root root     0 Sep  3 13:07 sys
+2019-09-03T13:07:31.049269146Z drwxrwxrwt   7 root root   132 Mar  5 17:36 tmp
+2019-09-03T13:07:31.049279273Z drwxr-xr-x  13 root root   155 Mar  5 17:34 usr
+2019-09-03T13:07:31.049297938Z drwxr-xr-x  18 root root   238 Mar  5 17:34 var
+```
+## 4. 查看容器内的进程
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help top
+
+Usage:	docker top CONTAINER [ps OPTIONS]
+
+Display the running processes of a container
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker top 3fec81b59db4
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+root                7890                7871                0                   21:07               ?                   00:00:00            /bin/bash
+```
+## 5. 查看容器统计信息
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help stats
+
+Usage:	docker stats [OPTIONS] [CONTAINER...]
+
+Display a live stream of container(s) resource usage statistics
+
+Options:
+  -a, --all             Show all containers (default shows just running)
+      --format string   Pretty-print images using a Go template
+      --no-stream       Disable streaming stats and only pull the first result
+      --no-trunc        Do not truncate output
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker stats 3fec81b59db4
+```
+## 6. 在容器内运行新进程
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help exec
+
+Usage:	docker exec [OPTIONS] CONTAINER COMMAND [ARG...]
+
+Run a command in a running container
+
+Options:
+  -d, --detach               Detached mode: run command in the background
+      --detach-keys string   Override the key sequence for detaching a container
+  -e, --env list             Set environment variables
+  -i, --interactive          Keep STDIN open even if not attached
+      --privileged           Give extended privileges to the command
+  -t, --tty                  Allocate a pseudo-TTY
+  -u, --user string          Username or UID (format: <name|uid>[:<group|gid>])
+  -w, --workdir string       Working directory inside the container
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker exec -d 3fec81b59db4 touch /etc/new_config_file
+```
+## 7. 停止容器
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help stop
+
+Usage:	docker stop [OPTIONS] CONTAINER [CONTAINER...]
+
+Stop one or more running containers
+
+Options:
+  -t, --time int   Seconds to wait for stop before killing it (default 10)
+
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help kill
+
+Usage:	docker kill [OPTIONS] CONTAINER [CONTAINER...]
+
+Kill one or more running containers
+
+Options:
+  -s, --signal string   Signal to send to the container (default "KILL")
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker stop 3fec81b59db4
+Error response from daemon: cannot stop container: 3fec81b59db4: Cannot kill container 3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2: unknown error after kill: docker-runc did not terminate sucessfully: container_linux.go:393: signaling init process caused "permission denied"
+: unknown
+```
+## 8. 删除docker images
 ```
 Usage:	docker rmi [OPTIONS] IMAGE [IMAGE...]
 
@@ -174,7 +306,7 @@ wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rmi b8d8cdaa12a5 
 Deleted: sha256:b8d8cdaa12a526600a2dff40f019f9dd03e360b8bde701c39cc8a0130a9bb766
 Deleted: sha256:9ec8af52c7fef3f633cdc20c6407a1f1f1aeea04bc63c28ec43240ba29df3035
 ```
-## 删除docker containers
+## 9. 删除docker containers
 ```
 Usage:	docker rm [OPTIONS] CONTAINER [CONTAINER...]
 
@@ -225,4 +357,218 @@ wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm 1d6986c6178d
 wangbb@wangbb-ThinkPad-T420:~/git/blogs/container$ sudo docker rm db9c07f4a74f
 Error response from daemon: You cannot remove a running container db9c07f4a74fcdc5b64613b8f597a04097548903a3a1085ddcf799c1b6a02b00. Stop the container before attempting removal or force remove
 ```
+## 10. 深入容器
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker help inspect
+
+Usage:	docker inspect [OPTIONS] NAME|ID [NAME|ID...]
+
+Return low-level information on Docker objects
+
+Options:
+  -f, --format string   Format the output using the given Go template
+  -s, --size            Display total file sizes if the type is container
+      --type string     Return JSON for specified type
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker inspect 3fec81b59db4
+[
+    {
+        "Id": "3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2",
+        "Created": "2019-09-02T23:12:20.749337956Z",
+        "Path": "/bin/bash",
+        "Args": [],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 7890,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2019-09-03T13:07:04.200974867Z",
+            "FinishedAt": "2019-09-02T23:21:29.857528986Z"
+        },
+        "Image": "sha256:9f38484d220fa527b1fb19747638497179500a1bed8bf0498eb788229229e6e1",
+        "ResolvConfPath": "/var/snap/docker/common/var-lib-docker/containers/3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2/resolv.conf",
+        "HostnamePath": "/var/snap/docker/common/var-lib-docker/containers/3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2/hostname",
+        "HostsPath": "/var/snap/docker/common/var-lib-docker/containers/3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2/hosts",
+        "LogPath": "/var/snap/docker/common/var-lib-docker/containers/3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2/3fec81b59db44e4a068d31c2b0d9a7dfe2b6bc844f923a9b0468e73b6a4780c2-json.log",
+        "Name": "/elegant_varahamihira",
+        "RestartCount": 0,
+        "Driver": "aufs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "CapAdd": null,
+            "CapDrop": null,
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "shareable",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DiskQuota": 0,
+            "KernelMemory": 0,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": 0,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/asound",
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": null,
+            "Name": "aufs"
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "3fec81b59db4",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": true,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "Tty": true,
+            "OpenStdin": true,
+            "StdinOnce": true,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "/bin/bash"
+            ],
+            "Image": "centos",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "org.label-schema.build-date": "20190305",
+                "org.label-schema.license": "GPLv2",
+                "org.label-schema.name": "CentOS Base Image",
+                "org.label-schema.schema-version": "1.0",
+                "org.label-schema.vendor": "CentOS"
+            }
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "1df65639324448174b4762ee49f23a4b66cdc0578820e8463d3064adf2689c8e",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {},
+            "SandboxKey": "/var/snap/docker/384/run/docker/netns/1df656393244",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "44727d0fc1ea1ff76ea4bd219b79edc4a150bc21f87278d9c9f2758c7c18485b",
+            "Gateway": "172.17.0.1",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "172.17.0.2",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "MacAddress": "02:42:ac:11:00:02",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "23e36244df276e1e48db78473b13afef4fd4ef64c3367bcb8905fb8e759b0f2c",
+                    "EndpointID": "44727d0fc1ea1ff76ea4bd219b79edc4a150bc21f87278d9c9f2758c7c18485b",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:02",
+                    "DriverOpts": null
+                }
+            }
+        }
+    }
+]
+```
+
 ## 参考
