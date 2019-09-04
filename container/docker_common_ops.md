@@ -570,6 +570,25 @@ wangbb@wangbb-ThinkPad-T420:~$ sudo docker inspect 3fec81b59db4
     }
 ]
 ```
+## 11. 查看服务日志
+```
+wangbb@wangbb-ThinkPad-T420:~/git/blogs$ sudo docker service logs --help
+
+Usage:	docker service logs [OPTIONS] SERVICE|TASK
+
+Fetch the logs of a service or task
+
+Options:
+      --details        Show extra details provided to logs
+  -f, --follow         Follow log output
+      --no-resolve     Do not map IDs to Names in output
+      --no-task-ids    Do not include task IDs in output
+      --no-trunc       Do not truncate output
+      --raw            Do not neatly format logs
+      --since string   Show logs since timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42 minutes)
+      --tail string    Number of lines to show from the end of the logs (default "all")
+  -t, --timestamps     Show timestamps
+```
 
 ## 参考
 - [Configure logging drivers](https://docs.docker.com/config/containers/logging/configure/)
