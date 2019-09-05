@@ -49,6 +49,24 @@ $ docker info --format '{{.LoggingDriver}}'
 
 json-file
 ```
+### 为容器配置日志驱动
+当你启动一个容器时，你可以用--log-driver标记来指定一个不同于Docker 服务（Docker daemon）缺省日志驱动的选项。如果这个日志驱动有可配置选项，你可以使用--log-opt <NAME>=<VALUE>来制定一个或多个选项值。即使容器使用缺省日志驱动，它也可指定不同的（日志驱动）配置项。
+
+下面的例子使用日志驱动none来启动一个Alpine容器：
+```
+$ docker run -it --log-driver none alpine ash
+```
+为了找到运行中的容器的当前驱动日志，如果Docker 服务采用json-file日志驱动，如下运行docker inspect命令，并用容器名字或ID
+替换<CONTAINER>：
+```
+$ docker inspect -f '{{.HostConfig.LogConfig.Type}}' <CONTAINER>
+
+json-file
+```
+### 配置容器到日志驱动的消息发送模式
+Docker提供两种模式用于发送从容器到日志驱动的消息：
+- （缺省）直接模式，从容奇至日志驱动以阻塞方式发送
+-  非阻塞模式，日志消息被存在一个容器级别的环形缓存中供日志驱动消费
 ## 使用docker logs阅读配置了远程日志驱动的容器的日志（Use docker logs to read container logs for remote logging drivers）
 ## 使用日志驱动插件（Use a logging driver plugin）
 ## 定制日志驱动输出（Customize log driver output）
