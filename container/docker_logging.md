@@ -14,6 +14,41 @@ docker logs命令显示一个运行中的容器记录的信息。docker service 
 
 官方Apache httpd更改其httpd的配置文件将正常输出直接写到/proc/self/fd/1 (STDOUT)，将错误消息写至/proc/self/fd/2 (STDERR). 参阅[Dockerfile](https://github.com/docker-library/httpd/blob/b13054c7de5c74bbaa6d595dbe38969e6d4f860c/2.2/Dockerfile#L72-L75)。
 ## 配置日志驱动（Configure logging drivers）
+Docker包含多种日志机制来帮你[得到运行中的容器和服务相关信息](https://docs.docker.com/engine/admin/logging/view_container_logs/)。这些机制被称为日志驱动。
+
+每个Docker服务（daemon）有一个缺省日志驱动，每个启动容器除非你配置它使用一个不同的日志驱动，否则将使用缺省驱动。
+
+另外为了使用Docker中含有的日志驱动，你可以实现并使用[日志驱动插件](https://docs.docker.com/engine/admin/logging/plugins/)
+### 配置缺省日志驱动
+为了配置Docker daemon缺省使用一种特定日志驱动，在daemon.json设置“log-driver”的值为日志驱动名，该文件在Linux主机中位于/etc/docker/下（注意：在我的Ubuntu 18.04上位于/snap/docker/384/config），在Windows服务器主机在位于C:\ProgramData\docker\config\ 下。缺省日志驱动是“json-file”。下面的例子显式设置缺省日志驱动为"syslog"：
+```
+{
+  "log-driver": "syslog"
+}
+```
+如果日志驱动有其它可配置选项，你可以在daemon.json中的键“log-opts”下以JSON对象的格式设置它们。下面的例子为"json-file"型日志驱动设置了两个可配置选项：
+```
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3",
+    "labels": "production_status",
+    "env": "os,customer"
+  }
+}
+```
+
+> **注意：** 在配置文件daemon.json中log-opt必须以字符串形式提供。布尔类型和数字类型值必须以引号 (")包裹（如上例中的max-file设置）。
+
+如果你不指定日志驱动，默认即为“json-file”，因此，一些命令比如docker inspect <CONTAINER> 的输出是JSON。
+
+为了找出当前Docker daemon的缺省日志驱动，运行docker info并搜索Logging Driver。你可以在Linux, macOS, 或 PowerShell on Windows运行下面的命令：
+```
+$ docker info --format '{{.LoggingDriver}}'
+
+json-file
+```
 ## 使用docker logs阅读配置了远程日志驱动的容器的日志（Use docker logs to read container logs for remote logging drivers）
 ## 使用日志驱动插件（Use a logging driver plugin）
 ## 定制日志驱动输出（Customize log driver output）
@@ -22,3 +57,5 @@ docker logs命令显示一个运行中的容器记录的信息。docker service 
 ## 参考
 - [Container Logging](https://docs.docker.com/config/containers/logging/)
 - [Write a Dockerfile](https://docs.docker.com/engine/reference/builder/)
+- [Docker日志收集最佳实践](https://www.cnblogs.com/jingjulianyi/p/6637801.html)
+- [Docker 生产环境之日志 - 配置日志驱动程序](https://blog.csdn.net/kikajack/article/details/79575286)
