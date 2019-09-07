@@ -143,3 +143,5 @@
     ```
 
     LD_LIBRARY_PATH这一步是必须的，因为/usr/local/lib缺省情况下并不被包含在内（安全原因）。
+# 参考
+- [Building the SDK from source on EC2](https://github.com/aws/aws-sdk-cpp/wiki/Building-the-SDK-from-source-on-EC2)

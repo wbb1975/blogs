@@ -1,9 +1,9 @@
-欢迎来到AWS C++ SDK　wiki!
+欢迎来到AWS C++ SDK wiki!
 # 普通常见问题（General FAQ）
 ## 我怎样从源代码编译SDK
 参阅相对详细的[逐步指南](https://github.com/wbb1975/blogs/blob/master/aws/build_c%2B%2Bsdk_on_ec2.md)来入门。
 ## 我怎么打开日志
-日至设施的类型和可见性是在SDK的初始化过程中由SDKOptions指定的。指定任何非LogLevel::Off的级别将打开缺省日志器（logger）。缺省的日志器将会写向文件系统，日志文件将采用形如aws_sdk_YYYY-MM-DD-HH.log的命名模式。日志器将每小时创建一个新的日志文件。总共由六个日志级别：
+日志设施的类型和可见性是在SDK的初始化过程中由SDKOptions指定的。指定任何非LogLevel::Off的级别将打开缺省日志器（logger）。缺省的日志器将会写向文件系统，日志文件将采用形如aws_sdk_YYYY-MM-DD-HH.log的命名模式。日志器将每小时创建一个新的日志文件。总共由六个日志级别：
 1. Off (the default)
 2. Fatal
 3. Error
@@ -21,7 +21,6 @@ Aws::ShutdownAPI(options);
 ```
 
 SDK带有一个终端日志器－－它把日志消息打到标准输出上。为了使用终端日志器代替缺省文件系统日志器：
-
 ```
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 
@@ -38,8 +37,6 @@ Aws::ShutdownAPI(options);
 1. GCC 4.9.x and later
 2. Clang 3.3 and later
 3. Visual Studio 2015 and later
-## 我仍在使用一个较老的编译器（C++11之前版本），我该怎么使用SDK
-很快到来
 ## 我们遵从什么样的版本命名规范
 主版本号.次版本号.补丁号（Major.Minor.Patch）
 + 主版本号为全面修改保留（我们目前还不需要它）
@@ -57,3 +54,5 @@ Aws::ShutdownAPI(options);
   缺省这个选项是打开的，为了独立于SDK之外编译第三方依赖库，关闭这个选项。
  + DREGENERATE_CLIENTS
   缺省这个选项是关闭的，为了重新产生服务的客户端，打开它。注意：这将调用代码生成器，这是用Java编译出来的（据我所知）。当重新产生客户端时，必必须在机器上拥有JDK, maven和python。
+# 参考
+- [General FAQ](https://github.com/aws/aws-sdk-cpp/wiki)
