@@ -90,6 +90,7 @@ $ docker run -dit --label production_status=testing -e os=ubuntu alpine sh
 ```
 ### 支持的日志驱动
 Docker支持如下日志驱动。参考每个驱动程序的文档来了解相关配置选项。如果你使用了[日志驱动程序插件](https://docs.docker.com/engine/admin/logging/plugins/)，会有更多的选项。
+
 驱动程序|描述
 --|--
 none|容器没有日志可用，docker logs 什么输出都不返回
