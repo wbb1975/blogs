@@ -206,6 +206,29 @@ Docker的日志插件能让你扩展和定制Docker内建日志驱动的功能�
 ### 配置插件为容器日志驱动
 日志驱动插件安装后，你可以配置容器使用它作为日志驱动：只需利用--log-driver把它们传递给docker run。如果该驱动插件支持额外选项，你可以传递一个或多个--log-opt标记，以选项名作为键，以选项值作为值。
 ## 定制日志驱动输出（Customize log driver output）
+tag日志选项指定怎样格式化以tag标识的日志内容。缺省地，系统使用容器ID的头12个字符，可以使用tag选项改变这种行为。
+```
+$ docker run --log-driver=fluentd --log-opt fluentd-address=myhost.local:24224 --log-opt tag="mailer"
+```
+
+Docker支持一些特殊的模板标记，你可以用他们指定tag选项值：
+
+标记(Markup)|描述
+--|--
+{{.ID}}|容器ID的头12个字符
+{{.FullID}}|完整容器ID
+{{.Name}}|容器名
+{{.ImageID}}|容器的镜像ID的头12个字符
+{{.ImageFullID}}|容器的完整镜像ID
+{{.ImageName}}|容器的镜像名
+{{.DaemonName}}|Docker程序名
+
+例如，指定`--log-opt tag="{{.ImageName}}/{{.Name}}/{{.ID}}"`将在syslog中产生如下日志行：
+```
+Aug  7 18:33:19 HOSTNAME hello-world/foobar/5790672ab6a0[9103]: Hello from Docker.
+```
+
+系统启动时将在标签（tag）中设置container_name字段和{{.Name}}。如果你使用docker rename命令重命名一个容器，新的名字将不会在日志中特现出来--消息将继续使用最初的容器名字。
 ## 日志驱动细节（Logging driver details）
 
 ## 参考
