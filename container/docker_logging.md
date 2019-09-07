@@ -141,8 +141,69 @@ none|容器没有日志可用，docker logs 什么输出都不返回
 
 下面的例子显示了在有及没有双日志能力的情况下docker logs命令的运行结果：
 ####  无双日志能力
+当一个容器或dockerd配置为远程日志驱动，比如splunk，如果你试图读本地容器日志时将返回一个错误。
+- 第1步： 配置Docker daemon
+```
+$ cat /etc/docker/daemon.json
+  {
+    "log-driver": "splunk",
+    "log-opts": {
+      ...
+    }
+  }
+```
+- 第2步：启动容器
+```
+$ docker run -d busybox --name testlog top 
+```
+- 第3步：读取容器日志
+```
+ $ docker logs 7d6ac83a89a0
+  The docker logs command was not available for drivers other than json-file and journald.
+```
 ####  拥有双日志能力
+一个容器或dockerd配置为远程日志驱动，比如splunk。
+- 第1步： 配置Docker daemon
+```
+$ cat /etc/docker/daemon.json
+  {
+    "log-driver": "splunk",
+    "log-opts": {
+      ...
+    }
+  }
+```
+- 第2步：启动容器
+```
+$ docker run -d busybox --name testlog top 
+```
+- 第3步：读取容器日志
+```
+ $ docker logs 7d6ac83a89a0
+  2019-02-04T19:48:15.423Z [INFO]  core: marked as sealed
+  2019-02-04T19:48:15.423Z [INFO]  core: pre-seal teardown starting
+  2019-02-04T19:48:15.423Z [INFO]  core: stopping cluster listeners
+  2019-02-04T19:48:15.423Z [INFO]  core: shutting down forwarding rpc listeners
+  2019-02-04T19:48:15.423Z [INFO]  core: forwarding rpc listeners stopped
+  2019-02-04T19:48:15.599Z [INFO]  core: rpc listeners successfully shut down
+  2019-02-04T19:48:15.599Z [INFO]  core: cluster listeners successfully shut down
+```
+> **注意**：对于一个本地日志驱动，比如json-file和journald，双日志功能开启以否其功能没有差别，两种情况下都可以本地读取容器日志。
+### 限制
+- 你不能指定超过一种日志驱动
+- 如果一个容器使用日志驱动远程发送日志，中间突发网络故障，不会有写本地缓存的情况发生。
+- 如果一次向驱动写日志操作失败（文件系统满，或者没有写权限），缓存写操作将失败，daemon 将记录这次失败，但写向缓存的操作不回重拾。
+- 在文件写操作较慢时，一个环形缓存用于防止容器被阻塞在IO上。由于默认环形缓冲大小的限制，某些日志可能从缓存丢失。管理员应该在docker daemon关闭时修复这个问题。
 ## 使用日志驱动插件（Use a logging driver plugin）
+Docker的日志插件能让你扩展和定制Docker内建日志驱动的功能。日志服务提供者可以[实现他们自己的插件](https://docs.docker.com/engine/extend/plugins_logging/)，并在Docker Hub或一个私人仓库上发布，本文将介绍如何配置Docker来使用这种插件。
+### 安装日志驱动插件
+使用docker plugin install <org/image>命令来安装日志驱动插件，安装过程中需要参阅插件开发者提供的信息。
+
+你可以使用docker plugin ls来列出已安装的所有插件，你也可以使用docker inspect来检视一个特定插件。
+### 配置插件为缺省日志驱动
+日志驱动插件安装后，你可以配置Docker daemon使用它作为日志缺省驱动：只需在daemon.json,中把log-driver设置为插件的名字。如果该驱动插件支持额外选项，你可以在该文件中使用log-opts数组来设置他们。
+### 配置插件为容器日志驱动
+日志驱动插件安装后，你可以配置容器使用它作为日志驱动：只需利用--log-driver把它们传递给docker run。如果该驱动插件支持额外选项，你可以传递一个或多个--log-opt标记，以选项名作为键，以选项值作为值。
 ## 定制日志驱动输出（Customize log driver output）
 ## 日志驱动细节（Logging driver details）
 
