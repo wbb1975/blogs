@@ -67,7 +67,81 @@ json-file
 Docker提供两种模式用于发送从容器到日志驱动的消息：
 - （缺省）直接模式，从容奇至日志驱动以阻塞方式发送
 -  非阻塞模式，日志消息被存在一个容器级别的环形缓存中供日志驱动消费
+
+非阻塞模式可防止由于记入日志的压力而阻塞，当 STDERR 或 STDOUT 流阻塞时，应用程序可能会以意想不到的方式失败。
+> **警告**： 当缓冲区已满且新消息排入队列时，内存中最早的消息将被丢弃。我们更倾向于丢弃消息通常阻塞在应用程序的日志写入过程。
+
+mode 这个日志选项用于控制使用阻塞（默认）还是非阻塞方式发送消息。
+
+max-buffer-size 这个日志选项用于控制非阻塞方式下用作中间消息存储的环形缓冲区大小，默认是 1MB。
+
+下面示例启动了日志输出为非阻塞模式且有 4MB 缓存的 Alpine 容器。
+```
+$ docker run -it --log-opt mode=non-blocking --log-opt max-buffer-size=4m alpine ping 127.0.0.1
+```
+### 为日志驱动使用环境变量或标签
+部分日志驱动程序会将容器的 --env|-e 或 --label 标志值添加到容器的日志中。这个例子启动了一个使用 Docker 守护进程默认日志驱动程序（假设是 json-file）的容器，但是设置了环境变量 os=ubuntu。
+```
+$ docker run -dit --label production_status=testing -e os=ubuntu alpine sh
+```
+如果日志驱动程序支持，这会添加额外的字段到日志输出中。下面是 json-file 日志驱动程序的输出：
+```
+"attrs":{"production_status":"testing","os":"ubuntu"}
+```
+### 支持的日志驱动
+Docker支持如下日志驱动。参考每个驱动程序的文档来了解相关配置选项。如果你使用了[日志驱动程序插件](https://docs.docker.com/engine/admin/logging/plugins/)，会有更多的选项。
+驱动程序|描述
+--|--
+none|容器没有日志可用，docker logs 什么输出都不返回
+[local](https://docs.docker.com/config/containers/logging/local/)|日志被以一种旨在最小化负荷的用户格式存储
+[json-file](https://docs.docker.com/config/containers/logging/json-file/)|日志格式化为 JSON。这是 Docker 默认的日志驱动程序
+[syslog](https://docs.docker.com/config/containers/logging/syslog/)|将日志消息写入 syslog 工具。syslog 守护程序必须在宿主机上运行
+[journald](https://docs.docker.com/config/containers/logging/journald/)|将日志消息写入 journald。journald 守护程序必须在宿主机上运行
+[gelf](https://docs.docker.com/config/containers/logging/gelf/)|将日志消息写入 Graylog Extended Log Format (GELF) 终端，例如 Graylog 或 Logstash
+[fluentd](https://docs.docker.com/config/containers/logging/fluentd/)|将日志消息写入 fluentd（forward input）。fluentd 守护程序必须在宿主机上运行
+[awslogs](https://docs.docker.com/config/containers/logging/awslogs/)|将日志消息写入 Amazon CloudWatch Logs。
+[splunk](https://docs.docker.com/config/containers/logging/splunk/)|用HTTP事件收集器将日志消息写入splunk
+[etwlogs](https://docs.docker.com/config/containers/logging/etwlogs/)|将日志消息写为 Windows 的 Event Tracing 事件。仅在Windows平台上可用
+[gcplogs](https://docs.docker.com/config/containers/logging/gcplogs/)|将日志消息写入 Google Cloud Platform (GCP) Logging
+[logentries](https://docs.docker.com/config/containers/logging/logentries/)|将日志消息写入 Rapid7 Logentries
+### 日志驱动的限制
+- Docker企业版用户可以使用“双日志”，这是你可以把docker logs命令用于任何日志驱动。参阅[使用docker logs阅读配置了远程日志驱动的容器的日志](https://docs.docker.com/config/containers/logging/dual-logging/)以获得关于用docker logs来本地读取第三方日志驱动解决方案的日志的信息，包括：
+  + syslog
+  + gelf
+  + fluentd
+  + awslogs
+  + splunk
+  + etwlogs
+  + gcplogs
+  + Logentries
+- 当使用Docker社区版时，docker logs仅仅可用于以下驱动：
+  + local
+  + json-file
+  + journald
+- 读取日志信息需要解压轮转的（rotated）日志文件，这将导致解压时的CPU使用率上升和磁盘利用率暂时增大（直至在轮转日志文件中的消息被读取完毕）
+- docker数据目录所驻主机存储大小决定了存储日志文件信息的多少。
 ## 使用docker logs阅读配置了远程日志驱动的容器的日志（Use docker logs to read container logs for remote logging drivers）
+### 概览
+在Docker企业版18.03之前，jsonfile和journald两种日志驱动支持用docker logs命令读取容器日志。但是，许多第三方日志驱动不支持用docker logs本地读取日志消息，包括：
+- syslog
+- gelf
+- fluentd
+- awslogs
+- splunk
+- etwlogs
+- gcplogs
+- Logentries
+这给以一种自动化和标准化方式收集日志数据带来许多问题，尤其是UDP。日志信息仅仅能够以的第三方日志驱动指定的格式访问和查看。
+
+从Docker企业版18.03.1-ee-1开始，你可以用docker logs命令读取日志记录无论你配置何种日志驱动或插件。这种能力，通常被称为双日志，由于Docker引擎已经配置了“local”日志驱动，能够让你以一种一致的格式本地读取容器日志，无论远端使用何种日志驱动。查阅[配置缺省日志驱动](https://docs.docker.com/config/containers/logging/configure)可以看到更多额外信息。
+### 前提
+- Docker 企业版 - 双日志只有企业版才支持，而且从Docker企业版引擎18.03.1-ee-1起默认开启支持。
+### 用法
+双日志缺省打开。你必须配置docker daemon或容器本身支持远程日志驱动。
+
+下面的例子显示了在有及没有双日志能力的情况下docker logs命令的运行结果：
+####  无双日志能力
+####  拥有双日志能力
 ## 使用日志驱动插件（Use a logging driver plugin）
 ## 定制日志驱动输出（Customize log driver output）
 ## 日志驱动细节（Logging driver details）
