@@ -13,8 +13,8 @@
   + [SDK source](https://github.com/aws/aws-sdk-cpp)
   + [SDK issues](https://github.com/aws/aws-sdk-cpp/issues)
 - [SDK License](https://aws.amazon.com/apache2.0/)
-## 入门（Getting Started ）
-### 设立AWS SKD C++
+## 第一章 入门（Getting Started ）
+### $1 设立AWS SKD C++
 本节给出了在你的开发平台上如何设立AWS SDK C++的相关信息。 
 #### 前提 
 为了使用AWS SDK for C++，你需要：
@@ -122,7 +122,7 @@ sudo yum install libcurl-devel openssl-devel libuuid-devel pulseaudio-libs-devel
    ```
 #### 为安卓（Android）编译SDK
 为了创建安卓SDK，在cmake命令行上添加 -DTARGET_ARCH=ANDROID。AWS SDK for C++已经包含了所需的cmake工具链，前提是你已经设立了争取的环境变量(ANDROID_NDK)。 
-### 提供AWS凭证（Providing AWS Credentials）
+### $2 提供AWS凭证（Providing AWS Credentials）
 要连接仁义AWS SDK for C++支持的AWS服务，你必须提供AWS凭证。AWS SDKs 和 CLIs使用提供者链来在不同的地方寻找AWS凭证，包括系统/用户环境变量，以及本地AWS配置文件。
 
 你可以用不同的方式设置AWS SDK for C++所需凭证，但下面是推荐的方式：
@@ -155,7 +155,7 @@ sudo yum install libcurl-devel openssl-devel libuuid-devel pulseaudio-libs-devel
 你也可以使用你自己的方式提供AWS凭证：
 - 把你的凭证提供给AWS client类的构造函数
 - 使用[Amazon Cognito](https://aws.amazon.com/cognito/)，一种AWS实体管理方案。你可以在实体管理项目中使用CognitoCachingCredentialsProviders。更多信息，请参阅[Amazon Cognito开发者指南](https://docs.aws.amazon.com/cognito/latest/developerguide/)。
-### 使用AWS SKD C++
+### $3 使用AWS SKD C++
 使用AWS SDK for C++的应用必须初始化它，相似地，应用终止前，SDK必须被停止。两种操作（初始化和停止）都接受配置选项，这些选项将会影响初始化和停止过程以及其后的SDK调用。
 #### 初始化和停止SDK
 所有使用AWS SDK for C++的应用必须包含**aws/core/Aws.h**。
@@ -179,11 +179,54 @@ int main(int argc, char** argv)
 }
 ```
 #### 设置SDK选项
+[Aws::SDKOptions](https://sdk.amazonaws.com/cpp/api/LATEST/struct_aws_1_1_s_d_k_options.html)结构体含有SDK配置选项。
+
+一个[Aws::SDKOptions](https://sdk.amazonaws.com/cpp/api/LATEST/struct_aws_1_1_s_d_k_options.html)结构体实例被传递给Aws::InitAPI 和 Aws::ShutdownAPI方法，同一个实例应该被传递给两个方法。
+
+下面的例子演示了一些可用选项：
+  - 用缺省日志器打开日志
+     ```
+     Aws::SDKOptions options;
+    options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
+    Aws::InitAPI(options);
+    {
+        // make your SDK calls here.
+    }
+    Aws::ShutdownAPI(options);
+     ```
+  - 安装一个自定义内存管理器
+    ```
+    MyMemoryManager memoryManager;
+    Aws::SDKOptions options;
+    options.memoryManagementOptions.memoryManager = &memoryManager;
+    Aws::InitAPI(options);
+    {
+        // make your SDK calls here.
+    }
+    Aws::ShutdownAPI(options);
+    ```
+  - 覆盖缺省HTTP client factory
+     ```
+     Aws::SDKOptions options;
+     options.httpOptions.httpClientFactory_create_fn = [](){
+        return Aws::MakeShared<MyCustomHttpClientFactory>(
+            "ALLOC_TAG", arg1);
+    };
+     Aws::InitAPI(options);
+     {
+        // make your SDK calls here.
+     }
+     Aws::ShutdownAPI(options);
+     ```
+     > **注意**
+     > httpOptions传递的是一个闭包而不是一个std::shared_ptr。SDK的每个工厂方法以同样的方式工作，这是由于在工厂内存分配发生时，内存管理器还没有安装。通过传递给方法一个闭包，内存管理器将会在安全的时候被调用来分配内存。完成这个过程的简单方式是使用Lambda表达式。
 #### 更多信息
-### 用Cmake创建你的程序
-## 配置SDK
-## 使用SDK
-## 代码示例
+AWS SDK for C++的更多示例代码在[AWS SDK for C++ Code Examples](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/programming-services.html)中描述。每个示例包含了一个在GitHub上的完整代码的链接，这些事例可以作为你自己的应用的出发点。
+### $4 用Cmake创建你的程序
+
+## 第二章 配置SDK
+## 第三章 使用SDK
+## 第四章 代码示例
 
 # 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
