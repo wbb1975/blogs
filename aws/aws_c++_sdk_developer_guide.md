@@ -122,7 +122,39 @@ sudo yum install libcurl-devel openssl-devel libuuid-devel pulseaudio-libs-devel
    ```
 #### 为安卓（Android）编译SDK
 为了创建安卓SDK，在cmake命令行上添加 -DTARGET_ARCH=ANDROID。AWS SDK for C++已经包含了所需的cmake工具链，前提是你已经设立了争取的环境变量(ANDROID_NDK)。 
-### 提供AWS证书（Providing AWS Credentials）
+### 提供AWS凭证（Providing AWS Credentials）
+要连接仁义AWS SDK for C++支持的AWS服务，你必须提供AWS凭证。AWS SDKs 和 CLIs使用提供者链来在不同的地方寻找AWS凭证，包括系统/用户环境变量，以及本地AWS配置文件。
+
+你可以用不同的方式设置AWS SDK for C++所需凭证，但下面是推荐的方式：
++ 在本地系统的AWS credentials profile文件中设置凭证
+    - 在Linux, macOS, 或 Unix平台上是~/.aws/credentials on 
+    -  在Windows平台上是C:\Users\USERNAME\.aws\credentials
+    
+    该文件应该包含如下格式内容：
+    ```
+    [default]
+    aws_access_key_id = your_access_key_id
+    aws_secret_access_key = your_secret_access_key
+    ```
+    将the values your_access_key_id 和 your_secret_access_key替换为你自己的AWS凭证值。
++ 设置AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY环境变量
+    在Linux, macOS, 或 Unix，使用export设置环境变量
+    ```
+    export AWS_ACCESS_KEY_ID=your_access_key_id
+    export AWS_SECRET_ACCESS_KEY=your_secret_access_key
+    ```
+    在Windows平台上，用set设置环境变量
+    ```
+    set AWS_ACCESS_KEY_ID=your_access_key_id
+    set AWS_SECRET_ACCESS_KEY=your_secret_access_key
+    ```
++ 对于一个EC2实例，制定一个IAM角色并授予你的EC2实例访问这个角色的权限。查阅Amazon EC2用户指南中的[ IAM Roles for Amazon EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)以获取这种方式如何工作的详细信息。
+
+当你用如上任一方式设置好了AWS凭证后，AWS SDK for C++将使用默认凭证提供者链自动加载它们。
+
+你也可以使用你自己的方式提供AWS凭证：
+- 把你的凭证提供给AWS client类的构造函数
+- 使用[Amazon Cognito](https://aws.amazon.com/cognito/)，一种AWS实体管理方案。你可以在实体管理项目中使用CognitoCachingCredentialsProviders。更多信息，请参阅[Amazon Cognito开发者指南](https://docs.aws.amazon.com/cognito/latest/developerguide/)。
 ### 使用AWS SKD C++
 ### 用Cmake创建你的程序
 ## 配置SDK
