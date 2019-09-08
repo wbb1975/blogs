@@ -222,11 +222,63 @@ int main(int argc, char** argv)
      > httpOptions传递的是一个闭包而不是一个std::shared_ptr。SDK的每个工厂方法以同样的方式工作，这是由于在工厂内存分配发生时，内存管理器还没有安装。通过传递给方法一个闭包，内存管理器将会在安全的时候被调用来分配内存。完成这个过程的简单方式是使用Lambda表达式。
 #### 更多信息
 AWS SDK for C++的更多示例代码在[AWS SDK for C++ Code Examples](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/programming-services.html)中描述。每个示例包含了一个在GitHub上的完整代码的链接，这些事例可以作为你自己的应用的出发点。
-### $4 用Cmake创建你的程序
+### $4 用Cmake构建你的程序
+[Cmake](https://cmake.org/)是一个创建适合你平台的makefiles，以及管理你的应用依赖的创建（build）工具。这是一个创建及编译AWS SDK for C++项目的简单方式。
+#### 创建一个CMake项目
+1. 创建一个目录来容纳你的项目：`mkdir my_example_project`
+2. 切换到目录，添加一个文件CMakeLists.txt--其指定你的项目的名字，可执行文件名，源代码及链接库等。下面是一个极小的示例：
+    ```
+    # minimal CMakeLists.txt for the AWS SDK for C++
+    cmake_minimum_required(VERSION 3.2)
 
+    # "my-example" is just an example value.
+    project(my-example)
+
+    # Locate the AWS SDK for C++ package.
+    # Requires that you build with:
+    #   -DCMAKE_PREFIX_PATH=/path/to/sdk_install
+    find_package(AWSSDK REQUIRED COMPONENTS service1 service2 ...)
+
+    # The executable name and its sourcefiles
+    add_executable(my-example my-example.cpp)
+
+    # The libraries used by your executable.
+    # "aws-cpp-sdk-s3" is just an example.
+    target_link_libraries(my-example ${AWSSDK_LINK_LIBRARIES})
+    ```
+> 注意： 你可以在你的创建文件CMakeLists.txt中设立很多选项。关于这个文件特性的介绍，请参阅CMake网站上的[CMake tutorial](https://cmake.org/cmake-tutorial/)。
+#### 设置CMAKE_PREFIX_PAT H（可选）
+Cmake需要知道aws-sdk-cpp-config.cmake的位置，如此它才能解析你的应用使用的AWS SDK库。你可以在[构建SDK](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/setup.html)已接种建立的build目录中找到它。
+
+通过设置CMAKE_PREFIX_PATH，你不需要在够建你的应用时每次输入这个路径。
+
+你可以在Linux, macOS, or Unix中象如下设置：
+```
+export CMAKE_PREFIX_PATH=/path/to/sdk_build_dir
+```
+在Windows上如下设置：
+```
+set CMAKE_PREFIX_PATH=C:\path\to\sdk_build_dir
+```
+#### 用CMake构建
+创建一个目录，你将在着这个目录中构建
+```
+mkdir my_project_build
+```
+切换到构建目录，传入你的项目的源代码目录运行cmake命令
+```
+cd my_project_build
+cmake ../my_example_project
+```
+如果你没有设置CMAKE_PREFIX_PATH，你必须用-Daws-sdk-cpp_DIR加入SDk构建目录
+```
+cmake -Daws-sdk-cpp_DIR=/path/to/sdk_build_dir ../my_example_project
+```
+当cmake产生了构建目录，你可以使用make (Windows上使用nmake)来构建你的应用。
 ## 第二章 配置SDK
 ## 第三章 使用SDK
 ## 第四章 代码示例
 
 # 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
+- [CMake tutorial](https://cmake.org/cmake-tutorial/)
