@@ -156,6 +156,30 @@ sudo yum install libcurl-devel openssl-devel libuuid-devel pulseaudio-libs-devel
 - 把你的凭证提供给AWS client类的构造函数
 - 使用[Amazon Cognito](https://aws.amazon.com/cognito/)，一种AWS实体管理方案。你可以在实体管理项目中使用CognitoCachingCredentialsProviders。更多信息，请参阅[Amazon Cognito开发者指南](https://docs.aws.amazon.com/cognito/latest/developerguide/)。
 ### 使用AWS SKD C++
+使用AWS SDK for C++的应用必须初始化它，相似地，应用终止前，SDK必须被停止。两种操作（初始化和停止）都接受配置选项，这些选项将会影响初始化和停止过程以及其后的SDK调用。
+#### 初始化和停止SDK
+所有使用AWS SDK for C++的应用必须包含**aws/core/Aws.h**。
+
+AWS SDK for C++必须调用Aws::InitAPI来初始化它。应用终止前，SDK必须Aws::ShutdownAPI来停止它。两种方法都接受Aws::SDKOptions参数。对SDK其它方法的调用在这两个方法之间发出。
+
+最佳实践要求所有在Aws::InitAPI 和 Aws::ShutdownAPI之间的AWS SDK for C++调用要么被大括弧包装成代码块，要么在两个方法之间直接调用。
+
+一个基本的应用框架如下所示：
+```
+#include <aws/core/Aws.h>
+int main(int argc, char** argv)
+{
+   Aws::SDKOptions options;
+   Aws::InitAPI(options);
+   {
+      // make your SDK calls here.
+   }
+   Aws::ShutdownAPI(options);
+   return 0;
+}
+```
+#### 设置SDK选项
+#### 更多信息
 ### 用Cmake创建你的程序
 ## 配置SDK
 ## 使用SDK
