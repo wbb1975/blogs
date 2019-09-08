@@ -277,6 +277,15 @@ cmake -Daws-sdk-cpp_DIR=/path/to/sdk_build_dir ../my_example_project
 当cmake产生了构建目录，你可以使用make (Windows上使用nmake)来构建你的应用。
 ## 第二章 配置SDK
 ### $1 CMake参数
+使用本节介绍的CMake参数来定制你的SDK构建。
+
+你可以使用CMake图形工具或者在命令行使用”-D“来设置这些选项，例如：
+    ```
+    cmake -DENABLE_UNITY_BUILD=ON -DREGENERATE_CLIENTS=1
+    ```
+#### 通用CMake变量和选项
+  > 注意： 为了使用变量ADD_CUSTOM_CLIENTS 或 REGENERATE_CLIENTS，你必须安装了[Python 2.7](https://www.python.org/downloads/), Java ([JDK 1.8+](http://openjdk.java.net/install/)), and [Maven](https://maven.apache.org/)，并已经将它们加入到你的 PATH里。
+#### 安卓适用的CMake变量和选项
 ### $2 AWS客户端配置
 ### $3 覆写你的HTTP客户端
 ### $4 控制HttpClient 和 AWSClient的IO流
