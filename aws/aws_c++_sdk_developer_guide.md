@@ -285,6 +285,74 @@ cmake -Daws-sdk-cpp_DIR=/path/to/sdk_build_dir ../my_example_project
     ```
 #### 通用CMake变量和选项
   > 注意： 为了使用变量ADD_CUSTOM_CLIENTS 或 REGENERATE_CLIENTS，你必须安装了[Python 2.7](https://www.python.org/downloads/), Java ([JDK 1.8+](http://openjdk.java.net/install/)), and [Maven](https://maven.apache.org/)，并已经将它们加入到你的 PATH里。
+- ADD_CUSTOM_CLIENTS
+- BUILD_ONLY
+   仅仅构建你需要的客户端。如果设置一个高阶SDK，比如aws-cpp-sdk-transfer，BUILD_ONLY将解析任何底层客户端依赖。如果存在，它也构建你选择的项目的集成和单元测试。这是一个列表参数，值以分号分割。例如：
+   ```
+   -DBUILD_ONLY="s3;cognito-identity"
+   ```
+
+   > 注意：SDK核心模块，即aws-sdk-cpp-core，无论BUILD_ONLY被传入什么值，都会被构建。
+- BUILD_SHARED_LIBS
+   CMake内建选项，这里重为了可见性新导出。如果开启，将构建共享库，否则，它将仅构建静态库。
+    > 注意：为了动态链接SDK，你必须为使用SDK的所有构建目标定义USE_IMPORT_EXPORT。
+
+    Values
+
+        ON/OFF
+    
+    Default
+
+      ON
+- CPP_STANDARD
+
+   指定用户C++标准
+   Values
+
+        11/14/17
+    
+    Default
+
+      11
+- CUSTOM_MEMORY_MANAGEMENT
+- ENABLE_RTTI
+   
+   控制SDK是否开启运行时信心（RTTI）
+
+   Values
+
+        ON/OFF
+    
+    Default
+
+      ON
+- ENABLE_TESTING
+- ENABLE_UNITY_BUILD
+  
+   如果开启，大部分SDK库将被构建成一个简单的，生成的.cpp文件。这将极大地减小静态库大小并加快编译时间。
+
+   Values
+
+        ON/OFF
+    
+    Default
+
+      ON
+- FORCE_SHARED_CRT
+- G
+- MINIMIZE_SIZE
+- NO_ENCRYPTION
+- NO_HTTP_CLIENT
+- REGENERATE_CLIENTS
+- SIMPLE_INSTALL
+- TARGET_ARCH
+   
+   为了交叉编译或者为了移动平台构建，你必须指定一个目标平台。默认地，构建过程会检测宿主操作系统并为检测到的操作系统构建。
+    > 注意：当TARGET_ARCH是ANDROID时，有额外的选项可用，请参阅[Android CMake Variables and Options.](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/cmake-params.html#cmake-android-variables)。
+
+    Values
+    
+       WINDOWS | LINUX | APPLE | ANDROID
 #### 安卓适用的CMake变量和选项
 ### $2 AWS客户端配置
 ### $3 覆写你的HTTP客户端
