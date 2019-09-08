@@ -471,6 +471,53 @@ int main(int argc, char** argv)
 }
 ```
 ### $5 错误处理
+AWS SDK for C++不使用异常；但是，你可以在你的代码中使用异常。每个服务的客户端将返回一个输出对象，包含一个结果及一个错误码：
+```
+bool CreateTableAndWaitForItToBeActive()
+{
+  CreateTableRequest createTableRequest;
+  AttributeDefinition hashKey;
+  hashKey.SetAttributeName(HASH_KEY_NAME);
+  hashKey.SetAttributeType(ScalarAttributeType::S);
+  createTableRequest.AddAttributeDefinitions(hashKey);
+  KeySchemaElement hashKeySchemaElement;
+  hashKeySchemaElement.WithAttributeName(HASH_KEY_NAME).WithKeyType(KeyType::HASH);
+  createTableRequest.AddKeySchema(hashKeySchemaElement);
+  ProvisionedThroughput provisionedThroughput;
+  provisionedThroughput.SetReadCapacityUnits(readCap);
+  provisionedThroughput.SetWriteCapacityUnits(writeCap);
+  createTableRequest.WithProvisionedThroughput(provisionedThroughput);
+  createTableRequest.WithTableName(tableName);
+
+  CreateTableOutcome createTableOutcome = dynamoDbClient->CreateTable(createTableRequest);
+  if (createTableOutcome.IsSuccess())
+  {
+     DescribeTableRequest describeTableRequest;
+     describeTableRequest.SetTableName(tableName);
+     bool shouldContinue = true;
+     DescribeTableOutcome outcome = dynamoDbClient->DescribeTable(describeTableRequest);
+
+     while (shouldContinue)
+     {
+         if (outcome.GetResult().GetTable().GetTableStatus() == TableStatus::ACTIVE)
+         {
+            break;
+         }
+         else
+         {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+         }
+     }
+     return true;
+  }
+  else if(createTableOutcome.GetError().GetErrorType() == DynamoDBErrors::RESOURCE_IN_USE)
+  {
+     return true;
+  }
+
+  return false;
+}
+```
 ## 第四章 代码示例
 本节包括使用AWS SDK for C++开发特定AWS服务的实例，指南，小窍门。
 ### $1 Amazon CloudWatch 示例
