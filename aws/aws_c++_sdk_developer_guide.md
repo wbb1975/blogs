@@ -276,8 +276,29 @@ cmake -Daws-sdk-cpp_DIR=/path/to/sdk_build_dir ../my_example_project
 ```
 当cmake产生了构建目录，你可以使用make (Windows上使用nmake)来构建你的应用。
 ## 第二章 配置SDK
+### $1 CMake参数
+### $2 AWS客户端配置
+### $3 覆写你的HTTP客户端
+### $4 控制HttpClient 和 AWSClient的IO流
+### $5 SDK Metrics
 ## 第三章 使用SDK
+这一节介绍AWS SDK for C++的一般性用法，包含SDK入门篇不曾覆盖的内容。
+
+关于特定服务相关的代码示例，请参见[AWS SDK for C++ Code Examples.](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/programming-services.html)。
+### $1 服务客户端类
+### $2 工具模块
+### $3 内存管理
+### $4 日志
+### $5 错误处理
 ## 第四章 代码示例
+本节包括使用AWS SDK for C++开发特定AWS服务的实例，指南，小窍门。
+### $1 Amazon CloudWatch 示例
+### $2 Amazon DynamoDB 示例
+### $3 Amazon EC2 示例
+### $4 Amazon IAM 示例
+### $5 Amazon S3 示例
+### $6 Amazon SQS 示例
+### $7 异步方法
 
 # 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
