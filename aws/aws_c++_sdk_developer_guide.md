@@ -355,6 +355,79 @@ cmake -Daws-sdk-cpp_DIR=/path/to/sdk_build_dir ../my_example_project
        WINDOWS | LINUX | APPLE | ANDROID
 #### 安卓适用的CMake变量和选项
 ### $2 AWS客户端配置
+利用客户端配置来控制AWS SDK for C++.的各种行为。
+
+ClientConfiguration声明：
+```
+struct AWS_CORE_API ClientConfiguration
+{
+    ClientConfiguration();
+
+    Aws::String userAgent;
+    Aws::Http::Scheme scheme;
+    Aws::Region region;
+    bool useDualStack;
+    unsigned maxConnections;
+    long requestTimeoutMs;
+    long connectTimeoutMs;
+    bool enableTcpKeepAlive;
+    unsigned long tcpKeepAliveIntervalMs;
+    unsigned long lowSpeedLimit;
+    std::shared_ptr<RetryStrategy> retryStrategy;
+    Aws::String endpointOverride;
+    Aws::Http::Scheme proxyScheme;
+    Aws::String proxyHost;
+    unsigned proxyPort;
+    Aws::String proxyUserName;
+    Aws::String proxyPassword;
+    std::shared_ptr<Aws::Utils::Threading::Executor> executor;
+    bool verifySSL;
+    Aws::String caPath;
+    Aws::String caFile;
+    std::shared_ptr<Aws::Utils::RateLimits::RateLimiterInterface> writeRateLimiter;
+    std::shared_ptr<Aws::Utils::RateLimits::RateLimiterInterface> readRateLimiter;
+    Aws::Http::TransferLibType httpLibOverride;
+    bool followRedirects;
+    bool disableExpectHeader;
+    bool enableClockSkewAdjustment;
+    bool enableHostPrefixInjection;
+    bool enableEndpointDiscovery;
+};
+```
+
+**配置变量**
+- userAgent
+  
+   仅仅内部使用，不要更改其设置。
+- scheme
+  
+   指定URI地址架构，HTTP 或 HTTPS， 默认为HTTPS。
+- region
+  
+   指定使用的AWS区域，比如us-east-1。默认地，使用的区域是可用AWS凭证配置的的缺省区域。
+- useDualStack
+
+   控制是否使用 IPv4 和 IPv6 双栈端点。注意不是所有区域的所有AWS服务支持 IPv6 。
+- maxConnections
+
+   指定和单独一个服务的最大HTTP连接数。缺省值为25。除了你的带宽限制，没有真正最大允许连接数。
+- requestTimeoutMs 和 connectTimeoutMs
+- enableTcpKeepAlive
+- tcpKeepAliveIntervalMs
+- lowSpeedLimit
+- retryStrategy
+- endpointOverride
+- proxyScheme, proxyHost, proxyPort, proxyUserName, 和 proxyPassword
+- executor
+- verifySSL
+- caPath, caFile
+- writeRateLimiter 和 readRateLimiter
+- httpLibOverride
+- followRedirects
+- disableExpectHeader
+- enableClockSkewAdjustment
+- enableHostPrefixInjection
+- enableEndpointDiscovery
 ### $3 覆写你的HTTP客户端
 ### $4 控制HttpClient 和 AWSClient的IO流
 ### $5 SDK Metrics
@@ -366,6 +439,37 @@ cmake -Daws-sdk-cpp_DIR=/path/to/sdk_build_dir ../my_example_project
 ### $2 工具模块
 ### $3 内存管理
 ### $4 日志
+AWS SDK for C++包含你可配置的日志支持。当初始化日志系统时，你可以控制过滤级别以及日志目标（可以用一个配置的前缀名或流名来过滤）。产生的带前缀日志文件每小时产生一个新文件，以此来归档或删除日志文件。
+```
+Aws::Utils::Logging::InitializeAWSLogging(
+    Aws::MakeShared<Aws::Utils::Logging::DefaultLogSystem>(
+        "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace, "aws_sdk_"));
+```
+如果你没有在你的应用中调用InitializeAWSLogging，SDK将不会记录任何日志。如果你使用了日志，请勿忘记在在程序结尾处利用ShutdownAWSLogging关闭日志。
+```
+Aws::Utils::Logging::ShutdownAWSLogging();
+```
+集成日志的例子：
+```
+#include <aws/external/gtest.h>
+
+#include <aws/core/utils/memory/stl/AWSString.h>
+#include <aws/core/utils/logging/DefaultLogSystem.h>
+#include <aws/core/utils/logging/AWSLogging.h>
+
+#include <iostream>
+
+int main(int argc, char** argv)
+{
+    Aws::Utils::Logging::InitializeAWSLogging(
+        Aws::MakeShared<Aws::Utils::Logging::DefaultLogSystem>(
+            "RunUnitTests", Aws::Utils::Logging::LogLevel::Trace, "aws_sdk_"));
+    ::testing::InitGoogleTest(&argc, argv);
+    int exitCode = RUN_ALL_TESTS();
+    Aws::Utils::Logging::ShutdownAWSLogging();
+    return exitCode;
+}
+```
 ### $5 错误处理
 ## 第四章 代码示例
 本节包括使用AWS SDK for C++开发特定AWS服务的实例，指南，小窍门。
