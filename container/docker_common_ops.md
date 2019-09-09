@@ -75,7 +75,7 @@ Options:
       --pid string                     PID namespace to use
       --pids-limit int                 Tune container pids limit (set -1 for unlimited)
       --privileged                     Give extended privileges to this container
-  -p, --publish list                   Publish a container's port(s) to the host
+  -p, --publish list                   Publish a container's port(s) to the host     // 有用，hostIP:hostPort:containerPort
   -P, --publish-all                    Publish all exposed ports to random ports
       --read-only                      Mount the container's root filesystem as read only
       --restart string                 Restart policy to apply when a container exits (default "no")  // 有用， 控制容器自动重启，可用选项包括:always,on-failure,no等
@@ -588,6 +588,26 @@ Options:
       --since string   Show logs since timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42 minutes)
       --tail string    Number of lines to show from the end of the logs (default "all")
   -t, --timestamps     Show timestamps
+```
+## 12. 拷贝文件
+```
+wangbb@wangbb-ThinkPad-T420:~/git/aws-sdk-cpp-build/aws-cpp-sdk-s3$ sudo docker help cp
+Usage:	docker cp [OPTIONS] CONTAINER:SRC_PATH DEST_PATH|-
+	            docker cp [OPTIONS] SRC_PATH|- CONTAINER:DEST_PATH
+
+Copy files/folders between a container and the local filesystem
+
+Options:
+  -a, --archive       Archive mode (copy all uid/gid information)
+  -L, --follow-link   Always follow symbol link in SRC_PATH
+```
+
+**Example:**
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED              STATUS              PORTS               NAMES
+4985dfc555a6        centos              "/bin/bash"         About a minute ago   Up About a minute                       priceless_bohr
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker cp aws_ops.txt 4985dfc555a6:/tmp/.
 ```
 
 ## 参考
