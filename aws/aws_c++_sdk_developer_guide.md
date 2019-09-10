@@ -531,3 +531,4 @@ bool CreateTableAndWaitForItToBeActive()
 # 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
 - [CMake tutorial](https://cmake.org/cmake-tutorial/)
+- [How to build AWS C++ SDK on Windows](https://www.megalacant.com/techblog/2019/02/28/building-aws-cpp-sdk-windows.html)
