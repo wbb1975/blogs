@@ -26,7 +26,6 @@
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/CreateBucketRequest.h>
 ```
-
 **代码**
 ```
 bool create_bucket(const Aws::String &bucket_name,
@@ -58,7 +57,6 @@ bool create_bucket(const Aws::String &bucket_name,
     return true;
 }
 ```
-
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/create_bucket.cpp)。
 ##### 列出存储桶
 使用[S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的ListBucket方法。如果成功，返回一个ListBucketOutcome对象，它包含一个ListBucketResult对象。
@@ -70,7 +68,6 @@ bool create_bucket(const Aws::String &bucket_name,
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/Bucket.h>
 ```
-
 **代码**
 ```
 Aws::S3::S3Client s3_client;
@@ -95,7 +92,6 @@ else
         << outcome.GetError().GetMessage() << std::endl;
 }
 ```
-
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/list_buckets.cpp)。
 ##### 删除存储桶
 使用[S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的DeleteBucket方法，传给它一个DeleteBucketRequest和存储桶的名字。存储桶必须为空，否则返回错误。
@@ -106,7 +102,6 @@ else
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/DeleteBucketRequest.h>
 ```
-
 **代码**
 ```
 Aws::Client::ClientConfiguration config;
@@ -128,9 +123,7 @@ else
         << outcome.GetError().GetExceptionName() << " - "
         << outcome.GetError().GetMessage() << std::endl;
 }
-
 ```
-
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/delete_bucket.cpp)。
 #### 操作存储桶
 #### 管理Amazon S3访问权限
