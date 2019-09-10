@@ -518,7 +518,7 @@ bool CreateTableAndWaitForItToBeActive()
   return false;
 }
 ```
-## 第四章 [代码示例](https://github.com/wbb1975/blogs/blob/master/aws/c++sdk_sample_codes.md)
+## 第四章 [代码示例](https://github.com/wbb1975/blogs/blob/master/aws/aws_c++sdk_sample_codes.md)
 
 # 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
