@@ -94,7 +94,7 @@ Options:
   -u, --user string                    Username or UID (format: <name|uid>[:<group|gid>])
       --userns string                  User namespace to use
       --uts string                     UTS namespace to use
-  -v, --volume list                    Bind mount a volume
+  -v, --volume list                    Bind mount a volume     // 常用，-v hostdir:containerDir:accessProperty，将宿主机的目录作为卷，挂载到容器里
       --volume-driver string           Optional volume driver for the container
       --volumes-from list              Mount volumes from the specified container(s)
   -w, --workdir string                 Working directory inside the container
