@@ -62,6 +62,7 @@ bool create_bucket(const Aws::String &bucket_name,
 使用[S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的ListBucket方法。如果成功，返回一个ListBucketOutcome对象，它包含一个ListBucketResult对象。
 
 使用ListBucketResult对象的GetBuckets得到一个Bucket对象的列表，包含你的账号下每个Amazon S3存储桶的信息。
+
 **包含文件**
 ```
 #include <aws/core/Aws.h>
