@@ -8,7 +8,7 @@
 亚马逊简单存储服务（Amazon S3）是服务于互联网的存储。你可使用下面的例子利用 AWS SDK for C++对Amazon S3编程。
 
 >  **注意**： 只有对展示技术有用的代码片段在这里提供，[完整的代码可见于Github](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp)，你可以从那里下载一个文件，或者克隆整个代码仓库，构建并运行它们。
-#### 创建，列出，删除存储桶
+#### 5.1 创建，列出，删除存储桶
 每个Amazon S3上的对象或文件必须驻留在一个存储桶中，后者代表对象目录。每个存储桶有AWS生态中全局唯一的名字标识。对于存储桶的详细信息及其配置，请参阅Amazon S3开发者指南中的[使用 Amazon S3 存储桶](https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html)。
 
 > **注意**：最佳实践
@@ -126,7 +126,7 @@ else
 }
 ```
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/delete_bucket.cpp)。
-#### 操作存储桶
+#### 5.2 操作存储桶
 一个Amazon S3 对象代表一个文件，一个数据的集合。一个对象必须驻留在一个[存储桶](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/examples-s3-buckets.html)中。
 
 > **注意**：代码片段假设你理解[AWS SDK for C++入门](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/getting-started.html)的内容，并已经依据[提供AWS凭证](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/credentials.html)中的内容配置好了缺省凭证。
@@ -292,7 +292,7 @@ else
 }
 ```
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/delete_object.cpp)。
-#### 管理Amazon S3访问权限
+#### 5.3 管理Amazon S3访问权限
 对一个Amazon S3存储桶或对象的访问权限由访问控制列表（ACL）定义。ACL指定了存储桶及对象的所有者以及对其的一系列授权。每个授权指定了一个用户，以及用户对存储桶，对象的访问权限，比如读或写权限。
 ##### 管理一个对象的访问控制列表
 一个对象的访问控制列表可以通过调用S3Client的GetObjectAcl方法来获取。该方法接受对象名及其所属存储桶名作为参数。返回值包括访问控制列表的所有者及一系列授权。
@@ -415,8 +415,8 @@ put_request.SetBucket(bucket_name);
 // Set the new access control policy
 auto set_outcome = s3_client.PutBucketAcl(put_request);
 ```
-#### 使用存储桶策略来管理对Amazon S3存储桶的访问
-#### 将Amazon S3存储桶配置为一个站点
+#### 5.4 使用存储桶策略来管理对Amazon S3存储桶的访问
+#### 5.5 将Amazon S3存储桶配置为一个站点
 ### $6 Amazon SQS 示例
 ### $7 异步方法
 
