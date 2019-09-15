@@ -667,8 +667,47 @@ ThrottleCount|有AWS服务限流导致的API调用失败次数|使用这个指�
 这一节介绍AWS SDK for C++的一般性用法，包含SDK入门篇不曾覆盖的内容。
 
 关于特定服务相关的代码示例，请参见[AWS SDK for C++ Code Examples.](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/programming-services.html)。
-### $1 服务客户端类
+### $1 服务的客户端类
+C++开发工具包（AWS SDK for C++）包含了访问AWS服务的客户端类。每个客户端支持一个特定的AWS服务。例如，S3Client提供了访问AWS
+S3服务的借口。
+
+客户端类的命名空间遵从Aws::Service::ServiceClient的规范。例如，IAM的客户端类是Aws::IAM::IAMClient，AWS S3客户端类是Aws::S3::S3Client。
+
+所有AWS服务的客户端类是线程安全的。
+
+当实例化一个客户端类时，AWS凭证必须提供。关于凭证的更多信息，请参见[提供AWS凭证](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/credentials.html)。
 ### $2 工具模块
+C++开发工具包（AWS SDK for C++）包含了许多[工具模块](https://sdk.amazonaws.com/cpp/api/LATEST/namespace_aws_1_1_utils.html)来减少使用工具包开发应用的复杂性。
+- HTTP栈
+   一个HTTP栈提供了连接池，是线程安全的，可根据你的需要复用。更多信息，请参阅[AWS客户端配置](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/client-config.html)
+
+   Headers|[/aws/core/http/](https://github.com/aws/aws-sdk-cpp/tree/master/aws-cpp-sdk-core/include/aws/core/http)
+   --|--
+   API Documentation|[Aws::Http](https://sdk.amazonaws.com/cpp/api/LATEST/namespace_aws_1_1_http.html)
+- 字符串工具
+   核心字符串功能，如trim, lowercase，与数字的转换等。
+
+   Headers|[aws/core/utils/StringUtils.h](https://github.com/aws/aws-sdk-cpp/tree/master/aws-cpp-sdk-core/include/aws/core/utils/StringUtils.h)
+   --|--
+   API Documentation|[Aws::Utils::StringUtils](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_utils_1_1_string_utils.html)
+- 哈希工具
+   哈希函数例如SHA256, MD5, Base64, 和 SHA256_HMAC。
+
+   Headers|[aws/core/utils/HashingUtils.h](https://github.com/aws/aws-sdk-cpp/tree/master/aws-cpp-sdk-core/include/aws/core/utils/HashingUtils.h)
+   --|--
+   API Documentation|[Aws::Utils::HashingUtils](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_utils_1_1_hashing_utils.html)
+- JSON解析器
+   一个全功能且轻量级JSON解析器（JsonCpp的浅封装）
+
+   Headers|[/aws/core/utils/json/JsonSerializer.h](https://github.com/aws/aws-sdk-cpp/tree/master/aws-cpp-sdk-core/include/aws/core/utils/json/JsonSerializer.h)
+   --|--
+   API Documentation|[Aws::Utils::Json::JsonValue](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_utils_1_1_json_1_1_json_value.html)
+- XML解析器
+   一个轻量级XML解析库（tinyxml2的浅封装），[RAII模式](http://en.cppreference.com/w/cpp/language/raii)已经被添加进接口中。
+
+   Headers|[/aws/core/utils/xml/XmlSerializer.h](https://github.com/aws/aws-sdk-cpp/tree/master/aws-cpp-sdk-core/include/aws/core/utils/xml/XmlSerializer.h)
+   --|--
+   API Documentation|[Aws::Utils::Xml](https://sdk.amazonaws.com/cpp/api/LATEST/namespace_aws_1_1_utils_1_1_xml.html)
 ### $3 内存管理
 ### $4 日志
 AWS SDK for C++包含你可配置的日志支持。当初始化日志系统时，你可以控制过滤级别以及日志目标（可以用一个配置的前缀名或流名来过滤）。产生的带前缀日志文件每小时产生一个新文件，以此来归档或删除日志文件。
