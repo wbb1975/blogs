@@ -781,7 +781,22 @@ template<typename T> using Vector = std::vector<T, Aws::Allocator<T>>;
 
 SDK中执行内存分配的所有std:: types使用了类型别名，比如容器，字符流，字符缓冲。AWS SDK for C++使用了这些类型。
 #### 遗留问题
+你可以在SDK中控制内存分配；但是，STL类型仍通过从字符串参数到模型对象的initialize和set方法统治着公共接口。如果你不想使用STL，取而代之使用字符串和容器类型，当你做一次服务调用时你将不得不创建许多临时变量。
+
+为了移除使用非STL做服务调用时产生的临时变量和分配，我们已经实现了以下方法：
++ 每个接受字符串的Init/Set 方法都有一个接受const char*的重载版本。
++ 每个接受容器(map/vector)的Init/Set 方法都有一个add的变体能够接受单一一项值。
++ 每个接受二进制数据的Init/Set 方法都有一个接受指向数据的指针及其长度的重载版本
++ （可选地）每个接受字符串的Init/Set 方法都有一个接受非0结尾的const char*及其长度值的重载版本。
 #### 本地SDK开发及内存控制
+在SDK代码中遵从以下规则：
++ 不要使用new和delete，取而代之使用Aws::New<> and Aws::Delete<> 
++ 不要使用new[]和delete[]，取而代之使用Aws::NewArray<> and Aws::DeleteArray<> 
++ 不要使用std::make_shared；使用Aws::MakeShared
++ 使用Aws::UniquePtr用作指向单一对象的唯一指针；使用Aws::MakeUnique创建唯一指针
++ 使用Aws::UniqueArray 用作指向一个数组对象的唯一指针；使用Aws::MakeUniqueArray来创建唯一指针
++ 不要直接使用STL容器；使用 Aws:: typedefs中的一个或加入一个对你期望使用的容器的typedef，例如：`Aws::Map<Aws::String, Aws::String> m_kvPairs;`
++ 对任何传递进SDK，有SDK管理的外部指针使用shared_ptr。你必须使用一个匹配对象分配的析构策略来初始化共享指针。如果不期望SDK清理指针，可以使用原始指针。
 ### $4 日志
 AWS SDK for C++包含你可配置的日志支持。当初始化日志系统时，你可以控制过滤级别以及日志目标（可以用一个配置的前缀名或流名来过滤）。产生的带前缀日志文件每小时产生一个新文件，以此来归档或删除日志文件。
 ```
