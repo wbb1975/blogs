@@ -421,6 +421,7 @@ auto set_outcome = s3_client.PutBucketAcl(put_request);
 > **注意**：代码片段假设你理解[AWS SDK for C++入门](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/getting-started.html)的内容，并已经依据[提供AWS凭证](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/credentials.html)
 ##### 设置一个桶策略
 对一个特定的S3存储桶，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 PutBucketPolicy方法来设置桶策略，并传递桶名字以及存在一个[PutBucketPolicyRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_put_bucket_policy_request.html)对象中的JSON形式的桶策略。
+
 **包含文件**
 ```
 #include <cstdio>
@@ -466,6 +467,7 @@ if (outcome.IsSuccess()) {
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/put_bucket_policy.cpp)。
 ##### 获取一个桶策略
 为了检索一个S3存储桶的策略，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 GetBucketPolicy方法，并传递一个含有桶名字的[GetBucketPolicyRequest对象](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_get_bucket_policy_request.html)。
+
 **包含文件**
 ```
 #include <aws/core/Aws.h>
@@ -501,6 +503,7 @@ else
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/get_bucket_policy.cpp)。
 ##### 删除一个桶策略
 为了删除一个S3存储桶的策略，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 DeleteBucketPolicy方法，并传递一个含有桶名字的[DeleteBucketPolicyRequest对象](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_delete_bucket_policy_request.html)。
+
 **包含文件**
 ```
 #include <aws/core/Aws.h>
@@ -545,6 +548,7 @@ else
 对一个S3存储桶的网站配置，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 [PutBucketWebsiteRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_put_bucket_website_request.html)方法，它含有桶名字以及容纳网站配置信息的一个[PutBucketPolicyRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_website_configuration.html)对象。
 
 设置一个主文档（index document）是必须的，其它所有参数是可选的。
+
 **包含文件**
 ```
 #include <aws/core/Aws.h>
@@ -591,6 +595,7 @@ else
 为了检索一个S3存储桶的网站配置，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 GetBucketWebsite方法，并传递一个含有桶名字的[GetBucketWebsiteRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_get_bucket_website_request.html)对象。
 
 配置信息将以返回的outcome对象所包含的的[GetBucketWebsiteResult](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_get_bucket_website_result.html)呈现。如果这个桶没有网站配置，null将返回。
+
 **包含文件**
 ```
 #include <aws/core/Aws.h>
@@ -624,6 +629,7 @@ else
 参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/get_website_config.cpp)。
 ##### 删除桶的网站配置
 为了删除一个S3存储桶的网站配置，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 DeleteBucketPolicy方法，并传递一个含有桶名字的[DeleteBucketWebsiteRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_delete_bucket_website_request.html)对象。
+
 **包含文件**
 ```
 #include <aws/core/Aws.h>
