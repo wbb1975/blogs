@@ -533,8 +533,136 @@ struct AWS_CORE_API ClientConfiguration
 
    控制是否使用端点发现。缺省，区域或覆盖的端点被使用。为了开启端点发现，将这个变量设置为true。
 ### $3 覆写你的HTTP客户端
+Windows平台的缺省HTTP客户端是现是[WinHTTP](https://msdn.microsoft.com/en-us/library/windows/desktop/aa382925%28v=vs.85%29.aspx)。其它所有平台的HTTP客户端是[CURL](https://curl.haxx.se/)。如果需要，你可以创建一个定制的HttpClientFactory对象，并把它传递给任何服务的客户端构造函数。
 ### $4 控制HttpClient 和 AWSClient的IO流
-### $5 SDK Metrics
+缺省地，所有服务回复（response）使用一个基于stringbuf的输入流。服务需要，你可以覆盖其缺省行为。例如，如果你使用亚马逊S3GetObject方法，切不想把整个文件载入内存，你可以使用AmazonWebServiceRequest中的IOStreamFactory，并传递一个匿名函数来创建一个文件流。
+```
+GetObjectRequest getObjectRequest;
+getObjectRequest.SetBucket(fullBucketName);
+getObjectRequest.SetKey(keyName);
+getObjectRequest.SetResponseStreamFactory([](){
+    return Aws::New<Aws::FStream>(
+        ALLOCATION_TAG, DOWNLOADED_FILENAME, std::ios_base::out); });
+
+auto getObjectOutcome = s3Client->GetObject(getObjectRequest);
+```
+### $5 SDK 指标（Metrics）
+AWS SDK指标企业支持 (SDK Metrics)使企业用户能够从其主机上的AWS SDK，以及与其共享AWS企业支持的客户那里收集指标。SDK指标能够为AWS企业支持客户提供信息用于加速发现和诊断与AWS服务间的连接问题。
+
+像自动测量技术在每个主机上收集一样，它被通过UDP转发到127.0.0.1 (AKA localhost)上--CloudWatch代理汇聚这些数据并把它们发送至SDK指标服务。因此，为了收到指标，CloudWatch需要被加入到你的实例中。
+
+下面的步骤将为一个使用AWS SDK for C++的客户端应用设立SDK指标，该指标从属于一个运行running Amazon Linux的Amazon EC2实例。如果你在配置AWS SDK for C++是开启了它，SDK指标在你的产品环境中也是可用的。
+
+为了利用SDK指标，运行最新版本的CloudWatch代理。参见Amazon CloudWatch用户指南中的[为SDK指标配置CloudWatch代理](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Configure-CloudWatch-Agent-SDK-Metrics.html)以获得更多信息。
+
+为开发工具包指标配置 CloudWatch 代理，请遵从以下指令：
+1. 安装最新版本开发工具包
+2. 将你的项目运行于一个Amazon EC2主机或一个本地环境
+3. 创建一个应用使用AWS SDK for C++ 客户端访问AWS服务。
+4. 在EC2实例或本地环境安装CloudWatch代理
+5. 授权SDK指标手机和发送指标
+6. 为AWS SDK for C++ 启用SDK指标
+#### 为开发工具包启用SDK指标
+缺省地，SDK指标使用端口号31000并被禁用。
+```
+//default values
+ [
+     'enabled' => false,
+     'port' => 31000,
+ ]
+```
+启用SDK指标与配置使用AWS服务的凭证是独立的。
+
+你可以通过设置环境变量或使用AWS共享配置文件的方式来启用SDK指标。
+- 选项1： 使用环境变量
+   如果AWS_CSM_ENABLED没被设置，SDK将检查由环境变量AWS_PROFILE指定的剖面文件（profile）来决定是否开启SDk指标。缺省地，它被设为false。
+
+   为了开启SDK指标，添加如下环境变量：
+   ```
+   export AWS_CSM_ENABLED=true
+   ```
+   > **注意**：开启SDK指标并没有配置你使用AWS服务的凭证
+- 选项2： AWS共享配置文件
+   如果环境变量中没有CSM相关设置，SDK将会查询你的缺省AWS剖面文件字段。如果AWS_DEFAULT_PROFILE被设置为非缺省文件，更新该文件。为了开启SDK指标，在~/.aws/config中添加csm_enabled设置。
+   ```
+   [default]
+   csm_enabled = true
+
+   [profile aws_csm]
+   csm_enabled = true
+   ```
+   > **注意**： 开启SDK指标与配置你使用AWS服务的凭证是独立地。你可以使用一个独立的文件来授权。
+#### 更新CloudWatch代理
+为了使对端口的更改生效，你需要设置值并重启当前活跃的AWS工作（jobs）。
+- 选项1： 使用环境变量
+   大多数服务使用缺省端口。但如果你的服务需要一个唯一端口ID，在环境变量中添加AWS_CSM_PORT=[port_number]。
+   ```
+   export AWS_CSM_ENABLED=true
+   export AWS_CSM_PORT=1234
+   ```
+- 选项2： AWS共享配置文件
+   大多数服务使用缺省端口。但如果你的服务需要一个唯一端口ID，在~/.aws/config中添加csm_port = [port_number]。
+   ```
+   [default]
+   csm_enabled = false
+   csm_port = 1234
+
+   [profile aws_csm]
+   csm_enabled = false
+   csm_port = 1234
+   ```
+- **重启SDK指标**
+
+   为了重启一个job，运行以下命令：
+   ```
+   amazon-cloudwatch-agent-ctl –a stop;
+   amazon-cloudwatch-agent-ctl –a start;
+   ```
+#### 禁用SDK指标
+为了禁用SDK指标，在环境变量，或者在AWS共享配置文件~/.aws/config中设置csm_enabled为false。然后重启你的CloudWatch以使你的更改生效。
+
+- **环境变量**
+   ```
+   export AWS_CSM_ENABLED=false
+   ```
+   
+- **AWS共享配置文件**
+   从AWS贡献配置文件~/.aws/config中移除csm_enabled。
+   > **注意**： 环境变量覆盖共享配置文件设置。如果SDK指标在环境变量中开启，那么SDK指标维持开启。
+   ```
+   [default]
+   csm_enabled = false
+
+   [profile aws_csm]
+   csm_enabled = false
+   ```
+
+   为了禁用SDK指标，使用下面的命令停止CloudWatch代理：
+   ```
+   sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop && echo "Done"
+   ```
+
+   如果你使用了CloudWatch其他的特性，使用下面的命令来重启CloudWatch代理：
+   ```
+   amazon-cloudwatch-agent-ctl –a start;
+   ```
+
+   为了重启一个job，运行以下命令：
+   ```
+   amazon-cloudwatch-agent-ctl –a stop;
+   amazon-cloudwatch-agent-ctl –a start;
+   ```
+#### SDK指标的定义
+你可以使用下面的SDK指标描述来解释你的结果。基本上，这些指标在日常商业评审中在与你的技术经理审核（review）是是可用的。AWS支持团队和你的技术经理有权限访问SDK指标数据，这能帮助你解决很多问题（cases），但如果你发现数据混淆或不是期望的，但并没有对你的应用的性能造成负面影响，最好在计划的商业评审中审核这些数据。
+
+指标|定义|如何使用它
+--|--|--
+CallCount|你的代码中无论成功或失败调用API的次数|把它作为一个基线与其它指标如错误，限流关联起来
+ClientErrorCount|带有客户端错误(4xx HTTP返回码)的API调用次数。例如，限流导致的访问拒绝，S3存储桶不存在，无效参数值等|除了某些限流导致的错误，支个指标能够指示你的应用代码需要修复。
+ConnectionErrorCount|由于与AWS服务连接错误导致时代的API调用数|使用这个指标来判断是你的应用代码问题还是你的基础设施问题。高ConnectionErrorCount值也有可能和API调用超时设置太短有关。
+EndToEndLatency|你的应用代码利用AWS SDK所费总时间，包括重试。换句话说，不管经过重试成功，或是马上由于不明原因失败|判断你的API滴啊用对你的整体延迟的贡献率。超过期待的高延迟可能由网络，防火墙，或者其它配置设置导致，也有可能有SDK重试导致。
+ServerErrorCount|带有服务端错误(5xx HTTP返回码)的API调用次数。典型地，这些错误由AWS服务产生。|判断SDK错误或重试原因。这个指标并不总是指示AWS服务错误，一些AWS团队已经澄清延迟作为HTTP503返回码。
+ThrottleCount|有AWS服务限流导致的API调用失败次数|使用这个指标来评价你的应用是否已经达到限流阀；也可用于判定应用重试或延迟的原因。考虑通过窗口分布化你的调用而非打包你的调用。
 ## 第三章 使用SDK
 这一节介绍AWS SDK for C++的一般性用法，包含SDK入门篇不曾覆盖的内容。
 
