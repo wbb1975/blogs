@@ -709,6 +709,79 @@ C++开发工具包（AWS SDK for C++）包含了许多[工具模块](https://sdk
    --|--
    API Documentation|[Aws::Utils::Xml](https://sdk.amazonaws.com/cpp/api/LATEST/namespace_aws_1_1_utils_1_1_xml.html)
 ### $3 内存管理
+AWS SDK for C++以库的形式提供了分配和释放内存的方式。
+> **注意**：用户内存管理只有在你使用某种库时才可用，这种库是在定义了编译期常量AWS_CUSTOM_MEMORY_MANAGEMENT的情况下构建而得。
+>  
+> **注意**：如果你的应用连接了没有定义编译期常量的库，全局内存管理函数比如InitializeAWSMemorySystem将不会工作；全局new和delete将会被使用。
+
+关于更多编译期常量，请参阅[标准模板库与AWS字符串与向量](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/memory-management.html#stl-and-aws-strings-and-vectors)。
+#### 分配及释放内存
+1. 继承MemorySystemInterface：aws/core/utils/memory/MemorySystemInterface.h
+    ```
+    class MyMemoryManager : public Aws::Utils::Memory::MemorySystemInterface
+   {
+   public:
+       // ...
+       virtual void* AllocateMemory(
+           std::size_t blockSize, std::size_t alignment,
+           const char *allocationTag = nullptr) override;
+       virtual void FreeMemory(void* memoryPtr) override;
+   };
+    ```
+    > **注意**：必要时你可以改变AllocateMemory的签名。
+2. 通过滴啊用InitializeAWSMemorySystem来把一个子类的实例安装为用户内存管理器，这个应该在你的应用开始处发生。例如，在你的main()函数：
+     ```
+     int main(void)
+    {
+       MyMemoryManager sdkMemoryManager;
+       Aws::Utils::Memory::InitializeAWSMemorySystem(sdkMemoryManager);
+       // ... do stuff
+       Aws::Utils::Memory::ShutdownAWSMemorySystem();
+       return 0;
+    }
+     ```
+3. 在退出前，调用ShutdownAWSMemorySystem（前面的代码里已经出现过，但在这里重复一下）：
+    ```
+    Aws::Utils::Memory::ShutdownAWSMemorySystem();
+    ```
+#### 标准模板库与AWS字符串与向量
+当初始化一个内存管理器时，AWS SDK for C++将延迟内存分配和释放至内存管理器。如果内存管理器不存在，SDK将使用全局new和delete。
+
+如果你使用自定义STL分配器，你必须改变所有STL对象类型的签名，以此来匹配分配策略。由于STL在SDK的实现及接口中被大量使用，一个简单的方式将禁止将缺省STL对象直接传递到SDK及STL内存分配的控制中。可选地，一种混合方式--内部使用自定义分配器，允许接口定义中的标准和自定义STL对象--可能会使得调查内存问题更加困难。
+
+解决方案是使用内存系统的编译期常量AWS_CUSTOM_MEMORY_MANAGEMENT来控制SDK使用哪种STL类型。
+
+如果编译期常量开启，这些类型将被解析为连接到AWS内存系统的自定义分配器的STL类型。
+
+如果编译期常量关闭，所有的Aws::*类型将被解析为对应的缺省std::* 类型。
+
+**来自SDK文件AWSAllocator.h的示例代码**
+```
+#ifdef AWS_CUSTOM_MEMORY_MANAGEMENT
+template< typename T >
+class AwsAllocator : public std::allocator< T >
+{
+   ... definition of allocator that uses AWS memory system
+};
+#else
+template< typename T > using Allocator = std::allocator<T>;
+#endif
+```
+在上面的例子中，AwsAllocator可以使一个自定义分配器或者缺省分配器，依赖于编译器常量。
+
+**来自SDK文件AWSVector.h的示例代码**
+```
+template<typename T> using Vector = std::vector<T, Aws::Allocator<T>>;
+```
+在示例代码中，我们定义了Aws::* 类型。
+
+如果编译期常量开启，这个类型被映射到一个使用自定义内存分配和AWS内存系统的向量（vector）。
+
+如果编译期常量关闭，这个类型将被映射到携有缺省类型参数的常规std::vector。
+
+SDK中执行内存分配的所有std:: types使用了类型别名，比如容器，字符流，字符缓冲。AWS SDK for C++使用了这些类型。
+#### 遗留问题
+#### 本地SDK开发及内存控制
 ### $4 日志
 AWS SDK for C++包含你可配置的日志支持。当初始化日志系统时，你可以控制过滤级别以及日志目标（可以用一个配置的前缀名或流名来过滤）。产生的带前缀日志文件每小时产生一个新文件，以此来归档或删除日志文件。
 ```
