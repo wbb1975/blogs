@@ -878,6 +878,22 @@ bool CreateTableAndWaitForItToBeActive()
 }
 ```
 ## 第四章 [代码示例](https://github.com/wbb1975/blogs/blob/master/aws/aws_c++_sdk_sample_codes.md)
+## 第五章 规范
+- 不要直接修改产生的客户端。应该修改产生器。直接在Core，Scripts，以及高阶接口中是可接受的。
+- 不要到处使用静态变量（statics)，这容易导致用户内存管理器奔溃且无处可寻
+- 使用四个空格的缩进，永远不要使用tab键
+- 不要使用异常。。。再次强调，不要使用异常。如果你需要使用一个返货错误码，请使用Outcome模式返回数据。
+- 经常考虑平台独立性。如果不可能，在其上加上一层好的抽象并使用抽象工厂模式。
+- 使用RAII，Aws::New 和 Aws::Delete应该仅仅在构造函数以及析构函数中出现
+- 确信遵从第5#规则
+- 尽可能使用C++11标准
+- 使用大写开头的驼峰模式（UpperCamelCase）与类型和函数定义。对成员变量使用m_*模式。不要使用静态变量。如果必须，使用UpperCammelCase模式用于静态变量。
+- 总是使用const，并清醒意识到何处使用右值。我们不能够信任编译器能够一致地优化各种构建，所以请显示指出
+- 命名空间名字应该遵从UpperCammelCase模式。永远不要把using namespace语句放到头文件中，除非它被放到class内部。在cpp文件中可以放置using namespace语句。
+- 使用enum class而非enum
+- 尽量使用#pragma once来做头文件保护
+- 尽可能使用前向申明
+- 使用nullptr而非NULL
 
 # 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
@@ -885,3 +901,4 @@ bool CreateTableAndWaitForItToBeActive()
 - [How to build AWS C++ SDK on Windows](https://www.megalacant.com/techblog/2019/02/28/building-aws-cpp-sdk-windows.html)
 - [AWS SDK for C++ API Reference](https://sdk.amazonaws.com/cpp/api/LATEST/index.html)
 - [java 1.8+](http://openjdk.java.net/install/)
+- [AWS SDK for C++](https://github.com/aws/aws-sdk-cpp)

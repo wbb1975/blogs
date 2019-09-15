@@ -781,3 +781,4 @@ if (put_s3_object_async(s3Client,
 - [CMake tutorial](https://cmake.org/cmake-tutorial/)
 - [How to build AWS C++ SDK on Windows](https://www.megalacant.com/techblog/2019/02/28/building-aws-cpp-sdk-windows.html)
 - [AWS SDK for C++ API Reference](https://sdk.amazonaws.com/cpp/api/LATEST/index.html)
+- [AWS SDK for C++](https://github.com/aws/aws-sdk-cpp)
