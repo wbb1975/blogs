@@ -657,7 +657,119 @@ else
 - [删除存储桶网站配置](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketDELETEwebsite.html) Amazon S3 API 参考
 ### $6 Amazon SQS 示例
 ### $7 异步方法
+#### 异步SDK方法
+对于许多方法，AWS SDK for C++同时提供同步和异步版本。一个方法如果其名字包含Async后缀就是异步的。比如，Amazon S3 方法PutObject是同步的，但PutObjectAsync就是异步的。
 
+就像所有的异步操作一样，一个异步SDK方法会在其主要任务完成之前返回。例如，PutObjectAsync将会在在将文件上传到Amazon S3存储桶之前返回。当上传过程继续时，应用可以执行其它操作，包括调用其他异步方法。 当异步操作完成时，应用将会被通知，其关联回调函数将会被调用。
+
+下面的章节描述了调用SDK异步函数的示例代码。每一节关注例子的[完整源代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/put_object_async.cpp)的一部分。
+#### 调用异步SDK方法
+基本上，一个SDK函数的异步版本接受下列参数：
++ 一个和其同步版本一样指向一个Request-type的引用
++ 一个指向回复处理回掉函数的引用，这个回掉函数的将会在异步操作完成时调用。其中一个参数含有操作的返回值。
++ 一个可选的指向AsyncCallerContext对象的智能共享指针（shared_ptr）。该对象被传递给回复处理回调函数。它包含一个UUID属性，可以被用来传递文本信息到回调函数。
+
+下面的put_s3_object_async方法设置并调用Amazon S3 PutObjectAsync方法来异步上传一个文件到一个S3存储桶。
+
+该方法与其同步版本一样的方式初始化一个PutObjectRequest对象。另外，一个指向AsyncCallerContext对象的智能指针被分配，它的UUID被设置为S3存储桶名字。出于演示目的，回复处理回调函数将访问该属性并打印其值。
+
+对PutObjectAsync的调用包含了一个对回复处理回调函数put_object_async_finished的引用参数，灰调函数将会在下一节详细解释。
+```
+bool put_s3_object_async(const Aws::S3::S3Client& s3_client,
+    const Aws::String& s3_bucket_name,
+    const Aws::String& s3_object_name,
+    const std::string& file_name)
+{
+    // Verify file_name exists
+    if (!file_exists(file_name)) {
+        std::cout << "ERROR: NoSuchFile: The specified file does not exist"
+            << std::endl;
+        return false;
+    }
+
+    // Set up request
+    Aws::S3::Model::PutObjectRequest object_request;
+
+    object_request.SetBucket(s3_bucket_name);
+    object_request.SetKey(s3_object_name);
+    const std::shared_ptr<Aws::IOStream> input_data =
+        Aws::MakeShared<Aws::FStream>("SampleAllocationTag",
+            file_name.c_str(),
+            std::ios_base::in | std::ios_base::binary);
+    object_request.SetBody(input_data);
+
+    // Set up AsyncCallerContext. Pass the S3 object name to the callback.
+    auto context =
+        Aws::MakeShared<Aws::Client::AsyncCallerContext>("PutObjectAllocationTag");
+    context->SetUUID(s3_object_name);
+
+    // Put the object asynchronously
+    s3_client.PutObjectAsync(object_request, 
+                             put_object_async_finished,
+                             context);
+    return true;
+```
+
+与一个异步操作直接关联的资源必须在操作完成前继续存在。例如，调用SDK一步方法的客户端对象必须在操作完成，应用收到通知前存在。类似地，应用本身不能在异步操作完成前终止。
+
+由于这个原因，put_s3_object_async方法接受一个传入的S3Client对象的引用，而不是在函数内部创建一个S3Client局部变量。在例子中，方法在开始异步操作后立即返回给调用者，能够使调用者在异步处理过程中处理其它的任务。如果客户端在局部变量中，方法返回后它将退出其作用域。但是，知道异步操作完成前客户端对象必须继续存在。
+#### 异步操作完成的通知
+当一个异步操作完成后，一个应用回复处理回调函数将会被调用。通知包括了操作的输出结果。输出结果包含在和其同步版本一样的 Outcome-type类中。在示例代码中，输出结果包含在一个PutObjectOutcome对象中。
+
+示例代码的应用回复处理回调函数put_object_async_finished在下面展示。它检查了异步操作成功了还是失败了。它使用了std::condition_variable来通知应用线程异步操作已经完成了。
+```
+std::mutex upload_mutex;
+std::condition_variable upload_variable;
+```
+
+```
+void put_object_async_finished(const Aws::S3::S3Client* client, 
+    const Aws::S3::Model::PutObjectRequest& request, 
+    const Aws::S3::Model::PutObjectOutcome& outcome,
+    const std::shared_ptr<const Aws::Client::AsyncCallerContext>& context)
+{
+    // Output operation status
+    if (outcome.IsSuccess()) {
+        std::cout << "put_object_async_finished: Finished uploading " 
+            << context->GetUUID() << std::endl;
+    }
+    else {
+        auto error = outcome.GetError();
+        std::cout << "ERROR: " << error.GetExceptionName() << ": "
+            << error.GetMessage() << std::endl;
+    }
+
+    // Notify the thread that started the operation
+    upload_variable.notify_one();
+}
+```
+当异步操作完成，相关资源可以被释放。应用本身也可以终止了。
+
+下面的代码演示了在一个应用中put_object_async 和 put_object_async_finished是如何被使用的。
+
+S3Client对象被分配，因此它将在异步操作完成前继续存在。当put_object_async被调用后，应用本身可以执行任何它希望的操作。为了简化，例子使用std::mutex 和 std::condition_variable来等待回复处理回调函数通知它上传操作已经完成。
+```
+// NOTE: The S3Client object that starts the async operation must 
+// continue to exist until the async operation completes.
+Aws::S3::S3Client s3Client(clientConfig);
+
+// Put the file into the S3 bucket asynchronously
+std::unique_lock<std::mutex> lock(upload_mutex);
+if (put_s3_object_async(s3Client, 
+                        bucket_name, 
+                        object_name, 
+                        file_name)) {
+    // While the upload is in progress, we can perform other tasks.
+    // For this example, we just wait for the upload to finish.
+    std::cout << "main: Waiting for file upload to complete..." 
+        << std::endl;
+    upload_variable.wait(lock);
+
+    // The upload has finished. The S3Client object can be cleaned up 
+    // now. We can also terminate the program if we wish.
+    std::cout << "main: File upload completed" << std::endl;
+}
+```
 ## 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
 - [CMake tutorial](https://cmake.org/cmake-tutorial/)
