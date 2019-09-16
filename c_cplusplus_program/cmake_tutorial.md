@@ -444,7 +444,7 @@ CTest会读这个文件并且运行它。如果要创建一个简单的dashboard
 - [cmake Buildsystems](https://cmake.org/cmake/help/latest/manual/cmake-buildsystem.7.html#introduction)
 - [cmake language](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#organization)
 - [cmake manual](https://cmake.org/cmake/help/v3.15/manual/cmake.1.html)
-- [ctest](https://cmake.org/cmake/help/v3.15/manual/ctest.1.html#manual:ctest(1)
+- [ctest](https://cmake.org/cmake/help/v3.15/manual/ctest.1.html#manual:ctest(1))
 - [cpack](https://cmake.org/cmake/help/v3.15/manual/cpack.1.html#manual:cpack(1))
 - [ccmake](https://cmake.org/cmake/help/v3.15/manual/ccmake.1.html#manual:ccmake(1))
 - [cmake-gui](https://cmake.org/cmake/help/v3.15/manual/cmake-gui.1.html#manual:cmake-gui(1))
