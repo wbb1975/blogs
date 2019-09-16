@@ -448,4 +448,4 @@ CTest会读这个文件并且运行它。如果要创建一个简单的dashboard
 - [cpack](https://cmake.org/cmake/help/v3.15/manual/cpack.1.html#manual:cpack(1))
 - [ccmake](https://cmake.org/cmake/help/v3.15/manual/ccmake.1.html#manual:ccmake(1))
 - [cmake-gui](https://cmake.org/cmake/help/v3.15/manual/cmake-gui.1.html#manual:cmake-gui(1))
-- [CMake online documentation and Community Resources](https://cmake.org/documentation)
+- [CMake Online Documentation and Community Resources](https://cmake.org/documentation)
