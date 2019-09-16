@@ -1,5 +1,5 @@
 # CMake简要教程
-本文是一个按部就班的教程，涵盖CMake主要解决的公共构建系统用例。许多主题已经在[掌握CMake](http://www.kitware.com/products/books/CMakeBook.html)中作为单独问题被介绍过了，但是观看它们如何在一个示例工程一起工作仍然是蛮有用的。这个教程也可以在CMake的源代码树中的[Tests/Tutorial](https://gitlab.kitware.com/cmake/cmake/blob/master/Help/guide/tutorial/index.rst)目录下找到。没有不由自己的子目录，包含了那一步所需代码的完整拷贝。
+本文是一个按部就班的教程，涵盖CMake主要解决的公共构建系统用例。许多主题已经在[掌握CMake](http://www.kitware.com/products/books/CMakeBook.html)中作为单独问题被介绍过了，但是观看它们如何在一个示例工程一起工作仍然是蛮有用的。这个教程也可以在CMake的源代码树中的[Tests/Tutorial](https://gitlab.kitware.com/cmake/cmake/blob/master/Help/guide/tutorial/index.rst)目录下找到。每一步有自己的子目录，包含了那一步所需代码的完整拷贝。
 
 可以查看[ cmake-buildsystem(7) ](https://cmake.org/cmake/help/latest/manual/cmake-buildsystem.7.html#introduction)和[cmake-language(7) ](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#organization)手册页中的介绍章节来获得对CMake概念及源代码组织的基本印象。
 ## 起点（Step1）
@@ -214,10 +214,232 @@ do_test (-25 "-25 is 0")
 ```
 对do_test的任意一次调用，就有另一个测试被添加到工程中。
 ## 加入系统自省（Step4）
+接下来，我们来考虑添加一些有些目标平台可能不支持的代码。在这个样例中，我们将根据目标平台是否有log和exp函数来添加我们的代码。当然大多数平台都是有这些函数的，只是本教程假设这两个函数没有被那么普遍地支持。如果平台有log，那么在mysqrt中，就用它来计算平方根。我们首先在顶层的CMakeLists文件中使用CheckFunctionExists.cmake来测试这些函数的是否存在：
+```
+# does this system provide the log and exp functions?
+include (CheckFunctionExists)
+check_function_exists (log HAVE_LOG)
+check_function_exists (exp HAVE_EXP)
+```
+接下来我们修改TutorialConfig.h.in来定义CMake在特定平台能否找到这些函数的宏：
+```
+// does the platform provide exp and log functions?
+#cmakedefine HAVE_LOG
+#cmakedefine HAVE_EXP
+```
+重要的一点是，对tests和log的测试必须要在配置文件命令前完成。配置文件命令会使用CMake中的配置立马配置文件。最后在mysqrt函数中我们提供了两种实现方式：
+```
+// if we have both log and exp then use them
+#if defined (HAVE_LOG) && defined (HAVE_EXP)
+    result = exp(log(x)*0.5);
+#else // otherwise use an iterative approach
+    . . .
+```
 ## 加入一个生成文件和一个生成器（Step5）
+在这一节当中，我们会告诉你如何将一个生成的源文件加入到应用程序的构建过程中。在此例中，我们会创建一个预先计算好的平方根的表，并将这个表编译到应用程序中去。为了达到这个目的，我们首先需要一个程序来生成这样的表。在MathFunctions这个子目录下一个新的叫做MakeTable.cxx的源文件就是用来干这个的。
+```
+// A simple program that builds a sqrt table 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+ 
+int main (int argc, char *argv[])
+{
+  int i;
+  double result;
+ 
+  // make sure we have enough arguments
+  if (argc < 2)
+    {
+    return 1;
+    }
+  
+  // open the output file
+  FILE *fout = fopen(argv[1],"w");
+  if (!fout)
+    {
+    return 1;
+    }
+  
+  // create a source file with a table of square roots
+  fprintf(fout,"double sqrtTable[] = {\n");
+  for (i = 0; i < 10; ++i)
+    {
+    result = sqrt(static_cast<double>(i));
+    fprintf(fout,"%g,\n",result);
+    }
+ 
+  // close the table with a zero
+  fprintf(fout,"0};\n");
+  fclose(fout);
+  return 0;
+}
+```
+注意到这张表是由一个有效的C++代码产生的，并且输出文件的名字是由参数代入的。下一步就是添加合适的命令到MathFunctions的CMakeLists文件中来构建MakeTable这个可执行程序，并且作为构建过程中的一部分。完成它需要一些命令，如下：
+```
+# first we add the executable that generates the table
+add_executable(MakeTable MakeTable.cxx)
+ 
+# add the command to generate the source code
+add_custom_command (
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+  COMMAND MakeTable ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+  DEPENDS MakeTable
+  )
+ 
+# add the binary tree directory to the search path for 
+# include files
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
+ 
+# add the main library
+add_library(MathFunctions mysqrt.cxx ${CMAKE_CURRENT_BINARY_DIR}/Table.h  )
+```
+首先，就像其它可执行程序一样，MakeTable被添加为可执行程序。然后我们添加了一个自定义命令来详细描述如何通过运行MakeTable来产生Table.h。接下来，我们需要让CMake知道mysqrt.cxx依赖于生成的文件Table.h。这是通过往MathFunctions这个库里面添加生成的Table.h来实现的。我们也需要添加当前的生成目录到搜索路径中，从而Table.h可以被mysqrt.cxx找到。
+
+当这个工程被构建时，它首先会构建MakeTable这个可执行程序。然后运行MakeTable从而生成Table.h。最后，它会编译mysqrt.cxx来生成MathFunctions library。
+
+在这一刻，我们添加了所有的特征到最顶层的CMakeLists文件，它现在看起来是这样的：
+```
+cmake_minimum_required (VERSION 2.6)
+project (Tutorial)
+include(CTest)
+ 
+# The version number.
+set (Tutorial_VERSION_MAJOR 1)
+set (Tutorial_VERSION_MINOR 0)
+ 
+# does this system provide the log and exp functions?
+include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
+ 
+check_function_exists (log HAVE_LOG)
+check_function_exists (exp HAVE_EXP)
+ 
+# should we use our own math functions
+option(USE_MYMATH 
+  "Use tutorial provided math implementation" ON)
+ 
+# configure a header file to pass some of the CMake settings
+# to the source code
+configure_file (
+  "${PROJECT_SOURCE_DIR}/TutorialConfig.h.in"
+  "${PROJECT_BINARY_DIR}/TutorialConfig.h"
+  )
+ 
+# add the binary tree to the search path for include files
+# so that we will find TutorialConfig.h
+include_directories ("${PROJECT_BINARY_DIR}")
+ 
+# add the MathFunctions library?
+if (USE_MYMATH)
+  include_directories ("${PROJECT_SOURCE_DIR}/MathFunctions")
+  add_subdirectory (MathFunctions)
+  set (EXTRA_LIBS ${EXTRA_LIBS} MathFunctions)
+endif (USE_MYMATH)
+ 
+# add the executable
+add_executable (Tutorial tutorial.cxx)
+target_link_libraries (Tutorial  ${EXTRA_LIBS})
+ 
+# add the install targets
+install (TARGETS Tutorial DESTINATION bin)
+install (FILES "${PROJECT_BINARY_DIR}/TutorialConfig.h"        
+         DESTINATION include)
+ 
+# does the application run
+add_test (TutorialRuns Tutorial 25)
+ 
+# does the usage message work?
+add_test (TutorialUsage Tutorial)
+set_tests_properties (TutorialUsage
+  PROPERTIES 
+  PASS_REGULAR_EXPRESSION "Usage:.*number"
+  )
+ 
+ 
+#define a macro to simplify adding tests
+macro (do_test arg result)
+  add_test (TutorialComp${arg} Tutorial ${arg})
+  set_tests_properties (TutorialComp${arg}
+    PROPERTIES PASS_REGULAR_EXPRESSION ${result}
+    )
+endmacro (do_test)
+ 
+# do a bunch of result based tests
+do_test (4 "4 is 2")
+do_test (9 "9 is 3")
+do_test (5 "5 is 2.236")
+do_test (7 "7 is 2.645")
+do_test (25 "25 is 5")
+do_test (-25 "-25 is 0")
+do_test (0.0001 "0.0001 is 0.01")
+```
+TutorialConfig.h.in是这样的：
+```
+// the configured options and settings for Tutorial
+#define Tutorial_VERSION_MAJOR @Tutorial_VERSION_MAJOR@
+#define Tutorial_VERSION_MINOR @Tutorial_VERSION_MINOR@
+#cmakedefine USE_MYMATH
+ 
+// does the platform provide exp and log functions?
+#cmakedefine HAVE_LOG
+#cmakedefine HAVE_EXP
+```
+最后MathFunctions的CMakeLists文件看起来是这样的：
+```
+# first we add the executable that generates the table
+add_executable(MakeTable MakeTable.cxx)
+# add the command to generate the source code
+add_custom_command (
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+  DEPENDS MakeTable
+  COMMAND MakeTable ${CMAKE_CURRENT_BINARY_DIR}/Table.h
+  )
+# add the binary tree directory to the search path 
+# for include files
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
+ 
+# add the main library
+add_library(MathFunctions mysqrt.cxx ${CMAKE_CURRENT_BINARY_DIR}/Table.h)
+ 
+install (TARGETS MathFunctions DESTINATION bin)
+install (FILES MathFunctions.h DESTINATION include)
+```
 ## 构建一个安装器（Step6）
+最后假设我们想要把我们的工程发布给别人从而让他们去使用。我们想要同时给他们不同平台的二进制文件和源代码。这与步骤3中的install略有不同，install是安装我们从源代码中构建的二进制文件。而在此例中，我们将要构建安装包来支持二进制安装以及cygwin，debian，RPMs等的包管理特性。为了达到这个目的，我们会使用CPack来创建平台相关的安装包。具体地说，我们需要在顶层CMakeLists.txt文件中的底部添加数行。
+```
+# build a CPack driven installer package
+include (InstallRequiredSystemLibraries)
+set (CPACK_RESOURCE_FILE_LICENSE  
+     "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
+set (CPACK_PACKAGE_VERSION_MAJOR "${Tutorial_VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${Tutorial_VERSION_MINOR}")
+include (CPack)
+```
+这就是所有要做的。我们首先包含了InstallRequiredSystemLibraries。这个模块将会包含当前平台所需要的所有运行时库。接下来，我们设置了一些CPack的变量来保存license以及工程的版本信息。版本信息利用了我们在早前的教程中使用到的变量。最后我们包含了CPack这个模块来使用这些变量和你所使用的系统的其它特性来设置安装包。
+
+接下来一步是用通常的方式构建工程，然后在CPack上运行它。如果要构建一个二进制包你需要运行：
+```
+cpack --config CPackConfig.cmake
+```
+如果要创建一个源代码包你需要输入：
+```
+cpack --config CPackSourceConfig.cmake
+```
 ## 加入仪表板（Dashboard）支持（Step7）
+将测试结果上传到dashboard上是非常简单的。我们在早前的步骤中已经定义了一些测试。我们仅需要运行这些例程然后提交到dashboard上。为了包含对dashboards的支持，我们需要在顶层的CMakeLists文件中包含CTest模块。
+```
+# enable dashboard scripting
+include (CTest)
+```
+我们也创建了一个CTestConfig.cmake文件来指定这个工程在dashobard上的的名字。
+```
+set (CTEST_PROJECT_NAME "Tutorial")
+```
+CTest会读这个文件并且运行它。如果要创建一个简单的dashboard，你可以在你的工程上运行CMake，改变生成路径的目录，然后运行ctest -D Experimental。你的dashboard的结果会被上传到Kitware的[公共dashboard](https://link.jianshu.com/?t=https://open.cdash.org/index.php?project=PublicDashboard)中。
+
 
 ## 引用
 - [cmake-tutorial](https://cmake.org/cmake-tutorial)
 - [CMake简要教程](https://www.jianshu.com/p/bbf68f9ddffa)
+- [cmake Buildsystems](https://cmake.org/cmake/help/latest/manual/cmake-buildsystem.7.html#introduction)
+- [cmake language](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#organization)
