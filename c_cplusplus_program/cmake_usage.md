@@ -84,4 +84,4 @@ cmake可执行程序是跨平台构建系统生成工具CMake的命令行接口�
 
   https://cmake.org/mailing-lists
 
-  关于CMake的帮助和讨论，一个邮件列表在cmake@cmake.org上建立起来。这个列表只有会员才能发文，但你可以从CMake网页上登录。但在向邮件列表投递问底之前，请首先阅读完https://cmake.org上的完整文档。
+  关于CMake的帮助和讨论，一个邮件列表在cmake@cmake.org上建立起来。这个列表只有会员才能发文，但你可以从CMake网页上登录。但在向邮件列表投递问底之前，请首先阅读完 https://cmake.org 上的完整文档。
