@@ -61,6 +61,43 @@ cmake可执行程序是跨平台构建系统生成工具CMake的命令行接口�
 
    当选择[命令行构建工具生成器](https://cmake.org/cmake/help/v3.15/manual/cmake-generators.7.html#command-line-build-tool-generators)之一时，CMake期盼工具链所需环境已经在shell上配置好了。当使用[集成开发环境构建生成器](https://cmake.org/cmake/help/v3.15/manual/cmake-generators.7.html#ide-build-tool-generators)时，并不需要特殊环境。
 ## 产生项目构建系统
+使用下面的命令行签名指定源代码树和构建树来运行CMake，从而产生一个构建系统。
+- `cmake [<options>] <path-to-source>`
+
+   使用当前目录作为构建树，`<path-to-source>`作为源代码树。指定的路径可以使绝对路径，也可以是基于当前路径的相对路径。源代码树必须包含一个CMakeLists.txt ，且不能包含CMakeCache.txt，因为后者表示一个已经存在的构建树。例如：
+   ```
+   $ mkdir build ; cd build
+   $ cmake ../src
+   ```
+- `cmake [<options>] <path-to-existing-build>`
+   
+   使用`<path-to-existing-build>`作为构建树，从CMakeCache.txt中加载源代码树路径--CMakeCache.txt必须是运行CMake产生的。指定的路径可以使绝对路径，也可以是基于当前路径的相对路径。例如：
+   ```
+   $ cd build
+   $ cmake .
+   ```
+- `cmake [<options>] -S <path-to-source> -B <path-to-build>`
+
+   使用`<path-to-build>`作为构建树，`<path-to-source>`作为源代码树。指定的路径可以使绝对路径，也可以是基于当前路径的相对路径。源代码树必须包含一个CMakeLists.txt文件。构建树如果不存在将会被自动创建。例如：
+   ```
+   $ cmake -S src -B build
+   ```
+
+在任何一种场景下你都可以指定0个或多个下面列出的选项。
+
+当产生一个构建系统后，你可以使用原生构建工具来构建项目。例如，在使用[Unix Makefiles](https://cmake.org/cmake/help/v3.15/generator/Unix%20Makefiles.html#generator:Unix%20Makefiles)生成器（产生了构建系统）后，你可以直接运行make：
+```
+$ make
+$ make install
+```
+
+可选地，你可以使用cmake来[构建项目](https://cmake.org/cmake/help/v3.15/manual/cmake.1.html#build-a-project)，它会自动选择并调用适合的原生构建工具。
+### 选项
+- `-S <path-to-source>`
+- `-B <path-to-build>`
+- `-C <initial-cache>`
+- `-D <var>:<type>=<value>, -D <var>=<value>`
+- `-U <globbing_expr>`
 ## 构建项目
 ## 安装项目
 ## 打开项目
