@@ -94,10 +94,73 @@ $ make install
 可选地，你可以使用cmake来[构建项目](https://cmake.org/cmake/help/v3.15/manual/cmake.1.html#build-a-project)，它会自动选择并调用适合的原生构建工具。
 ### 选项
 - `-S <path-to-source>`
+  
+   待构建CMake项目根目录路径。
 - `-B <path-to-build>`
+
+   CMake构建目录路径
+
+   构建树如果不存在将会被自动创建。
 - `-C <initial-cache>`
+
+   事先加载一个脚本来向构建缓存（cache）中添加内容。
+
+   当CMake第一次在空的构建目录下运行时，它创建CMakeCache.txt文件并在其中放入项目的个性化设置。这个选项用于指定一个文件，在第一次扫描CMake的项目文件列表之前，从中加载各个缓存项。这些加载的缓存项比项目的缺省值优先级高。给定的文件必须是一个CMake脚本，含有使用Option选项的[set()](https://cmake.org/cmake/help/v3.15/command/set.html#command:set)命令，而不是一个缓存格式的文件。
 - `-D <var>:<type>=<value>, -D <var>=<value>`
+
+   创建或更新一个缓存项（CACHE entry）。
+
+   当CMake第一次在空的构建目录下运行时，它创建CMakeCache.txt文件并在其中放入项目的个性化设置。这个选项用于指定一个比项目缺省设置有更高优先级的设置。如果需要，你可以重复使用这个选项指定许多缓存项。
+
+   如果给出了`:<type> `部分，它必须是[set()](https://cmake.org/cmake/help/v3.15/command/set.html#command:set)命令文档中用于缓存签名的众多类型中的一种。如果没有给出`:<type> `，该缓存项给被创建为没有类型。如果一个项目中的命令设置了PATH 或 FILEPATH类型，那么其值将被转化为绝对路径。
+
+   这个选项也可以一个参数的格式指定，`-D<var>:<type>=<value>` 或 `-D<var>=<value>`。
 - `-U <globbing_expr>`
+   
+   从CMake缓存中移除匹配的选项。
+
+   这个选项用于从CMakeCache.txt中移除一个或多个变量，通配表达式支持 * 和 ?。如果需要，你可以重复使用这个选项指定许多缓存项。
+
+   小心使用这个选项，它可能使你的CMakeCache.txt 不工作。
+- `-G <generator-name>`
+
+   指定构建系统生成器。
+
+   在特定平台上CMake可以支持多种构建系统。一个生成器用于生成一个特定的构建系统。特定的生成器名字在[cmake-generators(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-generators.7.html#manual:cmake-generators(7))手册中指定。
+
+   如果不指定，CMake将检查[CMAKE_GENERATOR](https://cmake.org/cmake/help/v3.15/envvar/CMAKE_GENERATOR.html#envvar:CMAKE_GENERATOR)环境变量，否则将使用内建缺省选项。
+- `-T <toolset-spec>`
+
+   如果支持，用于指定工具集规范。
+
+   某些CMake生成器支持工具集规范来告诉原生构建系统如何选择编译器。参阅[CMAKE_GENERATOR_TOOLSET](https://cmake.org/cmake/help/v3.15/variable/CMAKE_GENERATOR_TOOLSET.html#variable:CMAKE_GENERATOR_TOOLSET)变量可获得等多细节。
+- `-A <platform-name>`
+
+   指定生成器支持的平台名。
+
+   某些CMake生成器支持给定平台名来让原生构建系统如选择编译器或软件开发工具包（SDK）参阅[CMAKE_GENERATOR_PLATFORM](https://cmake.org/cmake/help/v3.15/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM)变量可获得更多信息。
+- `-Wno-dev`
+- `-Wdev`
+- `-Werror=dev`
+- `-Wno-error=dev`
+- `-Wdeprecated`
+- `-Wno-deprecated`
+- `-Werror=deprecated`
+- `-Wno-error=deprecated`
+- `-L[A][H]`
+- `-N`
+- `--graphviz=[file]`
+- `--system-information [file]`
+- `--loglevel=<ERROR|WARNING|NOTICE|STATUS|VERBOSE|DEBUG|TRACE>`
+- `--debug-trycompile`
+- `--debug-output`
+- `--trace`
+- `--trace-expand`
+- `--trace-source=<file>`
+- `--warn-uninitialized`
+- `--warn-unused-vars`
+- `--no-warn-unused-cli`
+- `--check-system-vars`
 ## 构建项目
 ## 安装项目
 ## 打开项目
