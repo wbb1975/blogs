@@ -140,19 +140,75 @@ $ make install
 
    某些CMake生成器支持给定平台名来让原生构建系统如选择编译器或软件开发工具包（SDK）参阅[CMAKE_GENERATOR_PLATFORM](https://cmake.org/cmake/help/v3.15/variable/CMAKE_GENERATOR_PLATFORM.html#variable:CMAKE_GENERATOR_PLATFORM)变量可获得更多信息。
 - `-Wno-dev`
+
+   抑制开发者警告（developer warnings）。
+
+   抑制警告是CMakeLists.txt等文件作者的职责。缺省地这也将关闭废弃（deprecation）警告。
 - `-Wdev`
+
+   打开开发者警告（developer warnings）。
+
+   打开警告是CMakeLists.txt等文件作者的职责。缺省地这也将打开废弃（deprecation）警告。
 - `-Werror=dev`
+
+   使开发者警告（developer warnings）成为错误。
+
+   使警告成为错误是CMakeLists.txt等文件作者的职责。缺省地这也将使废弃（deprecation）警告成为错误。
 - `-Wno-error=dev`
+
+   使开发者警告（developer warnings）不成为错误。
+
+   使警告不成为错误是CMakeLists.txt等文件作者的职责。缺省地这也将禁止废弃（deprecation）警告成为错误。
 - `-Wdeprecated`
+
+   打开废弃功能（developer functionality）告警。
+
+   打开废弃功能告警是CMakeLists.txt等文件作者的职责。
 - `-Wno-deprecated`
+
+   抑制废弃功能（developer functionality）告警。
+
+   抑制废弃功能告警是CMakeLists.txt等文件作者的职责。
 - `-Werror=deprecated`
+
+   使废弃宏或函数告警成为错误。
+
+   使废弃宏或函数告警成为错误是CMakeLists.txt等文件作者的职责。
 - `-Wno-error=deprecated`
+
+   使废弃宏或函数告警不成为错误。
+
+   使废弃宏或函数告警不成为错误是CMakeLists.txt等文件作者的职责。
 - `-L[A][H]`
+
+   打印非高级缓存选项。
+
+   打印运行CMake的缓存变量，打印从CMake缓存而来且没有被标记为内部（INTERNAL） 或 高级（[ADVANCED](https://cmake.org/cmake/help/v3.15/prop_cache/ADVANCED.html#prop_cache:ADVANCED)）的所有缓存选项。这将有效地显示当前CMake设置--这些设置可以被一个“-D”选项改变。改变其中某些变量可能导致更多变量被创建。如果A被指定，它将显示高级选项。入股H被指定，每个选项的帮助也会被显示。
 - `-N`
+
+   仅仅显式模式。
+
+   仅仅加载缓存，并不运行配置和生成步骤。
 - `--graphviz=[file]`
+
+   产生各种依赖的图形显示，参阅[CMakeGraphVizOptions](https://cmake.org/cmake/help/v3.15/module/CMakeGraphVizOptions.html#module:CMakeGraphVizOptions)可见更多细节。
+
+   产生一个图形化的输入文件，它将包括项目中可执行文件和库的各种依赖。参阅[CMakeGraphVizOptions](https://cmake.org/cmake/help/v3.15/module/CMakeGraphVizOptions.html#module:CMakeGraphVizOptions)可见更多细节。
 - `--system-information [file]`
+
+   转储系统信息。
+
+   转储当前系统非常宽泛的信息。如果是从一个CMake的二进制树的顶级目录运行，他将会转储额外的信息，比如缓存，日志文件等。
 - `--loglevel=<ERROR|WARNING|NOTICE|STATUS|VERBOSE|DEBUG|TRACE>`
+
+   设置日志级别。
+
+   [message()](https://cmake.org/cmake/help/v3.15/command/message.html#command:message)命令只会打印指定日志级别和更高级别的日志消息。缺省日志级别为STATUS。
 - `--debug-trycompile`
+
+   不要删除[try_compile(https://cmake.org/cmake/help/v3.15/command/try_compile.html#command:try_compile)]()构建树。只在一次性使用try_compile()时有用。
+
+   不要删除try_compile()调用创建的文件和目录。这对于try_compile()失败时做调试是有用的。它可能产生和上一次运行try_compile()不同的结果。这个选项仅仅适用于一次性运行try_compile()，并且仅仅用于调试。
 - `--debug-output`
 - `--trace`
 - `--trace-expand`
