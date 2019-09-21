@@ -250,7 +250,7 @@ $ make install
 
    正常情况下，未被使用和未初始化的变量仅仅在[CMAKE_SOURCE_DIR](https://cmake.org/cmake/help/v3.15/variable/CMAKE_SOURCE_DIR.html#variable:CMAKE_SOURCE_DIR)和[CMAKE_BINARY_DIR](https://cmake.org/cmake/help/v3.15/variable/CMAKE_BINARY_DIR.html#variable:CMAKE_BINARY_DIR)中查找，这个标记告诉CMake在其他它文件中也执行类似查找。
 ## 构建项目
-CMake提供了命令行接口来构建一个一个已经生成的项目二进制树。
+CMake提供了命令行接口来构建一个已经生成的项目二进制树。
 ```
 cmake --build <dir> [<options>] [-- <build-tool-options>]
 ```
@@ -286,8 +286,35 @@ cmake --build <dir> [<options>] [-- <build-tool-options>]
 
    传递剩余的选项给原生工具。
 
-可以运行cmake --build以获取快速帮助。
+不带选项运行cmake --build以获取快速帮助。
 ## 安装项目
+Make提供了命令行接口来安装一个已经生成的项目二进制树。
+```
+cmake --install <dir> [<options>]
+```
+用于在构建了一个项目后安装一个项目，不使用生成的构建系统，也不实用原生工具。
+- `--install <dir>`
+
+   用于安装的项目二进制目录。这是必须的并且必须是第一个。
+- `--config <cfg>`
+
+   对于多个配置文件的工具，选择配置文件`<cfg>`。
+- `--component <comp>`
+
+   基于组件的安装，仅仅安装组件`<comp>`。
+- `--prefix <prefix>`
+
+   覆盖安装前缀，[CMAKE_INSTALL_PREFIX](https://cmake.org/cmake/help/v3.15/variable/CMAKE_INSTALL_PREFIX.html#variable:CMAKE_INSTALL_PREFIX)。
+- `--strip`
+
+   安装前去除符号。
+- `-v, --verbose`
+
+   细节输出模式。
+
+   如果[VERBOSE](https://cmake.org/cmake/help/v3.15/envvar/VERBOSE.html#envvar:VERBOSE)环境变量已经设置，可以不使用这个选项。
+
+不带选项运行cmake --install以获取快速帮助。
 ## 打开项目
 ## 运行脚本
 ## 运行一个命令行工具
