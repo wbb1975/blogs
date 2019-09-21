@@ -210,14 +210,83 @@ $ make install
 
    不要删除try_compile()调用创建的文件和目录。这对于try_compile()失败时做调试是有用的。它可能产生和上一次运行try_compile()不同的结果。这个选项仅仅适用于一次性运行try_compile()，并且仅仅用于调试。
 - `--debug-output`
+
+   将CMake设置为调试模式。
+
+   在cmake运行期间调用[message(SEND_ERROR)](https://cmake.org/cmake/help/v3.15/command/message.html#command:message)打印额外信息比如调用堆栈。
 - `--trace`
+
+   将CMake设置为Trace模式。
+
+   打印出所有调用的信息及出处。
 - `--trace-expand`
+
+    将CMake设置为Trace模式。
+
+    象`--trace`，但有变量扩展。
 - `--trace-source=<file>`
+
+   将CMake设置为Trace模式，但仅仅输出一个特定文件。
+
+   允许多个选项。
 - `--warn-uninitialized`
+
+   对未初始化的值发出警告。
+
+   当一个未初始化的值被使用时发出一个警告。
 - `--warn-unused-vars`
+
+   对从未使用的变量发出警告。
+
+   用于找到被声明或设置但从未被使用的变量。
 - `--no-warn-unused-cli`
+
+   不对对命令行选项发出警告。
+
+   不对命令行中声明但未被使用的变量发出警告。
 - `--check-system-vars`
+
+   在系统文件中找到变量使用的问题。
+
+   正常情况下，未被使用和未初始化的变量仅仅在[CMAKE_SOURCE_DIR](https://cmake.org/cmake/help/v3.15/variable/CMAKE_SOURCE_DIR.html#variable:CMAKE_SOURCE_DIR)和[CMAKE_BINARY_DIR](https://cmake.org/cmake/help/v3.15/variable/CMAKE_BINARY_DIR.html#variable:CMAKE_BINARY_DIR)中查找，这个标记告诉CMake在其他它文件中也执行类似查找。
 ## 构建项目
+CMake提供了命令行接口来构建一个一个已经生成的项目二进制树。
+```
+cmake --build <dir> [<options>] [-- <build-tool-options>]
+```
+它用以下选项抽象了原生构建工具的命令行借口：
+- `--build <dir>`
+
+   用于构建的项目二进制目录。这是必须的并且必须是第一个。
+- `--parallel [<jobs>], -j [<jobs>]`
+
+   构建时最大并行运行的进程数。如果没有`<jobs>`选项，原生构建工具的缺省值会被使用。
+
+   当这个选项没被给出时，环境变量[CMAKE_BUILD_PARALLEL_LEVEL](https://cmake.org/cmake/help/v3.15/envvar/CMAKE_BUILD_PARALLEL_LEVEL.html#envvar:CMAKE_BUILD_PARALLEL_LEVEL)用于指定缺省的并行级别。
+
+   某些构建工具总是并行构建，传递1给`<jobs>`可用于限制单个工作（job）。
+- `--target <tgt>..., -t <tgt>...`
+
+   构建`<tgt>`而非缺省构建目标。可以给出多个构建目标，以空格分割。
+- `--config <cfg>`
+
+   对于多个配置文件的工具，选择配置文件`<cfg>`。
+- `--clean-first`
+
+   首先构建clean目标，再构建其它（仅仅构建clean，使用--target clean）。
+- `--use-stderr`
+
+   忽略，在CMake >= 3.0时此行为是缺省行为。
+- `--verbose, -v`
+
+   开启细节输出--如果支持--包括执行的构建命令。
+
+   如果[VERBOSE](https://cmake.org/cmake/help/v3.15/envvar/VERBOSE.html#envvar:VERBOSE)环境变量或[CMAKE_VERBOSE_MAKEFILE](https://cmake.org/cmake/help/v3.15/variable/CMAKE_VERBOSE_MAKEFILE.html#variable:CMAKE_VERBOSE_MAKEFILE)缓存变量已经设置，可以不使用这个选项。
+- `--`
+
+   传递剩余的选项给原生工具。
+
+可以运行cmake --build以获取快速帮助。
 ## 安装项目
 ## 打开项目
 ## 运行脚本
