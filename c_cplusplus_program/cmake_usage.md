@@ -392,14 +392,36 @@ cmake -E <command> [<options>]
 
    比较`<file1>` 是否和`<file2>`一样。如果他们一样，返回0，否则返回1。`--ignore-eol`选项暗示逐行比较时忽略回车换行符的差别。
 - `copy <file>... <destination>`
+
+   拷贝文件到`<destination>`（无论文件或目录）。如果多个文件被指定，`<destination>`必须是个目录并必须存在。星号（*）不被支持。拷贝跟随符号链接。这意味着它不拷贝符号链接，但它指向的文件或目录被拷贝。
 - `copy_directory <dir>... <destination>`
+
+   拷贝目录到`<destination>`目录。如果`<destination>`怒存在，它就会被创建。copy_directory也跟随符号链接。
 - `copy_if_different <file>... <destination>`
+
+   拷贝文件到`<destination>`（无论文件或目录），如果文件已经改变。如果多个文件被指定，`<destination>`必须是个目录并必须存在。`copy_if_different`也跟随符号链接。
 - `echo [<string>...]`
+
+   将参数作为文本显示。
 - `echo_append [<string>...]`
+
+   将参数作为文本显示，但不加换行符。
 - `env [--unset=NAME]... [NAME=VALUE]... COMMAND [ARG]...`
+
+   在一个修改过的环境中运行命令。
 - `environment`
+
+   显示当前环境变量。
 - `make_directory <dir>...`
+
+   创建`<dir>`目录，如果必要，父目录也会被创建。如果目录已经存在，命令将会被安静地忽略。
 - `md5sum <file>...`
+
+   以md5sum兼容的格式计算文件的MD5校验码。
+   ```
+   351abe79cd3800b38cdfb25d45015a15  file1.txt
+   052f86c15bbde68af55c7f7b340ab639  file2.txt
+   ```
 - `sha1sum <file>...`
 - `sha224sum <file>...`
 - `sha256sum <file>...`
