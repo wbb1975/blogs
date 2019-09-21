@@ -316,9 +316,130 @@ cmake --install <dir> [<options>]
 
 不带选项运行cmake --install以获取快速帮助。
 ## 打开项目
+```
+make --open <dir>
+```
+用关联程序打开已经产生的项目。这仅仅被某些生成器支持。
 ## 运行脚本
+```
+cmake [{-D <var>=<value>}...] -P <cmake-script-file>
+```
+把一个用CMake语言写成的cmake文件作为脚本处理。没有配置或生成步骤被执行，缓存也未被修改。如果使用“-D”定义了变量，那它必须位于“-P”参数之前。
 ## 运行一个命令行工具
+CMake提供内建如下命令行工具支持：
+```
+cmake -E <command> [<options>]
+```
+运行cmake -E 或 cmake -E help来获取命令行总结。可用命令行包括：
+- `capabilities`
+
+   将cmake的功能以JSON格式汇报出来。输出是个用于下列键的JSON对象。
+   - version
+      
+      一个带有版本信息的JSON对象。包括的键有：
+      + string
+          
+          由cmake --version返回的全版本字符串。
+      + major
+
+          整数形式的主版本号。
+      + minor
+
+          整数形式的次版本号。
+      + patch
+
+          整数形式的补丁版本号。
+      + suffix
+
+          cmake版本后缀字符串。
+      + isDirty
+
+         一个bool值用于指示cmake是否从一个脏的树上构建。
+   - generators
+
+      可用的生成器列表。每个生成器是一个带有如下键的JSON对象。
+      + name
+
+          包含生成器名字的字符串。
+      + toolsetSupport
+
+          如果生成器支持工具集则为true，否则为false。
+      + platformSupport
+
+          如果生成器支持平台则为true，否则为false。
+      + extraGenerators
+
+         一系列与该生成器兼容的生成器名字。
+   - fileApi
+
+      当[cmake-file-api(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-file-api.7.html#manual:cmake-file-api(7))可用时存在的一个可选成员。它是有一个成员的JSON对象。
+      + requests
+
+         一个JSON数组包含零个或多个file-api请求。每个请求时含有如下成员的JSON对象
+         + kind
+
+             指定某个支持的[对象类型](https://cmake.org/cmake/help/v3.15/manual/cmake-file-api.7.html#file-api-object-kinds)。
+         + version
+
+            一个JSON数组，每个元素是含有major和minor成员的JSON对象。
+   - serverMode
+  
+      如果cmake支持服务器模式则为true，否则为false。
+- `chdir <dir> <cmd> [<arg>...]`
+
+   改变当前工作目录并运行命令。
+- `compare_files [--ignore-eol] <file1> <file2>`
+
+   比较`<file1>` 是否和`<file2>`一样。如果他们一样，返回0，否则返回1。`--ignore-eol`选项暗示逐行比较时忽略回车换行符的差别。
+- `copy <file>... <destination>`
+- `copy_directory <dir>... <destination>`
+- `copy_if_different <file>... <destination>`
+- `echo [<string>...]`
+- `echo_append [<string>...]`
+- `env [--unset=NAME]... [NAME=VALUE]... COMMAND [ARG]...`
+- `environment`
+- `make_directory <dir>...`
+- `md5sum <file>...`
+- `sha1sum <file>...`
+- `sha224sum <file>...`
+- `sha256sum <file>...`
+- `sha384sum <file>...`
+- `sha512sum <file>...`
+- `remove [-f] <file>...`
+- `remove_directory <dir>...`
+- `rename <oldname> <newname>`
+- `server`
+- `sleep <number>...`
+- `tar [cxt][vf][zjJ] file.tar [<options>] [--] [<pathname>...]`
+- `time <command> [<args>...]`
+- `touch <file>...`
+- `touch_nocreate <file>...`
+- `create_symlink <old> <new>`
+   
+   创建一个到文件old的符号链接new
+   > **主语**：符号链接的目标文件必须事先存在。
+## Windows特定的命令行工具
+下面的cmake -E命令只在Windows平台上可用
+- `delete_regv <key>`
+
+   删除Windows注册表项
+- `env_vs8_wince <sdkname>`
+
+   显示在VS2005安装中为Windows CE SDK提供环境的batch文件
+- `env_vs9_wince <sdkname>`
+
+   显示在VS2008安装中为Windows CE SDK提供环境的batch文件
+- `write_regv <key> <value>`
+
+   写Windows注册表项
 ## 运行包查找工具
+CMake为基于Makefile的项目提供象pkg-config一样的帮助功能。
+```
+cmake --find-package [<options>]
+```
+它利用[find_package()](https://cmake.org/cmake/help/v3.15/command/find_package.html#command:find_package)搜索一个包，并在标准输出上打印结果。这可被用户替代pkg-config在基于Makefile或autoconf（通过share/aclocal/cmake.m4）的项目中找到已安装的库。
+
+> **注意**：由于技术限制这个模式并没有很好地支持。它被保留仅仅因为兼容性，新项目中绝不应使用它。
 ## 查看帮助
 ## 参见
 下面的链接可在使用CMake的过程中得到帮助：
