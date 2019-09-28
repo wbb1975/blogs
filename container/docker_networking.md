@@ -51,12 +51,12 @@ root@0cb243cd1293:/# ip -4 addr
 
 root@0cb243cd1293:/#
 ```
-> **注意**：你可以使用`CTRL-p CTRL-q`接触与容器的附着关系并离开它。
+> **注意**：你可以使用`CTRL-p CTRL-q`接触与容器的附着关系并让其保持运行状态。
 
 `host`网络将向`host`网络栈添加一个容器。只要网络连接着，在宿主机和容器之间就没有隔离。比如，如果你启动一个容器，利用`host`网络在80端口运行一个网站（Web）服务器，网站服务器就在宿主机的80端口上可用。
 
 `none`和`host`网络在Docker中并非直接可配，但是，你可以配置缺省的`bridge`网络，也可以配置自定义的bridge网络。
-### 缺省bridge网络（The default bridge network）
+#### 缺省bridge网络（The default bridge network）
 缺省的bridge网络在所有Docker主机上都存在。如果你不指定一个不同的网络，新的容器将自动连接到缺省bridge网络。
 
 `docker network inspect`命令可用于返回关于网络的一些信息：
@@ -170,6 +170,58 @@ wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect bridge
 ]
 ```
 连接到bridge网络的容器能够通过IP地址彼此通信。**Docker不支持在缺省bridge网络上的自动服务发现。如果你期望容器能够从容器名中解析出IP地址，你应该使用用户自定义网络**。你可以利用遗留`docker run --link`选项来连接两个容器，但是在大多数情况下这是不被推荐的（选项）。
+
+你可以附着到一个运行的容器来从内部观察网络。你是以root账户登陆的，所以你的命令提示符是一个`#`字符：
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker attach 484c540f5767
+/ # ip -4 addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+7: eth0@if8: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue 
+    inet 172.17.0.3/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+/ # 
+```
+从容器内部使用ping命令来测试到另一个容器的IP地址的连接。
+```
+/ # ping -w3 172.17.0.2
+PING 172.17.0.2 (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.314 ms
+64 bytes from 172.17.0.2: seq=1 ttl=64 time=0.199 ms
+64 bytes from 172.17.0.2: seq=2 ttl=64 time=0.334 ms
+
+--- 172.17.0.2 ping statistics ---
+4 packets transmitted, 3 packets received, 25% packet loss
+round-trip min/avg/max = 0.199/0.282/0.334 ms
+```
+使用cat命令来查看容器的/etc/hosts。它显示了容器能够识别的IP地址和主机名。
+```
+/ # cat /etc/hosts
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.3	484c540f5767
+```
+使用按键序列`CTRL-p CTRL-q`可以解除与`conatiner1`的附着关系，并保持其运行状态。如果你愿意，你可以附着到`conatiner2`上并重复上面的命令。
+
+缺省的docker0 bridge网络支持通过端口映射（port mapping）和docker run --link来允许容器在docker0网络中通讯。这种方式是不推荐的。只要可能，应尽可能使用[用户定义bridge网络](https://docs.docker.com/engine/userguide/networking/#user-defined-networks)。
+#### 禁用缺省bridge网络（DISABLE THE DEFAULT BRIDGE NETWORK）
+如果你根本不想缺省的bridge网络被创建，在daemon.json文件中加入下面的配置。这仅仅当Docker在Linux主机上运行时适用。
+```
+"bridge": "none",
+"iptables": "false"
+```
+重启Docker以使修改生效。
+
+你也可以手动以选项`--bridge=none --iptables=false`启动dockerd，但是，这可能与系统启动节本启动的dockerd环境不一样，因此其它的行为可能改变。
+
+禁用缺省bridge网络属于高级选项，大多数用户不需要。
+### 用户定义网络（User-defined networks）
+建议使用用户自定义bridge网络来控制哪些容器能够互相通信，启用容器名字到IP地址解析的自动DNS解析。Docker提供了创建这些网络的缺省网络驱动。你能够创建**bridge网络**, **overlay网络**或**MACVLAN网络**。你也可以创建**网络插件**或**远程网络**来满足彻底的用户定制和控制。
 
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
