@@ -57,6 +57,119 @@ root@0cb243cd1293:/#
 
 `none`和`host`网络在Docker中并非直接可配，但是，你可以配置缺省的`bridge`网络，也可以配置自定义的bridge网络。
 ### 缺省bridge网络（The default bridge network）
+缺省的bridge网络在所有Docker主机上都存在。如果你不指定一个不同的网络，新的容器将自动连接到缺省bridge网络。
+
+`docker network inspect`命令可用于返回关于网络的一些信息：
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "75fd510472216b1d00c56aaa277ea63d873811123e74ccbc0f8fd3a2fce10a1c",
+        "Created": "2019-09-28T19:08:10.148911696+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+运行下面的命令来启动两个busybox容器，每一个都连接到缺省bridge网络。
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run -itd --name=container1 busybox
+[sudo] wangbb 的密码： 
+Unable to find image 'busybox:latest' locally
+latest: Pulling from library/busybox
+7c9d20b9b6cd: Pull complete 
+Digest: sha256:fe301db49df08c384001ed752dff6d52b4305a73a7f608f21528048e8a08b51e
+Status: Downloaded newer image for busybox:latest
+d171031f1fcdfe09a14df27c011503ed9b422d41b2ea8a679b1c8b0b8fb28b9b
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run -itd --name=container2 busybox
+484c540f5767ec29d24f1314175cd1d3b1338b2ed94d2154bcd9ae74bf955169
+```
+启动两个容器后再次检视bridg网络。两个busybox容器都连接到bridge网络。注意它们的IP地址，它们在你的宿主机上可能与下面的例子不一样：
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "75fd510472216b1d00c56aaa277ea63d873811123e74ccbc0f8fd3a2fce10a1c",
+        "Created": "2019-09-28T19:08:10.148911696+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "484c540f5767ec29d24f1314175cd1d3b1338b2ed94d2154bcd9ae74bf955169": {
+                "Name": "container2",
+                "EndpointID": "300d2766a103874c23af0d9ac26bad8dee993b66f663a3bc60a3f5bc6b88da88",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            },
+            "d171031f1fcdfe09a14df27c011503ed9b422d41b2ea8a679b1c8b0b8fb28b9b": {
+                "Name": "container1",
+                "EndpointID": "df53dd7d0902ee33fb1881767f3e05b44a1d27e279447a687f8ce1ee3b079926",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+连接到bridge网络的容器能够通过IP地址彼此通信。**Docker不支持在缺省bridge网络上的自动服务发现。如果你期望容器能够从容器名中解析出IP地址，你应该使用用户自定义网络**。你可以利用遗留`docker run --link`选项来连接两个容器，但是在大多数情况下这是不被推荐的（选项）。
 
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
