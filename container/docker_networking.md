@@ -226,7 +226,7 @@ ff02::2	ip6-allrouters
 你可以根据你的需要创建很多网络，你也可以在任何时间将容器连接到0个或多个网络。另外，你不需要重启容器便可以将容器联网或断网。当一个容器连接到多个网络时，它的外部链接有第一个（单词序）非内部网络提供。
 
 下面的章节将详细描述每种Docker内建网络驱动。
-#### bridge网络（Bridge networks）
+#### 1.2.1 bridge网络（Bridge networks）
 bridge网络是Docker世界使用最广泛的网络类型。bridge网络与缺省bridge网络相似，但添加了一些新特性，移除了一些老的功能。下面的例子创建了一些bridge网络，并对这些网络上的容器做了一些实验。
 ```
 wangbb@wangbb-ThinkPad-T420:~$ sudo docker network create --driver bridge isolated_nw
@@ -323,7 +323,7 @@ wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect isolated_nw
 ![network_access](https://github.com/wbb1975/blogs/blob/master/container/images/network_access.png)
 
 如果想在单个主机上运行一个相对小的网络，bridge网络是有用的。但是，你可以通过创建overlay网络创建重要的大型网络。
-#### docker_gwbridge网络（docker_gwbridge network）
+#### 1.2.2 docker_gwbridge网络（docker_gwbridge network）
 docker_gwbridge是一个本地bridge网络，在两种场景下有Docker自动创建：
 - 当你初始化或者加入swarm，Docker将创建docker_gwbridge网络，并将它用于跨主机的不同swarm节点间通讯。
 - 当容器的网络没有一个可以提供外部连接，除了其他容器的网络，Docker还将容器连接到docker_gwbridge网络，如此，容器可以连接到外部网络或其他swarm节点。
@@ -336,7 +336,7 @@ $ docker network create --subnet 172.30.0.0/16 \
 			docker_gwbridge
 ```
 当你使用overlay网络时docker_gwbridge网络总是存在。
-#### Overlay networks in swarm mode
+#### 1.2.3 Overlay networks in swarm mode
 你可以在一个运行在没有外部键值存储的swarm模式的管理节点上创建一个overlay网络。swarm使得overlay网络对swarm中需要它提供服务的节点可用。当你创建了一个使用overlay网络的服务，管理节点自动扩展overlay网络到运行服务任务的节点。
 
 为了了解更多运行于swarm模式的Docker引擎，请参阅[swarm模式概览](https://docs.docker.com/v17.09/engine/swarm/)。
@@ -349,7 +349,22 @@ $ docker service create --replicas 2 --network my-multi-host-network --name my-w
 716thylsndqma81j6kkkb5aus
 ```
 只有swarm服务才能连接到overlay网络，孤立容器不能。关于swarms的更多信息，请参阅[Docker swarm模式下overlay网络安全模型](https://docs.docker.com/v17.09/engine/userguide/networking/overlay-security-model/)和[将服务附着到overlay网络](https://docs.docker.com/v17.09/engine/swarm/networking/)。
-#### Overlay networks without swarm mode
+#### 1.2.4 Overlay networks without swarm mode
+如果你不是在swarm模式下使用Docker引擎，overlay网络需要一个有效的键值存储服务。支持的键值存储包括Consul, Etcd, 和 ZooKeeper (分布式存储)。在以这种方式创建网络前，你需要安装和配置你选择的键值存储服务。Docker持有你将连接的网络和你必须通讯的服务。
+> **注意**：运行于swarm模式的Docker引擎并不与一个拥有键值存储的网络兼容。
+
+这种使用overlay网络的方式对大多数Docker用户是不推荐的。它可被用于孤立的swarms ，对于构建方案的系统开发者是有用的。将来可能被废弃。如果你认为你可能以这种方式使用overlay网络，参见[这篇指南](https://docs.docker.com/v17.09/engine/userguide/networking/get-started-overlay/)。
+#### 1.2.5 定制网路插件
+如果上面的网络机制还不能满足你的需求，你可以使用Docker的插件机制撰写你自己的网络驱动插件。插件将在Docker服务所在主机上以一个单独的进程运行。网络插件的使用是一个高级主题。
+
+网络插件遵从和其它插件一样的限制和安装规则。所有的插件使用插件API，拥有同样的生命周期，包括：安装，启动，停止和激活。
+
+一旦你创建并安装了自定义网络驱动，你可以在创建网络时使用--driver标记指定驱动。
+```
+$ docker network create --driver weave mynet
+```
+你可以检视你的网络，将容器连接到网络或从网络切断，以及移除网络。一个特定的网络插件可能有特定的使用需求。检查插件的文档来获取特定信息。关于撰写插件的更多信息，请参阅[扩展Docker](https://docs.docker.com/v17.09/engine/extend/legacy_plugins/)和[撰写网络插件](https://docs.docker.com/v17.09/engine/extend/plugins_network/)。
+#### 1.2.6 嵌入式域名服务器
 
 ### 1.3 导出和发布端口（Exposing and publishing ports）
 ### 1.4 将代理用于容器（Use a proxy server with containers）
