@@ -1,9 +1,9 @@
 # 容器联网
-## Docker容器联网（Docker container networking）
+## 第一章 Docker容器联网（Docker container networking）
 本节提供Docker缺省联网行为的综述，包括创建网络的缺省类型，以及如何创建用户自定义网络。它也描述了在单个主机上或跨主机集群上创建网络所需资源。
 
 关于在Linux主机上Docker与iptables交互的细节，请参阅[Docker and iptables](https://docs.docker.com/engine/userguide/networking/#docker-and-iptables)。
-### 缺省网络（Default networks）
+### 1.1 缺省网络（Default networks）
 当你安装Docker时，它将自动安装三个网络。你可以用`docker network ls`命令打印这些网络。
 ```
 wangbb@wangbb-ThinkPad-T420:~$ sudo docker network ls
@@ -220,7 +220,7 @@ ff02::2	ip6-allrouters
 你也可以手动以选项`--bridge=none --iptables=false`启动dockerd，但是，这可能与系统启动节本启动的dockerd环境不一样，因此其它的行为可能改变。
 
 禁用缺省bridge网络属于高级选项，大多数用户不需要。
-### 用户定义网络（User-defined networks）
+### 1.2 用户定义网络（User-defined networks）
 建议使用用户自定义bridge网络来控制哪些容器能够互相通信，启用容器名字到IP地址解析的自动DNS解析。Docker提供了创建这些网络的缺省网络驱动。你能够创建**bridge网络**, **overlay网络**或**MACVLAN网络**。你也可以创建**网络插件**或**远程网络**来满足彻底的用户定制和控制。
 
 你可以根据你的需要创建很多网络，你也可以在任何时间将容器连接到0个或多个网络。另外，你不需要重启容器便可以将容器联网或断网。当一个容器连接到多个网络时，它的外部链接有第一个（单词序）非内部网络提供。
@@ -351,6 +351,10 @@ $ docker service create --replicas 2 --network my-multi-host-network --name my-w
 只有swarm服务才能连接到overlay网络，孤立容器不能。关于swarms的更多信息，请参阅[Docker swarm模式下overlay网络安全模型](https://docs.docker.com/v17.09/engine/userguide/networking/overlay-security-model/)和[将服务附着到overlay网络](https://docs.docker.com/v17.09/engine/swarm/networking/)。
 #### Overlay networks without swarm mode
 
+### 1.3 导出和发布端口（Exposing and publishing ports）
+### 1.4 将代理用于容器（Use a proxy server with containers）
+### 1.5 链接
+### 1.6 Docker和防火墙（Docker and iptables）
 
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
