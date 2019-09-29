@@ -337,6 +337,20 @@ $ docker network create --subnet 172.30.0.0/16 \
 ```
 当你使用overlay网络时docker_gwbridge网络总是存在。
 #### Overlay networks in swarm mode
+你可以在一个运行在没有外部键值存储的swarm模式的管理节点上创建一个overlay网络。swarm使得overlay网络对swarm中需要它提供服务的节点可用。当你创建了一个使用overlay网络的服务，管理节点自动扩展overlay网络到运行服务任务的节点。
+
+为了了解更多运行于swarm模式的Docker引擎，请参阅[swarm模式概览](https://docs.docker.com/v17.09/engine/swarm/)。
+
+下面的例子显示了如何创建网络，以及如何在swarm模式中把它用于来自于管理节点的服务。
+```
+$ docker network create   --driver overlay   --subnet 10.0.9.0/24  my-multi-host-network
+400g6bwzd68jizzdx5pgyoe95
+$ docker service create --replicas 2 --network my-multi-host-network --name my-web nginx
+716thylsndqma81j6kkkb5aus
+```
+只有swarm服务才能连接到overlay网络，孤立容器不能。关于swarms的更多信息，请参阅[Docker swarm模式下overlay网络安全模型](https://docs.docker.com/v17.09/engine/userguide/networking/overlay-security-model/)和[将服务附着到overlay网络](https://docs.docker.com/v17.09/engine/swarm/networking/)。
+#### Overlay networks without swarm mode
+
 
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
