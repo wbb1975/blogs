@@ -223,6 +223,107 @@ ff02::2	ip6-allrouters
 ### 用户定义网络（User-defined networks）
 建议使用用户自定义bridge网络来控制哪些容器能够互相通信，启用容器名字到IP地址解析的自动DNS解析。Docker提供了创建这些网络的缺省网络驱动。你能够创建**bridge网络**, **overlay网络**或**MACVLAN网络**。你也可以创建**网络插件**或**远程网络**来满足彻底的用户定制和控制。
 
+你可以根据你的需要创建很多网络，你也可以在任何时间将容器连接到0个或多个网络。另外，你不需要重启容器便可以将容器联网或断网。当一个容器连接到多个网络时，它的外部链接有第一个（单词序）非内部网络提供。
+
+下面的章节将详细描述每种Docker内建网络驱动。
+#### bridge网络（Bridge networks）
+bridge网络是Docker世界使用最广泛的网络类型。bridge网络与缺省bridge网络相似，但添加了一些新特性，移除了一些老的功能。下面的例子创建了一些bridge网络，并对这些网络上的容器做了一些实验。
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker network create --driver bridge isolated_nw
+d5e9fc422bb6fafaba913fae73a460cde190a7e52dceabd61a605ac19ca0ded9
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect isolated_nw
+[
+    {
+        "Name": "isolated_nw",
+        "Id": "d5e9fc422bb6fafaba913fae73a460cde190a7e52dceabd61a605ac19ca0ded9",
+        "Created": "2019-09-29T10:04:13.598584747+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+wangbb@wangbb-ThinkPad-T420:~$ 
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+75fd51047221        bridge              bridge              local
+083182596fb9        host                host                local
+d5e9fc422bb6        isolated_nw         bridge              local
+7c7b0d8f8c22        none                null                local
+```
+当你创建网络后，你可以使用`docker run --network=<NETWORK>`选项来在该网络上启动容器。
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run --network=isolated_nw -itd --name=container3 busybox
+f3be9ee43844bf6358ce971f3169908574617dfc3a4546c9aac05212cb81acdf
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect isolated_nw
+[
+    {
+        "Name": "isolated_nw",
+        "Id": "d5e9fc422bb6fafaba913fae73a460cde190a7e52dceabd61a605ac19ca0ded9",
+        "Created": "2019-09-29T10:04:13.598584747+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "f3be9ee43844bf6358ce971f3169908574617dfc3a4546c9aac05212cb81acdf": {
+                "Name": "container3",
+                "EndpointID": "8c64c15f62ef16d03ad2c39db0441c80f643f2cd30c045464a358ce3ca5758a2",
+                "MacAddress": "02:42:ac:12:00:02",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
+你在这个网络上启动的容器必须驻留在同一Docker主机上。网络中的每台容器可以立即与网络中的其它容器通信。虽然，网络本身把容器与其它网络隔离。
+
+![bridge_network](https://github.com/wbb1975/blogs/blob/master/container/images/bridge_network.png)
+
+在一个用户定义bridge网络内部，链接是不支持的。在这个网络上你可以对容器[导出和发布容器端口](https://docs.docker.com/engine/userguide/networking/#exposing-and-publishing-ports)。如果你想使bridge网络的一部分对外部网络可用，这个特性是有用的。
+
+![network_access](https://github.com/wbb1975/blogs/blob/master/container/images/network_access.png)
+
+如果想在单个主机上运行一个相对小的网络，bridge网络是有用的。但是，你可以通过创建overlay网络创建重要的大型网络。
+
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
   
