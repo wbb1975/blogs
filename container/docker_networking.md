@@ -365,8 +365,11 @@ $ docker network create --driver weave mynet
 ```
 你可以检视你的网络，将容器连接到网络或从网络切断，以及移除网络。一个特定的网络插件可能有特定的使用需求。检查插件的文档来获取特定信息。关于撰写插件的更多信息，请参阅[扩展Docker](https://docs.docker.com/v17.09/engine/extend/legacy_plugins/)和[撰写网络插件](https://docs.docker.com/v17.09/engine/extend/plugins_network/)。
 #### 1.2.6 嵌入式域名服务器
-
+Docker服务器（Daemon）运行着一个嵌入式域名服务器，它可以提供连接到同一用户定义网络的容器间的域名解析，因此这些容器可以把域名解析为IP地址。如果嵌入式域名服务器不能解析请求，它将根据针对容器的配置将请求转发到外部域名服务器。当容器被创建时，为了帮助这个过程，这个嵌入式域名服务器将在127.0.0.11监听，并被添加到容器的resolv.conf文件中。有关自定义网络的嵌入式域名服务器的详细信息，请参见[自定义网络的嵌入式域名服务器](https://docs.docker.com/v17.09/engine/userguide/networking/configure-dns/)。
 ### 1.3 导出和发布端口（Exposing and publishing ports）
+在Docker网络，涉及到网络端口有两种不同的机制：导出和发布端口。这适用于缺省bridge网络和用户定义bridge网络。
+- 你早Dockfile中使用EXPOSE关键字，或者在docker run命令行中传递--expose来导出端口。导出端口属于某种记述：哪些端口将被使用，但并不实际映射或打开任何端口。导出端口是可选的。
+- 你可以传递--publish或--publish-all标记给docker run命令行来发布端口。这告诉Docker在容器的网卡上哪些端口已经被打开。
 ### 1.4 将代理用于容器（Use a proxy server with containers）
 ### 1.5 链接
 ### 1.6 Docker和防火墙（Docker and iptables）
