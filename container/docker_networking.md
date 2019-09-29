@@ -323,6 +323,20 @@ wangbb@wangbb-ThinkPad-T420:~$ sudo docker network inspect isolated_nw
 ![network_access](https://github.com/wbb1975/blogs/blob/master/container/images/network_access.png)
 
 如果想在单个主机上运行一个相对小的网络，bridge网络是有用的。但是，你可以通过创建overlay网络创建重要的大型网络。
+#### docker_gwbridge网络（docker_gwbridge network）
+docker_gwbridge是一个本地bridge网络，在两种场景下有Docker自动创建：
+- 当你初始化或者加入swarm，Docker将创建docker_gwbridge网络，并将它用于跨主机的不同swarm节点间通讯。
+- 当容器的网络没有一个可以提供外部连接，除了其他容器的网络，Docker还将容器连接到docker_gwbridge网络，如此，容器可以连接到外部网络或其他swarm节点。
+
+如果你期待用户配置，你可以事先创建docker_gwbridge网络，不然Docker会在需要时创建。下面的例子使用一些额外选项创建了docker_gwbridge网络。
+```
+$ docker network create --subnet 172.30.0.0/16 \
+                        --opt com.docker.network.bridge.name=docker_gwbridge \
+			--opt com.docker.network.bridge.enable_icc=false \
+			docker_gwbridge
+```
+当你使用overlay网络时docker_gwbridge网络总是存在。
+#### Overlay networks in swarm mode
 
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
