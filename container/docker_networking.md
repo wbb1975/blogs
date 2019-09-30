@@ -369,11 +369,78 @@ Docker服务器（Daemon）运行着一个嵌入式域名服务器，它可以�
 ### 1.3 导出和发布端口（Exposing and publishing ports）
 在Docker网络，涉及到网络端口有两种不同的机制：导出和发布端口。这适用于缺省bridge网络和用户定义bridge网络。
 - 你早Dockfile中使用EXPOSE关键字，或者在docker run命令行中传递--expose来导出端口。导出端口属于某种记述：哪些端口将被使用，但并不实际映射或打开任何端口。导出端口是可选的。
-- 你可以传递--publish或--publish-all标记给docker run命令行来发布端口。这告诉Docker在容器的网卡上哪些端口已经被打开。
+- 你可以传递--publish或--publish-all标记给docker run命令行来发布端口。这告诉Docker在容器的网卡上哪些端口已经被打开。当一个端口被发布后，除非你指定了宿主机上的运行时端口，它被映射到宿主机上的可用高阶端口（大于30000）。你不能在创建镜像时（在Docker文件）指定端口到宿主机的映射，因为没有方法能够确保当你运行镜像时该端口在宿主机上可用。
+
+下面的例子把容器中的80端口映射到宿主机的随机高阶端口（在这个例子中，32768）。-d 标记让容器在背景运行，因此你可以发布docker ps命令：
+```
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker run -it -d -p 80 nginx
+...
+Digest: sha256:aeded0f2a861747f43a01cf1018cf9efe2bdd02afd57d2b11fcc7fcadc16ccd1
+Status: Downloaded newer image for nginx:latest
+38a6d018aa4e040e0ceecd17ac0c91e3ce6e38e0192d279b3a49a4b61e66bc72
+wangbb@wangbb-ThinkPad-T420:~$ sudo docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS       NAMES
+38a6d018aa4e        nginx               "nginx -g 'daemon of…"   20 seconds ago      Up 7 seconds       0.0.0.0:32768->80/tcp   laughing_bhabha
+```
+
+下一个例子指定容器80端口应该被映射到宿主机的8080 端口上。如果8080端口不可用，它将会失败。
+```
+$ docker run -it -d -p 8080:80 nginx
+
+$ docker ps
+
+b9788c7adca3        nginx               "nginx -g 'daemon ..."   43 hours ago        Up 3 seconds        80/tcp, 443/tcp, 0.0.0.0:8080->80/tcp   goofy_brahmagupta
+```
 ### 1.4 将代理用于容器（Use a proxy server with containers）
+如果你的容器需要使用TTP, HTTPS, 或FTP 代理服务器，你可以用不同的方式来配置它：
+- 对Docker 17.07或更高版本，你可以配置Docker客户端把代理信息自动传递给容器
+- 对Docker 17.06或跟低版本，你必须在容器内设置合适的环境变量。你可以在构建镜像时（这会使镜缺乏可移植性），或当你创建并运行容器时设置。
+#### 1.4.1 配置Docker客户端
+1. 在Docker客户端，在启动容器的用户的主目录下，创建或编辑~/.config.json。象下面一样添加JSON描述，如果必要，将代理类型替换为httpsProxy o或ftpProxy，并替换代理服务器的地址和端口。你可以同时配置多个代理服务器。
+    
+    你可以从代理服务器中排除一些主机或一些地址，方式是设置noProxy为一个或多个由逗号分隔的主机或地址。使用`*`作为通配符是支持的，如下例所示：
+    ```
+    {
+        "proxies":
+        {
+            "default":
+            {
+            "httpProxy": "http://127.0.0.1:3001",
+            "noProxy": "*.test.example.com,.example2.com"
+            }
+        }
+    }
+    ```
+    保存该文件。
+2. 当你创建或启动新的容器，环境变量将会在容器里自动设置。
+#### 1.4.2 手动设置环境变量
+当你构建镜像，或当你创建或运行容器时使用--env标记，你可以设置一个或多个下面的变量为合适的值。这种方法使镜像缺少可移植性，因此如果你拥有Docker 17.07或更高版本，你应该使用[配置Docker客户端](https://docs.docker.com/engine/userguide/networking/#configure-the-docker-client)。
+
+Variable|Dockerfile example
+--|--
+HTTP_PROXY|ENV HTTP_PROXY "http://127.0.0.1:3001"	--env HTTP_PROXY "http://127.0.0.1:3001"
+HTTPS_PROXY|ENV HTTPS_PROXY "https://127.0.0.1:3001"	--env HTTPS_PROXY "https://127.0.0.1:3001"
+FTP_PROXY|ENV FTP_PROXY "ftp://127.0.0.1:3001"	--env FTP_PROXY "ftp://127.0.0.1:3001"
+NO_PROXY|ENV NO_PROXY "*.test.example.com,.example2.com"	--env NO_PROXY "*.test.example.com,.example2.com"
 ### 1.5 链接
+在Docker包含用户定义网络前，你可以使用Docker--link特性来允许一个容器将另一个容器的名字解析为IP地址，也使它可以访问链接容器的环境变量。只要可能，应避免使用--link标记。
+
+当你创建链接（link）时，其行为与你创建缺省bridge网络或用户定义bridge网络时不一样。更多信息，参阅[遗留链接](https://docs.docker.com/v17.09/engine/userguide/networking/default_network/dockerlinks/)来获取bridge网络中的链接特性，以及在用户网络中事关连接功能的[用户定义网络中的链接特性](https://docs.docker.com/v17.09/engine/userguide/networking/work-with-networks/#linking-containers-in-user-defined-networks)。
 ### 1.6 Docker和防火墙（Docker and iptables）
+Linux主机使用一个叫做iptables的模块管理对网络设备的访问，包括路由，端口转发，网络地址转换（NAT），以及其它功能。当你启动或停止发布端口的容器时，当你创建或修改容器附着的网络时，或者某些网络相关的操作时，Docker将会修改iptables
+
+iptables的完整讨论超出了这个主题的讨论范围，任何时候，你可以使用iptables -L来查看那些iptables规则在起作用。如果有多个表存在，你可以使用iptables -t nat -L命令来打印一个特定表，别如nat, prerouting, 或 postrouting。关于iptables的完整文档，请参阅[netfilter/iptables](https://netfilter.org/documentation/)。
+
+典型地，iptables规则由一个初始化脚本或一个服务进程如firewalld创建。这些规则不会跨越系统重启而存储，因此脚本或工具必须在系统启动时运行，典型地在运行级别3或网络初始化后。咨询你的Linux发行版的网络文档来获取使iptables规则持久化的合适方式。
+
+Docker动态管理服务器的iptables规则，容器，服务和网络。在Docker 17.06或更高版本，你可以在一个新表DOCKER-USER中添加规则，并且这些规则会在DOcker自动创建的任何规则前加载。如果你需要在Docker运行前事先加载一些规则，这将是很有用的。
 
 ## 参考
 - [Configure networking](https://docs.docker.com/v17.09/engine/userguide/networking/)
+- [用网络命令行工作](https://docs.docker.com/v17.09/engine/userguide/networking/work-with-networks/)
+- [多主机网络入门](https://docs.docker.com/v17.09/engine/userguide/networking/get-started-overlay/)
+- [管理容器中数据](https://docs.docker.com/v17.09/engine/tutorials/dockervolumes/)
+- [Docker及其概览](https://docs.docker.com/v17.09/machine)
+- [Docker Swarm概览](https://docs.docker.com/v17.09/swarm)
+- [libNetwork项目调查](https://github.com/docker/libnetwork)
   
