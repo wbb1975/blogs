@@ -463,8 +463,116 @@ cmake --find-package [<options>]
 
 > **注意**：由于技术限制这个模式并没有很好地支持。它被保留仅仅因为兼容性，新项目中绝不应使用它。
 ## 查看帮助
+为了从CMake文档中打印选择的页面，使用下面的命令：
+```
+cmake --help[-<topic>]
+```
+使用下面可选选项中的一项：
+- `--help,-help,-usage,-h,-H,/?`
+
+   打印用发信息并退出。
+
+   用法描述了基本命令行接口及其选项。
+- `--version,-version,/V [<f>]`
+
+   打印应用名，版本号等信息并退出。
+
+   如果指定一个文件，版本号将被写进这个文件。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-full [<f>]`
+
+   打印所有帮助手册并退出。
+
+   所有手册以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-manual <man> [<f>]`
+
+   打印一个手册也并退出。
+
+   指定的手册以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-manual-list [<f>]`
+
+   打印可用手册列表并退出。
+
+   列表包含所有的手册，每个手册可以使用--help-manual并跟随一个手册名来获取到。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-command <cmd> [<f>]`
+
+   打印一个命令的帮助并退出。
+
+   [cmake-commands(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-commands.7.html#manual:cmake-commands(7))的手册页入口`<cmd>`被以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-command-list [<f>]`
+
+   打印可用命令列表并退出。
+
+   列表包含所有的命令，每个命令可以使用--help-command并跟随一个命令名来获取到。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-commands [<f>]`
+
+   打印cmake-commands手册页并退出。
+
+    [cmake-commands(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-commands.7.html#manual:cmake-commands(7))的手册页以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-module <mod> [<f>]`
+
+   打印一个模块的帮助并退出。
+
+   [cmake-moduls(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-modules.7.html#manual:cmake-modules(7))的手册页入口`<mod>`被以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-module-list [<f>]`
+
+   打印可用模块帮助列表并退出。
+
+   列表包含所有的模块，每个模块可以使用--help-module并跟随一个模块名来获取到。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-modules [<f>]`
+
+   打印cmake-modules手册页并退出。
+
+    [cmake-modules(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-modules.7.html#manual:cmake-modules(7))的手册页以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-policy <cmp> [<f>]`
+
+   打印一个策略的帮助并退出。
+
+   [cmake-policies(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-policies.7.html#manual:cmake-policies(7))的手册页入口`<cmp>`被以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-policy-list [<f>]`
+
+   打印可用策略帮助列表并退出。
+
+   列表包含所有的策略，每个模块可以使用--help-policy并跟随一个策略名来获取到。如果给定一个文件，帮助就会被写进这个文件。  
+- `--help-policies [<f>]`
+
+   打印cmake-policies手册页并退出。
+
+   [cmake-policies(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-policies.7.html#manual:cmake-policies(7))的手册页以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-property <prop> [<f>]`
+
+   打印一个属性的帮助并退出。
+
+   [cmake-properties(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-properties.7.html#manual:cmake-properties(7))的手册页入口`<prop>`被以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-property-list [<f>]`
+
+   打印可用属性帮助列表并退出。
+
+   列表包含所有的属性，每个模块可以使用--help-property并跟随一个属性名来获取到。如果给定一个文件，帮助就会被写进这个文件。  
+- `--help-properties [<f>]`
+
+   打印cmake-properties手册页并退出。
+
+   [cmake-properties(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-properties.7.html#manual:cmake-properties(7))的手册页以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-variable <var> [<f>]`
+
+   打印一个变量的帮助并退出。
+
+   [cmake-variables(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-variables.7.html#manual:cmake-variables(7))的手册页入口`<var>`被以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
+- `--help-variable-list [<f>]`
+
+   打印可用变量帮助列表并退出。
+
+   列表包含所有的属性，每个模块可以使用--help-variable并跟随一个变量名来获取到。如果给定一个文件，帮助就会被写进这个文件。  
+- `--help-variables [<f>]`
+
+   打印cmake-properties手册页并退出。
+
+   [cmake-variables(7)](https://cmake.org/cmake/help/v3.15/manual/cmake-variables.7.html#manual:cmake-variables(7))的手册页以一种适合人阅读的文本格式打印。如果给定一个文件，帮助就会被写进这个文件。
 ## 参见
 下面的链接可在使用CMake的过程中得到帮助：
+- CMake手册（本页）
+
+   https://cmake.org/cmake/help/v3.15/manual/cmake.1.html
 - CMake主页
    
    https://cmake.org
