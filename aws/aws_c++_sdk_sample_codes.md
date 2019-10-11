@@ -416,12 +416,369 @@ put_request.SetBucket(bucket_name);
 auto set_outcome = s3_client.PutBucketAcl(put_request);
 ```
 #### 5.4 使用存储桶策略来管理对Amazon S3存储桶的访问
+你可以通过设置，获取，删除桶策略的方式等操作来管理对Amazon S3 存储桶的访问。
+
+> **注意**：代码片段假设你理解[AWS SDK for C++入门](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/getting-started.html)的内容，并已经依据[提供AWS凭证](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/credentials.html)
+##### 设置一个桶策略
+对一个特定的S3存储桶，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 PutBucketPolicy方法来设置桶策略，并传递桶名字以及存在一个[PutBucketPolicyRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_put_bucket_policy_request.html)对象中的JSON形式的桶策略。
+
+**包含文件**
+```
+#include <cstdio>
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/PutBucketPolicyRequest.h>
+```
+
+**代码**
+```
+const Aws::String policy_string =
+    "{\n"
+    "  \"Version\":\"2012-10-17\",\n"
+    "  \"Statement\":[\n"
+    "   {\n"
+    "     \"Sid\": \"1\",\n"
+    "     \"Effect\": \"Allow\",\n"
+    "     \"Principal\": {\"AWS\":\"*\"},\n"
+    "     \"Action\": [\"s3:GetObject\"],\n"
+    "     \"Resource\": [\"arn:aws:s3:::" + bucket_name + "/*\"]\n"
+    "   }]\n"
+    "}";
+
+auto request_body = Aws::MakeShared<Aws::StringStream>("");
+st_body << policy_string;
+
+Aws::S3::Model::PutBucketPolicyRequest request;
+request.SetBucket(bucket_name);
+request.SetBody(request_body);
+
+auto outcome = s3_client.PutBucketPolicy(request);
+
+if (outcome.IsSuccess()) {
+    std::cout << "Done!" << std::endl;
+} else {
+    std::cout << "SetBucketPolicy error: "
+              << outcome.GetError().GetExceptionName() << std::endl
+              << outcome.GetError().GetMessage() << std::endl;
+}
+```
+> **注意**： Aws::Utils::Json::JsonValue 工具类能够被用于帮你构造有效的JSON对象来传递给PutBucketPolicy方法。
+
+参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/put_bucket_policy.cpp)。
+##### 获取一个桶策略
+为了检索一个S3存储桶的策略，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 GetBucketPolicy方法，并传递一个含有桶名字的[GetBucketPolicyRequest对象](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_get_bucket_policy_request.html)。
+
+**包含文件**
+```
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetBucketPolicyRequest.h>
+```
+
+**代码**
+```
+Aws::S3::Model::GetBucketPolicyRequest request;
+request.SetBucket(bucket_name);
+
+auto outcome = s3_client.GetBucketPolicy(request);
+
+if (outcome.IsSuccess())
+{
+    Aws::StringStream policyStream;
+    Aws::String line;
+    while (outcome.GetResult().GetPolicy())
+    {
+        outcome.GetResult().GetPolicy() >> line;
+        policyStream << line;
+    }
+    std::cout << "Policy: " << std::endl << policyStream.str() << std::endl;
+}
+else
+{
+    std::cout << "GetBucketPolicy error: " <<
+        outcome.GetError().GetExceptionName() << std::endl <<
+        outcome.GetError().GetMessage() << std::endl;
+}
+```
+参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/get_bucket_policy.cpp)。
+##### 删除一个桶策略
+为了删除一个S3存储桶的策略，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 DeleteBucketPolicy方法，并传递一个含有桶名字的[DeleteBucketPolicyRequest对象](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_delete_bucket_policy_request.html)。
+
+**包含文件**
+```
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/DeleteBucketPolicyRequest.h>
+```
+
+**代码**
+```
+Aws::S3::Model::DeleteBucketPolicyRequest request;
+request.SetBucket(bucket_name);
+
+auto outcome = s3_client.DeleteBucketPolicy(request);
+
+if (outcome.IsSuccess())
+{
+    std::cout << "Done!" << std::endl;
+}
+else
+{
+    std::cout << "DeleteBucketPolicy error: "
+        << outcome.GetError().GetExceptionName() << " - "
+        << outcome.GetError().GetMessage() << std::endl;
+}
+```
+
+这个方法将会成功，即使该存储桶并不拥有策略。如果你指定一个并不存在的桶，或者你对通没有访问权限，一个AmazonServiceException异常将会抛出。
+
+参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/delete_bucket_policy.cpp)。
+
+**更多信息**
+- [PutBucketPolicy](https://docs.aws.amazon.com/AmazonS3/latest/API/PutBucketPolicy.html)  Amazon S3 API 参考
+- [GetBucketPolicy](https://docs.aws.amazon.com/AmazonS3/latest/API/GetBucketPolicy.html) Amazon S3 API 参考
+- [DeleteBucketPolicy](https://docs.aws.amazon.com/AmazonS3/latest/API/GetBucketPolicy.html) Amazon S3 API 参考
+- [Access Policy Language Overview](https://docs.aws.amazon.com/AmazonS3/latest/API/DeleteBucketPolicy.html) Amazon S3 开发者指南
+- [Bucket Policy Examples](https://docs.aws.amazon.com/AmazonS3/latest/dev/example-bucket-policies.html)  Amazon S3 开发者指南
 #### 5.5 将Amazon S3存储桶配置为一个站点
+你可以将一个Amazon S3存储桶配置成象网站一样工作。为了实现这个，你需要设置它的网站配置。
+
+> **注意**：代码片段假设你理解[AWS SDK for C++入门](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/getting-started.html)的内容，并已经依据[提供AWS凭证](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/credentials.html)
+##### 设置桶的网站配置
+对一个S3存储桶的网站配置，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 [PutBucketWebsiteRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_put_bucket_website_request.html)方法，它含有桶名字以及容纳网站配置信息的一个[PutBucketPolicyRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_website_configuration.html)对象。
+
+设置一个主文档（index document）是必须的，其它所有参数是可选的。
+
+**包含文件**
+```
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/IndexDocument.h>
+#include <aws/s3/model/ErrorDocument.h>
+#include <aws/s3/model/WebsiteConfiguration.h>
+#include <aws/s3/model/PutBucketWebsiteRequest.h>
+```
+
+**代码**
+```
+Aws::S3::Model::IndexDocument index_doc;
+index_doc.SetSuffix(index_suffix);
+
+Aws::S3::Model::ErrorDocument error_doc;
+error_doc.SetKey(error_key);
+
+Aws::S3::Model::WebsiteConfiguration website_config;
+website_config.SetIndexDocument(index_doc);
+website_config.SetErrorDocument(error_doc);
+
+Aws::S3::Model::PutBucketWebsiteRequest request;
+request.SetBucket(bucket_name);
+request.SetWebsiteConfiguration(website_config);
+
+auto outcome = s3_client.PutBucketWebsite(request);
+
+if (outcome.IsSuccess())
+{
+    std::cout << "Done!" << std::endl;
+}
+else
+{
+    std::cout << "PutBucketWebsite error: "
+        << outcome.GetError().GetExceptionName() << std::endl
+        << outcome.GetError().GetMessage() << std::endl;
+}
+```
+> **注意**： 设置网站配置并不会改变对你的存储桶的访问权限。为了使你的文件在网站上访问，你需要设置一个桶策略来允许对桶中文件的公开读访问。跟过信息，请参阅[使用桶策略来管理对存储桶的访问](https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/examples-s3-bucket-policies.html)。
+
+参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/put_website_config.cpp)。
+##### 获取桶的网站配置
+为了检索一个S3存储桶的网站配置，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 GetBucketWebsite方法，并传递一个含有桶名字的[GetBucketWebsiteRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_get_bucket_website_request.html)对象。
+
+配置信息将以返回的outcome对象所包含的的[GetBucketWebsiteResult](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_get_bucket_website_result.html)呈现。如果这个桶没有网站配置，null将返回。
+
+**包含文件**
+```
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetBucketWebsiteRequest.h>
+```
+
+**代码**
+```
+Aws::S3::Model::GetBucketWebsiteRequest request;
+request.SetBucket(bucket_name);
+
+auto outcome = s3_client.GetBucketWebsite(request);
+
+if (outcome.IsSuccess())
+{
+    std::cout << "  Index page: "
+        << outcome.GetResult().GetIndexDocument().GetSuffix()
+        << std::endl
+        << "  Error page: "
+        << outcome.GetResult().GetErrorDocument().GetKey()
+        << std::endl;
+}
+else
+{
+    std::cout << "GetBucketWebsite error: "
+        << outcome.GetError().GetExceptionName() << " - "
+        << outcome.GetError().GetMessage() << std::endl;
+}
+```
+参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/get_website_config.cpp)。
+##### 删除桶的网站配置
+为了删除一个S3存储桶的网站配置，你可以调用 [S3Client](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_s3_client.html)对象的 DeleteBucketPolicy方法，并传递一个含有桶名字的[DeleteBucketWebsiteRequest](https://sdk.amazonaws.com/cpp/api/LATEST/class_aws_1_1_s3_1_1_model_1_1_delete_bucket_website_request.html)对象。
+
+**包含文件**
+```
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/DeleteBucketWebsiteRequest.h>
+```
+
+**代码**
+```
+Aws::S3::Model::DeleteBucketWebsiteRequest request;
+request.SetBucket(bucket_name);
+
+auto outcome = s3_client.DeleteBucketWebsite(request);
+
+if (outcome.IsSuccess())
+{
+    std::cout << "Done!" << std::endl;
+}
+else
+{
+    std::cout << "DeleteBucketWebsite error: "
+        << outcome.GetError().GetExceptionName() << std::endl
+        << outcome.GetError().GetMessage() << std::endl;
+}
+```
+参见[完整代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/delete_website_config.cpp)。
+
+**更多信息**
+- [设置存储桶网站配置](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTwebsite.html) Amazon S3 API 参考
+- [获取存储桶网站配置](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGETwebsite.html) Amazon S3 API 参考
+- [删除存储桶网站配置](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketDELETEwebsite.html) Amazon S3 API 参考
 ### $6 Amazon SQS 示例
 ### $7 异步方法
+#### 异步SDK方法
+对于许多方法，AWS SDK for C++同时提供同步和异步版本。一个方法如果其名字包含Async后缀就是异步的。比如，Amazon S3 方法PutObject是同步的，但PutObjectAsync就是异步的。
 
+就像所有的异步操作一样，一个异步SDK方法会在其主要任务完成之前返回。例如，PutObjectAsync将会在在将文件上传到Amazon S3存储桶之前返回。当上传过程继续时，应用可以执行其它操作，包括调用其他异步方法。 当异步操作完成时，应用将会被通知，其关联回调函数将会被调用。
+
+下面的章节描述了调用SDK异步函数的示例代码。每一节关注例子的[完整源代码](https://github.com/awsdocs/aws-doc-sdk-examples/tree/master/cpp/example_code/s3/put_object_async.cpp)的一部分。
+#### 调用异步SDK方法
+基本上，一个SDK函数的异步版本接受下列参数：
++ 一个和其同步版本一样指向一个Request-type的引用
++ 一个指向回复处理回掉函数的引用，这个回掉函数的将会在异步操作完成时调用。其中一个参数含有操作的返回值。
++ 一个可选的指向AsyncCallerContext对象的智能共享指针（shared_ptr）。该对象被传递给回复处理回调函数。它包含一个UUID属性，可以被用来传递文本信息到回调函数。
+
+下面的put_s3_object_async方法设置并调用Amazon S3 PutObjectAsync方法来异步上传一个文件到一个S3存储桶。
+
+该方法与其同步版本一样的方式初始化一个PutObjectRequest对象。另外，一个指向AsyncCallerContext对象的智能指针被分配，它的UUID被设置为S3存储桶名字。出于演示目的，回复处理回调函数将访问该属性并打印其值。
+
+对PutObjectAsync的调用包含了一个对回复处理回调函数put_object_async_finished的引用参数，灰调函数将会在下一节详细解释。
+```
+bool put_s3_object_async(const Aws::S3::S3Client& s3_client,
+    const Aws::String& s3_bucket_name,
+    const Aws::String& s3_object_name,
+    const std::string& file_name)
+{
+    // Verify file_name exists
+    if (!file_exists(file_name)) {
+        std::cout << "ERROR: NoSuchFile: The specified file does not exist"
+            << std::endl;
+        return false;
+    }
+
+    // Set up request
+    Aws::S3::Model::PutObjectRequest object_request;
+
+    object_request.SetBucket(s3_bucket_name);
+    object_request.SetKey(s3_object_name);
+    const std::shared_ptr<Aws::IOStream> input_data =
+        Aws::MakeShared<Aws::FStream>("SampleAllocationTag",
+            file_name.c_str(),
+            std::ios_base::in | std::ios_base::binary);
+    object_request.SetBody(input_data);
+
+    // Set up AsyncCallerContext. Pass the S3 object name to the callback.
+    auto context =
+        Aws::MakeShared<Aws::Client::AsyncCallerContext>("PutObjectAllocationTag");
+    context->SetUUID(s3_object_name);
+
+    // Put the object asynchronously
+    s3_client.PutObjectAsync(object_request, 
+                             put_object_async_finished,
+                             context);
+    return true;
+```
+
+与一个异步操作直接关联的资源必须在操作完成前继续存在。例如，调用SDK一步方法的客户端对象必须在操作完成，应用收到通知前存在。类似地，应用本身不能在异步操作完成前终止。
+
+由于这个原因，put_s3_object_async方法接受一个传入的S3Client对象的引用，而不是在函数内部创建一个S3Client局部变量。在例子中，方法在开始异步操作后立即返回给调用者，能够使调用者在异步处理过程中处理其它的任务。如果客户端在局部变量中，方法返回后它将退出其作用域。但是，知道异步操作完成前客户端对象必须继续存在。
+#### 异步操作完成的通知
+当一个异步操作完成后，一个应用回复处理回调函数将会被调用。通知包括了操作的输出结果。输出结果包含在和其同步版本一样的 Outcome-type类中。在示例代码中，输出结果包含在一个PutObjectOutcome对象中。
+
+示例代码的应用回复处理回调函数put_object_async_finished在下面展示。它检查了异步操作成功了还是失败了。它使用了std::condition_variable来通知应用线程异步操作已经完成了。
+```
+std::mutex upload_mutex;
+std::condition_variable upload_variable;
+```
+
+```
+void put_object_async_finished(const Aws::S3::S3Client* client, 
+    const Aws::S3::Model::PutObjectRequest& request, 
+    const Aws::S3::Model::PutObjectOutcome& outcome,
+    const std::shared_ptr<const Aws::Client::AsyncCallerContext>& context)
+{
+    // Output operation status
+    if (outcome.IsSuccess()) {
+        std::cout << "put_object_async_finished: Finished uploading " 
+            << context->GetUUID() << std::endl;
+    }
+    else {
+        auto error = outcome.GetError();
+        std::cout << "ERROR: " << error.GetExceptionName() << ": "
+            << error.GetMessage() << std::endl;
+    }
+
+    // Notify the thread that started the operation
+    upload_variable.notify_one();
+}
+```
+当异步操作完成，相关资源可以被释放。应用本身也可以终止了。
+
+下面的代码演示了在一个应用中put_object_async 和 put_object_async_finished是如何被使用的。
+
+S3Client对象被分配，因此它将在异步操作完成前继续存在。当put_object_async被调用后，应用本身可以执行任何它希望的操作。为了简化，例子使用std::mutex 和 std::condition_variable来等待回复处理回调函数通知它上传操作已经完成。
+```
+// NOTE: The S3Client object that starts the async operation must 
+// continue to exist until the async operation completes.
+Aws::S3::S3Client s3Client(clientConfig);
+
+// Put the file into the S3 bucket asynchronously
+std::unique_lock<std::mutex> lock(upload_mutex);
+if (put_s3_object_async(s3Client, 
+                        bucket_name, 
+                        object_name, 
+                        file_name)) {
+    // While the upload is in progress, we can perform other tasks.
+    // For this example, we just wait for the upload to finish.
+    std::cout << "main: Waiting for file upload to complete..." 
+        << std::endl;
+    upload_variable.wait(lock);
+
+    // The upload has finished. The S3Client object can be cleaned up 
+    // now. We can also terminate the program if we wish.
+    std::cout << "main: File upload completed" << std::endl;
+}
+```
 ## 参考
 - [开发人员指南](https://docs.aws.amazon.com/zh_cn/sdk-for-cpp/v1/developer-guide/welcome.html)
 - [CMake tutorial](https://cmake.org/cmake-tutorial/)
 - [How to build AWS C++ SDK on Windows](https://www.megalacant.com/techblog/2019/02/28/building-aws-cpp-sdk-windows.html)
 - [AWS SDK for C++ API Reference](https://sdk.amazonaws.com/cpp/api/LATEST/index.html)
+- [AWS SDK for C++](https://github.com/aws/aws-sdk-cpp)
