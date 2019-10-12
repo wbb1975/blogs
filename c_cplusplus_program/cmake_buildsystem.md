@@ -67,7 +67,33 @@ target_compile_definitions(archive
 注意使用需求并不是设计为仅仅让下游更方便使用 [COMPILE_DEFINITIONS](https://cmake.org/cmake/help/latest/prop_tgt/COMPILE_DEFINITIONS.html#prop_tgt:COMPILE_DEFINITIONS) 和 [COMPILE_OPTIONS](https://cmake.org/cmake/help/latest/prop_tgt/COMPILE_OPTIONS.html#prop_tgt:COMPILE_OPTIONS)等的方式。这些属性的内容为必须，而不仅仅是建议或方便之举。
 
 从[cmake-packages(7)](https://cmake.org/cmake/help/latest/manual/cmake-packages.7.html#manual:cmake-packages(7)) 手册的[Creating Relocatable Packages](https://cmake.org/cmake/help/latest/manual/cmake-packages.7.html#creating-relocatable-packages)小节可以看到许多关于在创建发布包时指定使用需求的额外关注点的讨论。
-### 3.1 目标属性
+### 3.1 目标属性（Target Properties）
+当编译二进制目标的源文件时，[INCLUDE_DIRECTORIES](https://cmake.org/cmake/help/latest/prop_tgt/INCLUDE_DIRECTORIES.html#prop_tgt:INCLUDE_DIRECTORIES), [COMPILE_DEFINITIONS](https://cmake.org/cmake/help/latest/prop_tgt/COMPILE_DEFINITIONS.html#prop_tgt:COMPILE_DEFINITIONS) 和 [COMPILE_OPTIONS](https://cmake.org/cmake/help/latest/prop_tgt/COMPILE_OPTIONS.html#prop_tgt:COMPILE_OPTIONS)等目标属性的内容将被合理使用。
+
+[INCLUDE_DIRECTORIES](https://cmake.org/cmake/help/latest/prop_tgt/INCLUDE_DIRECTORIES.html#prop_tgt:INCLUDE_DIRECTORIES)中的条目将以`-I` 或`-isystem`前缀的形式添加到编译行中，并且按照属性值中出现的顺序添加。
+
+[COMPILE_DEFINITIONS](https://cmake.org/cmake/help/latest/prop_tgt/COMPILE_DEFINITIONS.html#prop_tgt:COMPILE_DEFINITIONS)中的条目将以-D or /D 前缀的形式被添加到编译行中，没有指定顺序。DEFINE_SYMBOL目标属性也以适用于共享和模块库目标的特殊便利设施被添加到编译定义中。
+
+ [COMPILE_OPTIONS](https://cmake.org/cmake/help/latest/prop_tgt/COMPILE_OPTIONS.html#prop_tgt:COMPILE_OPTIONS)中的条目将作用到shell中，并且按照属性值中出现的顺序添加。几种编译选项有其特殊的独立处理方式，也可参阅 [POSITION_INDEPENDENT_CODE](https://cmake.org/cmake/help/latest/prop_tgt/POSITION_INDEPENDENT_CODE.html#prop_tgt:POSITION_INDEPENDENT_CODE)。
+
+ [INTERFACE_INCLUDE_DIRECTORIES](https://cmake.org/cmake/help/latest/prop_tgt/INTERFACE_INCLUDE_DIRECTORIES.html#prop_tgt:INTERFACE_INCLUDE_DIRECTORIES), [INTERFACE_COMPILE_DEFINITIONS](https://cmake.org/cmake/help/latest/prop_tgt/INTERFACE_COMPILE_DEFINITIONS.html#prop_tgt:INTERFACE_COMPILE_DEFINITIONS) 以及 [INTERFACE_COMPILE_OPTIONS](https://cmake.org/cmake/help/latest/prop_tgt/INTERFACE_COMPILE_OPTIONS.html#prop_tgt:INTERFACE_COMPILE_OPTIONS)等目标属性的内容是使用需求--他们指定了客户用于正确编译和链接目标的内容。对于任何二进制目标，在一条[target_link_libraries(](https://cmake.org/cmake/help/latest/command/target_link_libraries.html#command:target_link_libraries))命令中指定的任一目标上的INTERFACE_ 属性内容会被消费：
+ ```
+ set(srcs archive.cpp zip.cpp)
+if (LZMA_FOUND)
+  list(APPEND srcs lzma.cpp)
+endif()
+add_library(archive SHARED ${srcs})
+if (LZMA_FOUND)
+  # The archive library sources are compiled with -DBUILDING_WITH_LZMA
+  target_compile_definitions(archive PRIVATE BUILDING_WITH_LZMA)
+endif()
+target_compile_definitions(archive INTERFACE USING_ARCHIVE_LIB)
+
+add_executable(consumer)
+# Link consumer to archive and consume its usage requirements. The consumer
+# executable sources are compiled with -DUSING_ARCHIVE_LIB.
+target_link_libraries(consumer archive)
+ ```
 ### 3.2 传递的使用需求
 ### 3.3 兼容接口属性
 ### 3.4 属性源调试
