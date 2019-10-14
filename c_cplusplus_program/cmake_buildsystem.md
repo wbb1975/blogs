@@ -94,7 +94,27 @@ add_executable(consumer)
 # executable sources are compiled with -DUSING_ARCHIVE_LIB.
 target_link_libraries(consumer archive)
  ```
+因为通常情况下源代码目录及其对应构建目录被添加到 [INCLUDE_DIRECTORIES](https://cmake.org/cmake/help/latest/prop_tgt/INCLUDE_DIRECTORIES.html#prop_tgt:INCLUDE_DIRECTORIES)中，变量[CMAKE_INCLUDE_CURRENT_DIR](https://cmake.org/cmake/help/latest/variable/CMAKE_INCLUDE_CURRENT_DIR.html#variable:CMAKE_INCLUDE_CURRENT_DIR)可被启用，以此来方便地添加对应目录到所有目标的[INCLUDE_DIRECTORIES](https://cmake.org/cmake/help/latest/prop_tgt/INCLUDE_DIRECTORIES.html#prop_tgt:INCLUDE_DIRECTORIES)里。变量[CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE](https://cmake.org/cmake/help/latest/variable/CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE.html#variable:CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE)可被启用，以此来方便地添加对应目录到所有目标的[INTERFACE_INCLUDE_DIRECTORIES](https://cmake.org/cmake/help/latest/prop_tgt/INTERFACE_INCLUDE_DIRECTORIES.html#prop_tgt:INTERFACE_INCLUDE_DIRECTORIES)里。通过命令[target_link_libraries()](https://cmake.org/cmake/help/latest/command/target_link_libraries.html#command:target_link_libraries) 它可以方便地使用位于多个不同目录的目标。
 ### 3.2 传递的使用需求
+目标的使用需求可以传播到依赖中，[target_link_libraries()](https://cmake.org/cmake/help/latest/command/target_link_libraries.html#command:target_link_libraries)命令具有PRIVATE, INTERFACE 和 PUBLIC等关键字来控制传播。
+```
+add_library(archive archive.cpp)
+target_compile_definitions(archive INTERFACE USING_ARCHIVE_LIB)
+
+add_library(serialization serialization.cpp)
+target_compile_definitions(serialization INTERFACE USING_SERIALIZATION_LIB)
+
+add_library(archiveExtras extras.cpp)
+target_link_libraries(archiveExtras PUBLIC archive)
+target_link_libraries(archiveExtras PRIVATE serialization)
+# archiveExtras is compiled with -DUSING_ARCHIVE_LIB
+# and -DUSING_SERIALIZATION_LIB
+
+add_executable(consumer consumer.cpp)
+# consumer is compiled with -DUSING_ARCHIVE_LIB
+target_link_libraries(consumer archiveExtras)
+```
+因为archive是archiveExtras的一个公开依赖，它（archive）的使用需求也传播到consumer。因为serialization是archiveExtras的一个私有依赖，它（serialization）的使用需求并未传播到consumer。
 ### 3.3 兼容接口属性
 ### 3.4 属性源调试
 ### 3.5 构建规范和生成器表达式
