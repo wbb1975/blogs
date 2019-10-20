@@ -79,7 +79,56 @@ It does end in a closing bracket of length 1.
 ```
 > **注意**： CMake 3.0以前版本不支持括号参数，它们将开括号解释为[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)的开始。
 #### 2.4.2 引用参数
+引用参数使用两个双引号包括内容：
+```
+quoted_argument        ::=  '"' quoted_element* '"'
+quoted_element           ::=  <any character except '\' or '"'> |
+                         escape_sequence |
+                         quoted_continuation
+quoted_continuation  ::=  '\' newline
+```
+引用参数内容包含两个双引号之间的所有文本。[转义序列](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#escape-sequences)和[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)将会被求值。一个引用参数通常被传递给一个命令调用作为其参数。
+
+例如：
+```
+message("This is a quoted argument containing multiple lines.
+This is always one argument even though it contains a ; character.
+Both \\-escape sequences and ${variable} references are evaluated.
+The text does not end on an escaped double-quote like \".
+It does end in an unescaped double quote.
+")
+```
+任一行的最后一个`\`如果以奇数个`\`结束，将被视为行继续标记，并和紧接着的新行符一起被忽略：
+```
+message("\
+This is the first line of a quoted argument. \
+In fact it is the only line but since it is long \
+the source code uses line continuation.\
+")
+```
+> **注意**： CMake 3.0以前版本不支持`\`行继续标记。如果引用参数中以奇数个`\`结尾，它们将报错。
 #### 2.4.3 非引用参数
+非引用参数不被任何引用语义包围。它不包括任何空白字符，`(`,` )`, `#`, `"`, 或 `\`，除非是反斜杠转义。
+```
+unquoted_argument  ::=  unquoted_element+ | unquoted_legacy
+unquoted_element     ::=  <any character except whitespace or one of '()#"\'> |
+                       escape_sequence
+unquoted_legacy         ::=  <see note in text>
+```
+非引用参数的内容包括有一个由连续允许的字符或转义字符构成的文本块。[转义序列](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#escape-sequences)和[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)将会被求值。求值结果以和[列表](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#lists)被分割成元素一样的方式切分。每个非空元素被传递给命令调用作为一个参数。因此一个非参数引用可被传递给命令调用作为0个或多个参数。
+
+例如：
+```
+foreach(arg
+    NoSpace
+    Escaped\ Space
+    This;Divides;Into;Five;Arguments
+    Escaped\;Semicolon
+    )
+  message("${arg}")
+endforeach()
+```
+> **注意**： 为了支持遗留CMake代码，
 ### 2.5 逃离序列
 ### 2.6 变量引用
 ### 2.7 注释
