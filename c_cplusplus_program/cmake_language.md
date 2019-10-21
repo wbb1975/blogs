@@ -145,6 +145,15 @@ escape_semicolon  ::=  '\;'
 ```
 一个`\`后跟一个非字母数字将简单地编码文本字符而不将它做语法解释。一个`\t`, `\r`, 或 `\n`分别编码一个制表符，回车符和新行符。一个任何[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)之外的`\;`将编码其自己，但不能在一个[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)中不分割变量值而编码`;`，在[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)内编码文字`;`（关于历史考量请参阅[CMP0053](https://cmake.org/cmake/help/latest/policy/CMP0053.html#policy:CMP0053)策略文档）。
 ### 2.6 变量引用
+一个变量引用形如`${<variable>}`，在[引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)或[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)中被求值。一个变量引用被变量的值替换，如果该变量不曾设置，则被替换为空字符串。变量引用可以嵌套，被求值时从里至外，例如`${outer_${inner_variable}_variable}`。
+
+字面变量引用可以包含字母字符，`/_.+-`以及[转义序列](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#escape-sequences)。嵌套引用可被用来对任何名字的变量求值。查参阅[CMP0053](https://cmake.org/cmake/help/latest/policy/CMP0053.html#policy:CMP0053)策略文档可看到历史考量，以及`$`技术上允许，但不鼓励的原因。
+
+[变量](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variables)段记录了变量名字的范围以及它们的值是如何设定的。
+
+一个缓存变量引用拥有象`$CACHE{<variable>}`的格式，参阅[CACHE](https://cmake.org/cmake/help/latest/variable/CACHE.html#variable:CACHE)获取更多信息。
+
+[if()](https://cmake.org/cmake/help/latest/command/if.html#command:if)命令拥有一个特殊的条件语法，允许短格式`<variable>`代替`${<variable>}`来定义变量引用。然而，环境变量和缓存变量总是以`$ENV{<variable>}` 或 `$CACHE{<variable>}`的格式被引用。
 ### 2.7 注释
 #### 2.7.1 括号注释
 #### 2.7.2 行注释
