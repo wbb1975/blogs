@@ -155,6 +155,7 @@ escape_semicolon  ::=  '\;'
 
 [if()](https://cmake.org/cmake/help/latest/command/if.html#command:if)命令拥有一个特殊的条件语法，允许短格式`<variable>`代替`${<variable>}`来定义变量引用。然而，环境变量和缓存变量总是以`$ENV{<variable>}` 或 `$CACHE{<variable>}`的格式被引用。
 ### 2.7 注释
+一个注释以一个不在[括号参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#bracket-argument)或[引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)里的`#`开始，或者作为[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)的一部分被`\`转义。
 #### 2.7.1 括号注释
 #### 2.7.2 行注释
 ## 3. 控制结构
