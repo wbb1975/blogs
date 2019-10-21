@@ -157,10 +157,34 @@ escape_semicolon  ::=  '\;'
 ### 2.7 注释
 一个注释以一个不在[括号参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#bracket-argument)或[引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)里的`#`开始，或者作为[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)的一部分被`\`转义。
 #### 2.7.1 括号注释
+一个`#`后跟随一个[开括号](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#grammar-token-bracket_open)，形成一个包含整个括号内内容的括号注释。
+```
+bracket_comment ::=  '#' bracket_argument
+```
+例如：
+```
+#[[This is a bracket comment.
+It runs until the close bracket.]]
+message("First Argument\n" #[[Bracket Comment]] "Second Argument")
+```
+> **注意**：CMake 3.0之前版本不支持括号注释，它们将开始的#解释为行注释的[开始](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#line-comment)。
 #### 2.7.2 行注释
+一个`#`后不跟随一个[开括号](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#grammar-token-bracket_open)，产生的行注释直到行结尾。
+```
+line_comment ::=  '#' <any text not starting in a bracket_open
+                       and not containing a newline>
+```
+例如：
+```
+# This is a line comment.
+message("First Argument\n" # This is a line comment :)
+        "Second Argument") # This is a line comment.
+```
 ## 3. 控制结构
 ### 3.1 条件块
+[if()](https://cmake.org/cmake/help/latest/command/if.html#command:if)/[elseif()](https://cmake.org/cmake/help/latest/command/elseif.html#command:elseif)/[else()](https://cmake.org/cmake/help/latest/command/else.html#command:else)/[endif()](https://cmake.org/cmake/help/latest/command/endif.html#command:endif) 命令分割条件执行的代码块。
 ### 3.2 循环
+[foreach()](https://cmake.org/cmake/help/latest/command/foreach.html#command:foreach)/[endforeach()](https://cmake.org/cmake/help/latest/command/endforeach.html#command:endforeach) 和 [while()](https://cmake.org/cmake/help/latest/command/while.html#command:while)/[endwhile()](https://cmake.org/cmake/help/latest/command/endwhile.html#command:endwhile)分割代码块循环执行。在块内[break()](https://cmake.org/cmake/help/latest/command/break.html#command:break)命令可被用于提前终止循环，[continue()](https://cmake.org/cmake/help/latest/command/continue.html#command:continue)命令可被用于立即开始下一次迭代。
 ### 3.3 命令定义
 ## 4. 变量
 ## ５. 环境变量
