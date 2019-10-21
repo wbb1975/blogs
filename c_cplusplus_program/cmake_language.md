@@ -136,6 +136,14 @@ endforeach()
 
 > 上面的“非引用遗留”产品代表了这些参数，我们不建议在新代码中使用遗留非引用参数。作为替代，使用[引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)或[括号参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#bracket-argument)来代表内容。
 ### 2.5 转义序列
+一个专一序列是一个`\`后跟一个字符。
+```
+escape_sequence    ::=  escape_identity | escape_encoded | escape_semicolon
+escape_identity       ::=  '\' <match '[^A-Za-z0-9;]'>
+escape_encoded     ::=  '\t' | '\r' | '\n'
+escape_semicolon  ::=  '\;'
+```
+一个`\`后跟一个非字母数字将简单地编码文本字符而不将它做语法解释。一个`\t`, `\r`, 或 `\n`分别编码一个制表符，回车符和新行符。一个任何[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)之外的`\;`将编码其自己，但不能在一个[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)中不分割变量值而编码`;`，在[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)内编码文字`;`（关于历史考量请参阅[CMP0053](https://cmake.org/cmake/help/latest/policy/CMP0053.html#policy:CMP0053)策略文档）。
 ### 2.6 变量引用
 ### 2.7 注释
 #### 2.7.1 括号注释
