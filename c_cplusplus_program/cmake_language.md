@@ -42,13 +42,13 @@ separation                         ::=  space | line_ending
 ```
 add_executable(hello world.c)
 ```
-命令名字是大小写敏感的。参数中的嵌套圆括号必须平衡。每个`(` 或` )`被以文本[Unquoted Argument](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)传递给命令调用。这可被用于[if()](https://cmake.org/cmake/help/latest/command/if.html#command:if)命令的调用中来包含条件，例如：
+命令名字是大小写敏感的。参数中的嵌套圆括号必须平衡。每个`(` 或` )`被以文本[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)传递给命令调用。这可被用于[if()](https://cmake.org/cmake/help/latest/command/if.html#command:if)命令的调用中来包含条件，例如：
 ```
 if(FALSE AND (FALSE OR TRUE)) # evaluates to FALSE
 ```
 > **注意**：CMake 3.0之前的版本要求命令名标识至少得2个字符。
 
->  CMake 2.8.12之前的版本静静地接受一个[Unquoted Argument](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument) 或 [Quoted Argument](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)跟随在一个 [Quoted Argument](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)之后，并且不以空格分隔。为了兼容性，CMake 2.8.12及更高版本接受这种代码但产生警告。
+>  CMake 2.8.12之前的版本静静地接受一个[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument) 或 [引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)跟随在一个 [引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)之后，并且不以空格分隔。为了兼容性，CMake 2.8.12及更高版本接受这种代码但产生警告。
 ### 2.4 命令参数
 在[命令调用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#command-invocations)中有三种类型的参数：
 ```
@@ -128,8 +128,14 @@ foreach(arg
   message("${arg}")
 endforeach()
 ```
-> **注意**： 为了支持遗留CMake代码，
-### 2.5 逃离序列
+> **注意**： 为了支持遗留CMake代码，非引用参数可能包括双引号字符串（"..."，可能包括横向空格），以及make风格的变量引用（$(MAKEVAR)）。
+
+> 非引用双引号必须平衡，不能出现在非引用参数的开头，并被认为是内容的一部分。例如，非引用参数`-Da="b c"`, `-Da=$(v)`, 和 `a" "b"c"d`被逐字解析。作为替代，它们可被分别写为引用参数"-Da=\"b c\"", "-Da=$(v)", 和 "a\" \"b\"c\"d"。
+
+> make风格的引用被当做文字内容的一部分，并不会进行变量扩展。它们被作为单参数的一部分被处理（而不是分离的`$`，`(`，`MAKEVAR`，和`)`参数）。
+
+> 上面的“非引用遗留”产品代表了这些参数，我们不建议在新代码中使用遗留非引用参数。作为替代，使用[引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument)或[括号参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#bracket-argument)来代表内容。
+### 2.5 转义序列
 ### 2.6 变量引用
 ### 2.7 注释
 #### 2.7.1 括号注释
