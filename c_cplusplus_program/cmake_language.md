@@ -208,7 +208,31 @@ CMake存储一套单独的缓存变量，或缓存项，它们的值在一个项
 
 [cmake-variables(7) ](https://cmake.org/cmake/help/latest/manual/cmake-variables.7.html#manual:cmake-variables(7))手册记述了许多CMake提供的变量，或项目代码设置的对CMake有用的变量。
 ## ５. 环境变量
+环境变量就像[普通变量](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variables)，除了以下一些不同：
+- 范围
+
+   环境变量在CMake进程中拥有全局范围，它们从不会被缓存。
+- 引用
+
+   [变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)拥有下面的格式：`$ENV{<variable>}`
+- 初始化
+
+   CMake环境变量的初始值来至于调用进程。值可以用[set()](https://cmake.org/cmake/help/latest/command/set.html#command:set)和[unset()](https://cmake.org/cmake/help/latest/command/unset.html#command:unset)命令修改。这些命令仅仅影响运行的CMake进程，绝对不会影响系统环境。改变后的值不会写回调用进程，它们对接下来的构建或测试进程不可见。
+
+[cmake-env-variables(7)](https://cmake.org/cmake/help/latest/manual/cmake-env-variables.7.html#manual:cmake-env-variables(7))手册描述了对CMake有特殊意义的环境变量。
 ## ６. 列表
+虽然在CMake中所有值以字符串形式存储，一个字符串可在特定语境下被视为一个列表，例如在[非引用参数](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#unquoted-argument)的求值中。在这种语境下，一个字符串通过以`;`为界被分割成元素列表，`;`字符后不能跟随奇数个`[` 和` ]`，也不能在其前恰好为`\`。`\;`并不会切分一个值，但会在结果元素中被替换为`;`。 
+
+一个元素的列表可表示为一个所有元素被`;`串在一起的一个字符串。例如，[set()](https://cmake.org/cmake/help/latest/command/set.html#command:set)命令将多个值存储在一个目标列表变量中：
+```
+set(srcs a.c b.c c.c) # sets "srcs" to "a.c;b.c;c.c"
+```
+
+b列表用于简化某些用例，例如原文件列表，但绝对不应该用于复杂的数据处理任务。大部分构造列表的命令并没有在元素中转义`;`字符，因此扁平化了嵌套列表：
+```
+et(x a "b;c") # sets "x" to "a;b;c", not "a;b\;c"
+```
+
 
 ## 引用
 - [cmake-language](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#organization)
