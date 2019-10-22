@@ -186,7 +186,27 @@ message("First Argument\n" # This is a line comment :)
 ### 3.2 循环
 [foreach()](https://cmake.org/cmake/help/latest/command/foreach.html#command:foreach)/[endforeach()](https://cmake.org/cmake/help/latest/command/endforeach.html#command:endforeach) 和 [while()](https://cmake.org/cmake/help/latest/command/while.html#command:while)/[endwhile()](https://cmake.org/cmake/help/latest/command/endwhile.html#command:endwhile)分割代码块循环执行。在块内[break()](https://cmake.org/cmake/help/latest/command/break.html#command:break)命令可被用于提前终止循环，[continue()](https://cmake.org/cmake/help/latest/command/continue.html#command:continue)命令可被用于立即开始下一次迭代。
 ### 3.3 命令定义
+[macro()](https://cmake.org/cmake/help/latest/command/macro.html#command:macro)/[endmacro()](https://cmake.org/cmake/help/latest/command/endmacro.html#command:endmacro), 和 [function()](https://cmake.org/cmake/help/latest/command/function.html#command:function)/[endfunction()](https://cmake.org/cmake/help/latest/command/endfunction.html#command:endfunction) 命令分割代码块被记录为而后使用的命令。
 ## 4. 变量
+变量是CMake语言中的基础存储单元。它们的值总是字符串类型，虽然某些命令可将字符串值解释为其它类型的值。[set()](https://cmake.org/cmake/help/latest/command/set.html#command:set) 和 [unset()](https://cmake.org/cmake/help/latest/command/unset.html#command:unset)显式设置或取消一个变量，但其它命令也有改变变量的语义。变量名字是大小写敏感的，而且可能包含任何文本，但是建议坚持使用字母字符加`_` 和 `-`。
+
+变量拥有动态范围。每个变量“设立（set）或删除（unset）在当前范围创建了一个绑定：
+
+函数范围（Function Scope）
+
+由[function()](https://cmake.org/cmake/help/latest/command/function.html#command:function)命令创建的[命令定义](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#command-definitions)建立命令，当该命令被调用时，记录的命令将在一个新的变量绑定范围内处理。一个变量设立（set）或删除（unset）在这个范围绑定，并只在当前函数范围及任何嵌套调用内可见，函数返回后则不可见。
+
+目录范围（Directory Scope）
+
+源码书树的每个 [Directories](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#directories) 拥有自己的变量绑定。在处理一个目录的CMakeLists.txt前，CMake将父目录当前定义的任何变量绑定，来初始化新的目录范围。CMake[脚本](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#scripts)，当以`cmake -P`处理时，在一个目录范围内绑定变量。
+
+持久缓存（Persistent Cache）
+
+CMake存储一套单独的缓存变量，或缓存项，它们的值在一个项目构建树中跨域多次运行。缓存项有一个孤立的绑定范围，仅被显式请求修改，比如[set()](https://cmake.org/cmake/help/latest/command/set.html#command:set)和[unset()](https://cmake.org/cmake/help/latest/command/unset.html#command:unset)命令的cache选项。
+
+当对[变量引用](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#variable-references)求值时，CMake首先在函数调用栈搜索变量绑定，然后在当前目录范围搜索。如果发现一个“set”绑定，其值将被使用。如果一个“unset”绑定被发现，或者没有绑定发现，CMake接下来将搜索缓存项。如果缓存项被找到，使用其值，否则该变量引用将被求值为空字符串。`$CACHE{VAR}`语法将做直接缓存查询。
+
+[cmake-variables(7) ](https://cmake.org/cmake/help/latest/manual/cmake-variables.7.html#manual:cmake-variables(7))手册记述了许多CMake提供的变量，或项目代码设置的对CMake有用的变量。
 ## ５. 环境变量
 ## ６. 列表
 
