@@ -289,6 +289,40 @@ us-west-2
   tcp_keepalive = false
   ``` 
 ##### S3 自定义命令设置
+Amazon S3 支持多项配置 CLI 如何执行 S3 操作的设置。一些设置适用于 s3api 和 s3 命名空间中的所有 S3 命令。其他的则专门用于抽象常见操作的 S3“自定义”命令，而不仅仅是对 API 操作的一对一映射。aws s3 传输命令 cp、sync、mv 和 rm 具有可用于控制 S3 传输的其他设置。
+
+可以通过在 config 文件中指定 s3 嵌套设置来配置所有这些选项。每个设置在其自己的行上缩进。
+> **注意**：这些设置完全是可选的。即使不配置这些设置中的任何一个，您也应该能够成功使用 aws s3 传输命令。提供这些设置是为了让您能够调整性能或匹配运行这些 aws s3 命令的特定环境。
+
+以下设置适用于 s3 或 s3api 命名空间中的任何 S3 命令。
+- addressing_style
+
+   指定要使用的寻址样式。这将控制存储桶名称位于主机名还是 URL 中。有效值为：path、virtual 和 auto。默认值为 auto。
+
+   构造 S3 终端节点的样式有两种。第一种称为 virtual，它将存储桶名称包含为主机名的一部分。例如：https://bucketname.s3.amazonaws.com。另一种为 path 样式 - 将存储桶名称视为 URI 中的路径。例如：https://s3.amazonaws.com/bucketname。CLI 中的默认值是使用 auto，它尝试尽可能使用 virtual 样式，但在需要时回退到 path 样式。例如，如果您的存储桶名称与 DNS 不兼容，则存储桶名称不能是主机名的一部分，而必须位于路径中。使用 auto 时，CLI 将检测这种情况并自动切换到 path 样式。如果将寻址方式设置为 path，您必须确保在 AWS CLI 中配置的 AWS 区域与存储桶的区域匹配。
+- payload_sigining_enabled
+
+   指定是否对 sigv4 负载进行 SHA256 签名。默认情况下，使用 https 时，将对流式上传（UploadPart 和 PutObject）禁用该设置。默认情况下，对于流式上传（UploadPart 和 PutObject），此设置为 false，但仅限存在 ContentMD5（默认生成）并且终端节点使用 HTTPS 时。
+
+   如果设置为 true，则 S3 请求接收 SHA256 校验和形式的额外内容验证（替您计算并包含在请求签名中）。如果设置为 false，则不计算校验和。禁用该设置可减少校验和计算产生的性能开销。
+- use_dualstack_endpoint
+
+   为所有 s3 和 s3api 命令使用 Amazon S3 双 IPv4 / IPv6 终端节点。默认值为 False。该设置与 use_accelerate_endpoint 设置互斥。
+
+   如果设置为 true，CLI 会将所有 Amazon S3 请求定向到配置的区域的双 IPv4/IPv6 终端节点。
+- use_accelerate_endpoint
+
+   为所有 s3 和 s3api 命令使用 Amazon S3 加速终端节点。默认值为 False。该设置与 use_dualstack_endpoint 设置互斥。
+
+   如果设置为 true，CLI 会将所有 Amazon S3 请求定向到 s3-accelerate.amazonaws.com 的 S3 加速终端节点。要使用该终端节点，您必须让您的存储桶使用 S3 加速。使用存储桶寻址的虚拟样式发送所有请求：my-bucket.s3-accelerate.amazonaws.com。不会将任何 ListBuckets、CreateBucket 和 DeleteBucket 请求发送到加速终端节点，因为该终端节点不支持这些操作。如果将任何 s3 或 s3api 命令的 --endpoint-url 参数设置为 https://s3-accelerate.amazonaws.com 或 http://s3-accelerate.amazonaws.com，也可以设置该行为。
+
+以下设置仅适用于 s3 命名空间命令集中的命令：
+- max_bandwidth
+- max_concurrent_requests
+- max_queue_size
+- multipart_chunksize
+- multipart_threshold
+
 ### 命名配置文件
 ### 环境变量
 ### 命令行选项
