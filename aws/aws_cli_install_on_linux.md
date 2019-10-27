@@ -1,6 +1,8 @@
 ### 在 Linux 上安装 AWS CLI
+> **重要**：从2020-01-10起，AWS CLI 1.17及其以后版本将不再支持Python 2.6 或 Python 3.3。那个日期之后，AWS CLI 的安装器将要求Python 2.7, Python 3.4及其以后版本来安装。更多信息，请参看借助[Python 2.6 或 Python 3.3来使用AWS CLI](https://docs.amazonaws.cn/en_us/cli/latest/userguide/deprecate-python-26-33.html)，以及[这篇博客中的废弃声明](https://aws.amazon.com/blogs/developer/deprecation-of-python-2-6-and-python-3-3-in-botocore-boto3-and-the-aws-cli/)。
+
 您可以使用 pip（一种适用于 Python 的程序包管理器）在大多数 Linux 发行版上安装 AWS Command Line Interface (AWS CLI) 及其依赖项。
-> **重要：**awscli 程序包可在其他程序包管理器（如 apt 和 yum）的存储库中可用，但除非您通过 pip 或使用[捆绑安装程序](https://docs.amazonaws.cn/cli/latest/userguide/install-bundle.html)获得该程序包，否则不保证您获得最新版本。
+> **重要**：awscli 程序包可在其他程序包管理器（如 apt 和 yum）的存储库中可用，但除非您通过 pip 或使用[捆绑安装程序](https://docs.amazonaws.cn/cli/latest/userguide/install-bundle.html)获得该程序包，否则不保证您获得最新版本。
 
 如果您已有 pip，请按照主要[安装主题](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-install.html)中的说明执行操作。运行 pip --version 可查看您的 Linux 版本是否已包含 Python 和 pip。如果您安装了 Python 3+ 版本，我们建议您使用 pip3 命令。
 ```
