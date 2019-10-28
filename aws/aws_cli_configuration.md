@@ -368,7 +368,59 @@ s3 =
   use_accelerate_endpoint = true
   addressing_style = path
 ```
-### 命名配置文件
+### 命名配置文件（Named Profiles）
+#### 命名配置文件
+AWS CLI 支持使用存储在 config 和 credentials 文件中的多个命名配置文件中的任何一个。您可以通过在 aws configure 中使用 --profile 选项或通过向 config 和 credentials 文件中添加条目来配置其他配置文件。
+
+下面的示例介绍一个有两个配置文件的 credentials 文件。第一个在运行没有配置文件的 CLI 命令时使用。第二个在运行有 --profile user1 参数的 CLI 命令时使用。
+
+**~/.aws/credentials**（Linux 和 Mac）或 **%USERPROFILE%\.aws\credentials** (Windows)
+```
+[default]
+aws_access_key_id=AKIAIOSFODNN7EXAMPLE
+aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+[user1]
+aws_access_key_id=AKIAI44QH8DHBEXAMPLE
+aws_secret_access_key=je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY
+```
+
+每个配置文件可以指定不同的凭证（可能来自不同的 IAM 用户），还可以指定不同的 AWS 区域和输出格式。
+
+**~/.aws/config**（Linux 和 Mac）或 **%USERPROFILE%\.aws\config** (Windows)
+```
+[default]
+region=us-west-2
+output=json
+
+[profile user1]
+region=us-east-1
+output=text
+```
+> **重要**：credentials 文件使用的命名格式与 CLI config 文件用于命名配置文件的格式不同。仅当在 config 文件中配置命名配置文件时，才包含前缀单词“profile”。在 credentials 文件中创建条目时，请勿 使用单词 profile。
+#### 通过 AWS CLI 使用配置文件（Using Profiles with the AWS CLI）
+要使用命名配置文件，请向您的命令添加 --profile profile-name 选项。以下示例列出了使用先前示例文件中 user1 配置文件中定义的凭证和设置的所有 Amazon EC2 实例。
+```
+aws ec2 describe-instances --profile user1
+```
+
+要为多个命令使用一个命名配置文件，通过在命令行设置 AWS_PROFILE 环境变量可以避免在每个命令中指定配置文件。
+
+Linux, OS X, or Unix
+
+```
+export AWS_PROFILE=user1
+```
+设置环境变量会更改默认配置文件，直到 Shell 会话结束或直到您将该变量设置为其他值。通过将环境变量放在 shell 的启动脚本中，可使环境变量在未来的会话中继续有效。有关更多信息，请参阅 [环境变量](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-envvars.html)。
+
+Windows
+
+```
+setx AWS_PROFILE user1
+```
+使用 [set](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/set_1) 设置环境变量会更改使用的值，直到当前命令提示符会话结束，或者直到您将该变量设置为其他值。
+
+使用 [setx](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/setx) 设置环境变量会更改运行命令后创建的所有命令 Shell 中的值。这不会 影响运行命令时已在运行的任何命令 Shell。关闭并重新启动命令 Shell 可查看这一更改的效果。
 ### 环境变量
 ### 命令行选项
 ### 使用外部进程获取凭证
