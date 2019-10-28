@@ -422,6 +422,52 @@ setx AWS_PROFILE user1
 
 使用 [setx](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/setx) 设置环境变量会更改运行命令后创建的所有命令 Shell 中的值。这不会 影响运行命令时已在运行的任何命令 Shell。关闭并重新启动命令 Shell 可查看这一更改的效果。
 ### 环境变量
+环境变量提供了另一种指定配置选项和凭证的方法；若要编写脚本或将一个命名配置文件临时设置为默认配置文件，环境变量会很有用。
+
+**选项的优先顺序：**
+- 如果您使用本主题中描述的某个环境变量指定选项，则它将在配置文件中覆盖从配置文件加载的任何值。
+- 如果您通过在 CLI 命令行上使用参数指定选项，则它将在配置文件中覆盖相应环境变量或配置文件中的任何值。
+
+**支持的环境变量**
++ AWS_ACCESS_KEY_ID – 指定与 IAM 用户或角色关联的 AWS 访问密钥。
++ AWS_SECRET_ACCESS_KEY – 指定与访问密钥关联的私有密钥。这基本上是访问密钥的“密码”。
++ AWS_SESSION_TOKEN – 指定在使用临时安全凭证时需要的会话令牌值。有关更多信息，请参阅 AWS CLI Command Reference 中的[代入角色命令的输出部分](https://docs.amazonaws.cn/cli/latest/reference/sts/assume-role.html#output)。
++ AWS_DEFAULT_REGION – 指定要将请求发送到的 [AWS 区域](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration-region)。
++ AWS_DEFAULT_OUTPUT – 指定要使用的[输出格式](https://docs.amazonaws.cn/cli/latest/userguide/cli-usage-output.html)。
++ AWS_PROFILE – 指定包含要使用的凭证和选项的 CLI [配置文件](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-profiles.html)的名称。可以是存储在 credentials 或 config 文件中的配置文件的名称，也可以是值 default，后者使用默认配置文件。如果您指定此环境变量，它将在配置文件中覆盖使用名为 [default] 的配置文件的行为。
++ AWS_ROLE_SESSION_NAME – 指定要与角色会话关联的名称。有关更多信息，请参阅[指定角色会话名称以便于审核](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-role.html#cli-configure-role-session-name)。
++ AWS_CA_BUNDLE – 指定要用于 HTTPS 证书验证的证书捆绑包的路径。
++ AWS_SHARED_CREDENTIALS_FILE – 指定 AWS CLI 用于存储访问密钥的文件的位置。默认路径为 ~/.aws/credentials。
++ AWS_CONFIG_FILE – 指定 AWS CLI 用于存储配置文件的文件的位置。默认路径为 ~/.aws/config。
+
+下面的示例介绍如何为默认用户配置环境变量。这些值将覆盖在命名配置文件中找到的任何值或实例元数据。设置后，您可以通过在 CLI 命令行上指定参数或通过更改/删除环境变量来覆盖这些值。有关优先顺序以及 AWS CLI 如何确定使用哪些凭证的更多信息，请参阅[配置设置和优先顺序](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-configure.html#config-settings-and-precedence)。
+
+**Linux, OS X, or Unix**
+
+```
+export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+export AWS_DEFAULT_REGION=us-west-2
+```
+设置环境变量会更改使用的值，直到 Shell 会话结束或直到您将该变量设置为其他值。通过在 shell 的启动脚本中设置变量，可使变量在未来的会话中继续有效。
+
+**Windows 命令提示符**
+
+```
+setx AWS_ACCESS_KEY_ID AKIAIOSFODNN7EXAMPLE
+setx AWS_SECRET_ACCESS_KEY wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+setx AWS_DEFAULT_REGION us-west-2
+```
+使用 [set](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/set_1) 设置环境变量会更改使用的值，直到当前命令提示符会话结束，或者直到您将该变量设置为其他值。使用 [setx](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/setx) 设置环境变量会更改当前命令提示符会话和运行该命令后创建的所有命令提示符会话中使用的值。它不 影响在运行该命令时已经运行的其他命令 shell。
+
+**PowerShell**
+
+```
+$Env:AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
+$Env:AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+$Env:AWS_DEFAULT_REGION="us-west-2"
+```
+如果在 PowerShell 提示符下设置环境变量（如前面的示例所示），则仅保存当前会话持续时间的值。要在所有 PowerShell 和命令提示符会话中使环境变量设置保持不变，请使用控制面板中的系统应用程序来存储该变量。或者，您可以通过将其添加到 PowerShell 配置文件来为将来的所有 PowerShell 会话设置该变量。有关存储环境变量或跨会话保存它们的更多信息，请参阅 [PowerShell 文档](https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_environment_variables)。
 ### 命令行选项
 ### 使用外部进程获取凭证
 ### 实例元数据
