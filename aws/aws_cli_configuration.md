@@ -683,8 +683,124 @@ credential_source = Ec2InstanceMetadata
 ```
 当您调用角色时，您可以要求其他选项，例如使用多重身份验证、外部 ID（供第三方公司用于访问其客户的资源）以及指定可更容易地在 AWS CloudTrail 日志中进行审核的唯一角色会话名称。
 #### 配置和使用角色
+在使用指定 IAM 角色的配置文件运行命令时，AWS CLI 将使用源配置文件的（source profile's）凭证调用 AWS Security Token Service (AWS STS) 并为指定角色请求临时凭证。源配置文件中的用户必须具有为指定配置文件中的角色调用 sts:assume-role 的权限。该角色必须具有允许源配置文件中的用户使用角色的信任关系。检索角色的临时凭证然后使用临时凭证的过程通常称为代入角色（assuming the role）。
+
+您可以通过执行 AWS Identity and Access Management 用户指南 中的[创建向 IAM 用户委派权限的角色](https://docs.amazonaws.cn/IAM/latest/UserGuide/roles-creatingrole-user.html)下的过程，在 IAM 中创建一个您希望用户代入的具有该权限的新角色。如果该角色和源配置文件的 IAM 用户在同一个账户中，在配置角色的信任关系时，您可以输入自己的账户 ID。
+
+在创建角色后，请修改信任关系以允许 IAM 用户（或 AWS 账户中的用户）代入该角色。
+
+以下示例显示了一个可附加到角色的信任策略。该策略允许账户 123456789012 中的任何 IAM 用户代入该角色，前提 是该账户的管理员向该用户显式授予了 sts:assumerole 权限。
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws-cn:iam::123456789012:root"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+信任策略不会实际授予权限。账户管理员必须通过附加具有适当权限的策略才能将代入角色的权限委派给各个用户。以下示例显示了一个可附加到 IAM 用户的策略，该策略仅允许用户代入 marketingadminrole 角色。有关授予用户代入角色的访问权限的更多信息，请参阅 IAM 用户指南 中的[向用户授予切换角色的权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_use_permissions-to-switch.html)。
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws-cn:iam::123456789012:role/marketingadminrole"
+    }
+  ]
+}
+```
+IAM 用户无需拥有任何附加权限即可使用角色配置文件运行 CLI 命令。相反，运行命令的权限来自附加到角色 的权限。您可以将权限策略附加到角色，以指定可以针对哪些 AWS 资源执行哪些操作。有关向角色附加权限（与向 IAM 用户附加权限的操作相同）的更多信息，请参阅 IAM 用户指南 中的[更改 IAM 用户的权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_users_change-permissions.html)。
+
+您已正确配置角色配置文件、角色权限、角色信任关系和用户权限，可以通过调用 --profile 选项在命令行中使用该角色了。例如，下面的命令使用附加到 marketingadmin 角色（由本主题开头的示例定义）的权限调用 Amazon S3 ls 命令。
+```
+aws s3 ls --profile marketingadmin
+```
+要对多个调用使用角色，您可以从命令行设置当前会话的 AWS_DEFAULT_PROFILE 环境变量。定义该环境变量后，就不必对每个命令都指定 --profile 选项。
+
+**Linux, OS X, or Unix**
+
+```
+export AWS_PROFILE=marketingadmin
+```
+**Windows**
+
+```
+setx AWS_PROFILE marketingadmin
+```
+
+有关配置 IAM 用户和角色的更多信息，请参阅 IAM 用户指南 中的[用户和组](https://docs.amazonaws.cn/IAM/latest/UserGuide/Using_WorkingWithGroupsAndUsers.html)和[角色](https://docs.amazonaws.cn/IAM/latest/UserGuide/roles-toplevel.html)。
 #### 使用多重验证
+为了提高安全性，当用户尝试使用角色配置文件进行调用时，您可以要求用户提供从多重验证 (MFA) 设备（一种 U2F 设备）或移动应用程序生成的一次性密钥。
+
+首先，您可以选择将与 IAM 角色有关的信任关系修改为需要 MFA。这可以防止任何人在未首先使用 MFA 进行身份验证的情况下使用该角色。有关示例，请参阅下面示例中的 Condition 行。此策略允许名为 anika 的 IAM 用户代入策略所附加的角色，但前提是她使用 MFA 进行身份验证。
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": { "AWS": "arn:aws-cn:iam::123456789012:user/anika" },
+      "Action": "sts:AssumeRole",
+      "Condition": { "Bool": { "aws:multifactorAuthPresent": true } }
+    }
+  ]
+}
+```
+
+其次，为角色配置文件添加一行，用来指定用户的 MFA 设备的 ARN。以下示例 config 文件条目显示两个角色配置文件，它们都使用访问密钥为 IAM 用户 anika 请求角色 cli-role 的临时凭证。用户 anika 有权代入角色，这是由角色的信任策略授予的。
+
+```
+[profile role-without-mfa]
+region = us-west-2
+role_arn= arn:aws:iam::128716708097:role/cli-role
+source_profile=cli-user
+
+[profile role-with-mfa]
+region = us-west-2
+role_arn= arn:aws:iam::128716708097:role/cli-role
+source_profile = cli-user
+mfa_serial = arn:aws:iam::128716708097:mfa/cli-user
+
+[profile anika]
+region = us-west-2
+output = json
+```
+该 mfa_serial 设置可以采取如图所示的 ARN 或硬件 MFA 令牌的序列号。
+
+第一个配置文件 role-without-mfa 不需要 MFA。但是，由于附加到角色的先前示例信任策略需要 MFA，因此使用此配置文件运行命令的任何尝试都将失败。
+```
+aws iam list-users --profile role-without-mfa
+An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied
+```
+
+第二个配置文件条目 role-with-mfa 标识要使用的 MFA 设备。当用户尝试使用此配置文件运行 CLI 命令时，CLI 会提示用户输入 MFA 设备提供的一次性密码 (OTP)。如果 MFA 身份验证成功，则此命令会执行请求的操作。OTP 未显示在屏幕上。
+```
+$ aws iam list-users --profile role-with-mfa
+Enter MFA code for arn:aws:iam::123456789012:mfa/cli-user:
+{
+    "Users": [
+        {
+```
 #### 跨账户角色和外部 ID
+通过将角色配置为跨账户角色，您可以让 IAM 用户使用属于不同账户的角色。在创建角色期间，将角色类型设置为 Another AWS account (其他 AWS 账户)（如[创建向 IAM 用户委派权限的角色](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_create_for-user.html)中所述）。（可选）选择 Require MFA (需要 MFA)。Require MFA (需要 MFA) 选项将按照[使用多重验证](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-role.html#cli-configure-role-mfa)中所述在信任关系中配置相应条件。
+
+如果使用[外部 ID](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html)来加强控制可跨账户使用角色的人员，则还必须将 external_id 参数添加到角色配置文件。通常情况下，仅应在其他账户由公司或组织外部的人员控制时才使用该功能。
+```
+[profile crossaccountrole]
+role_arn = arn:aws-cn:iam::234567890123:role/SomeRole
+source_profile = default
+mfa_serial = arn:aws-cn:iam::123456789012:mfa/saanvi
+external_id = 123456
+```
 #### 指定角色会话名称以便于审核
 #### 通过 Web 身份代入角色
 #### 清除缓存凭证
