@@ -469,11 +469,236 @@ $Env:AWS_DEFAULT_REGION="us-west-2"
 ```
 如果在 PowerShell 提示符下设置环境变量（如前面的示例所示），则仅保存当前会话持续时间的值。要在所有 PowerShell 和命令提示符会话中使环境变量设置保持不变，请使用控制面板中的系统应用程序来存储该变量。或者，您可以通过将其添加到 PowerShell 配置文件来为将来的所有 PowerShell 会话设置该变量。有关存储环境变量或跨会话保存它们的更多信息，请参阅 [PowerShell 文档](https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_environment_variables)。
 ### 命令行选项
-### 使用外部进程获取凭证
-### 实例元数据
-### 使用 HTTP 代理
-### 在 AWS CLI 中使用 IAM 角色
-### 命令完成
+您可以使用以下命令行选项来覆盖一条命令的默认配置设置。虽然您可以指定要使用的配置文件，但无法使用命令行选项直接指定凭证（credentials）。
++ **--profile <string>**
 
+   指定用于该命令的命名配置文件。要设置其他命名配置文件，可以在 aws configure 命令中使用 --profile 选项。
+   ```
+   aws configure --profile <profilename>
+   ```
++ **--region <string>**
+
+   指定要将该命令的 AWS 请求发送到的 AWS 区域。有关可以指定的所有区域的列表，请参阅Amazon Web Services 一般参考中的 [AWS 区域和终端节点](https://docs.amazonaws.cn/general/latest/gr/rande.html)。
++ **--output <string>**
+
+   指定用于该命令的输出格式。您可以指定以下任意值：
+
+   - json：输出采用 [JSON](https://json.org/) 字符串的格式。
+   - text：输出采用多行制表符分隔的字符串值的格式，如果要将输出传递给文本处理器（如 grep、sed 或 awk），则该格式非常有用。
+   - table：输出采用表格形式，使用字符 +|- 以形成单元格边框。它通常以“人性化”格式呈现信息，这种格式比其他格式更容易阅读，但从编程方面来讲不是那么有用。
++ **--endpoint-url <string>**
+
+   指定要将请求发送到的 URL。对于大多数命令，AWS CLI 会根据所选服务和指定的 AWS 区域自动确定 URL。但是，某些命令需要您指定账户专用 URL。您还可以配置一些 AWS 服务[直接在您的私有 VPC 中托管终端节点](https://docs.amazonaws.cn/AmazonVPC/latest/UserGuide/what-is-amazon-vpc.html#what-is-privatelink)（然后可能需要指定该终端节点）。
+
+   有关每个区域可用的标准服务终端节点的列表，请参阅Amazon Web Services 一般参考中的  [AWS 区域和终端节点](https://docs.amazonaws.cn/general/latest/gr/rande.html)。
++ **--debug**
+
+   指定要启用调试日志记录的布尔开关。这包括有关命令操作的额外诊断信息，这些信息在排查命令提供意外结果的原因时非常有用。
++ **--no-paginate**
+
+   禁用输出自动分页的布尔开关。
++ **--query <string>**
+
+   指定用于筛选响应数据的 [JMESPath 查询](http://jmespath.org/)。有关更多信息，请参阅[如何使用 --query 选项筛选输出](https://docs.amazonaws.cn/cli/latest/userguide/cli-usage-output.html#cli-usage-output-filter)。
++ **--version**
+
+   显示正在运行的 AWS CLI 程序的当前版本的布尔开关。
++ **---color <string>**
+
+   指定对彩色输出的支持。有效值包括 on、off 和 auto。默认值为 auto。
++ **--no-sign-request**
+
+   对 AWS 服务终端节点的 HTTP 请求禁用签名的布尔开关。这可避免加载凭证。
++ **--ca-bundle <string>**
+
+   指定验证 SSL 证书时要使用的 CA 证书捆绑包。
++ **--cli-read-timeout <integer>**
+
+   指定最大套接字读取时间（以秒为单位）。如果该值设置为 0，则套接字读取将无限等待（阻塞），不会超时。
++ **--cli-connect-timeout <integer>**
+
+   指定最大套接字连接时间（以秒为单位）。如果该值设置为 0，则套接字连接将无限等待（阻塞），不会超时。
+
+将这些选项中的一个或多个作为命令行参数提供时，它会覆盖该单个命令的默认配置或任何相应的配置文件设置。
+
+每个带参数的选项都需要一个空格或等号 (=) 将参数与选项名称分开。如果参数值为包含空格的字符串，则必须使用引号将参数引起来。
+
+常见的命令行选项用法包括在编写脚本时检查多个 AWS 区域中的资源，以及更改输出格式使其易于阅读或使用。例如，如果您不确定实例运行的区域，可以针对每个区域运行 describe-instances 命令，直到找到该区域，如下所示。
+```
+$ aws ec2 describe-instances --output table --region us-east-1
+-------------------
+|DescribeInstances|
++-----------------+
+$ aws ec2 describe-instances --output table --region us-west-1
+-------------------
+|DescribeInstances|
++-----------------+
+$ aws ec2 describe-instances --output table --region us-west-2
+------------------------------------------------------------------------------
+|                              DescribeInstances                             |
++----------------------------------------------------------------------------+
+||                               Reservations                               ||
+|+-------------------------------------+------------------------------------+|
+||  OwnerId                            |  012345678901                      ||
+||  ReservationId                      |  r-abcdefgh                        ||
+|+-------------------------------------+------------------------------------+|
+|||                                Instances                               |||
+||+------------------------+-----------------------------------------------+||
+|||  AmiLaunchIndex        |  0                                            |||
+|||  Architecture          |  x86_64                                       |||
+...
+```
+
+[指定参数值](https://docs.amazonaws.cn/cli/latest/userguide/cli-usage-parameters.html)中详细描述了每个命令行选项的参数类型（例如，字符串、布尔值）。
+### 使用外部进程获取凭证
+> **警告**：以下主题讨论从外部进程获取凭证。如果生成凭证的命令可由未经批准的进程或用户访问，则可能存在安全风险。我们建议您使用 CLI 和 AWS 提供的支持的安全替代方案，以降低泄露凭证的风险。请务必保管好 config 文件及任何支持文件和工具，以防泄露。
+
+如果您有 AWS CLI 不直接支持的生成或查找凭证的方法，则可以通过在 config 文件中配置 credential_process 设置来配置 CLI 使用它。
+
+例如，您可以在配置文件中包含类似于以下内容的条目：
+```
+[profile developer]
+credential_process = /opt/bin/awscreds-custom --username helen
+```
+
+AWS CLI 完全按照配置文件中指定的方式运行该命令，然后从 STDOUT 读取数据。您指定的命令必须在 STD​​OUT 上生成符合以下语法的 JSON 输出：
+```
+{
+  "Version": 1,
+  "AccessKeyId": "an AWS access key",
+  "SecretAccessKey": "your AWS secret access key",
+  "SessionToken": "the AWS session token for temporary credentials", 
+  "Expiration": "ISO8601 timestamp when the credentials expire"
+}  
+```
+截至撰写本文之时，Version 密钥必须设置为 1。随时间推移和该结构的发展，该值可能会增加。
+
+Expiration 密钥是采用 [ISO8601](https://wikipedia.org/wiki/ISO_8601) 格式的时间戳。如果工具的输出中不存在 Expiration 键，则 CLI 假定凭证是不刷新的长期凭证。否则，将其视为临时凭证，并通过在其过期前重新运行 credential_process 命令来自动刷新凭证。
+
+> **注意**：AWS CLI 不 缓存外部进程凭据，这一点不同于代入角色凭证。如果需要缓存，则必须在外部进程中实现。
+
+外部进程可以返回非零返回代码，以指示在检索凭证时发生错误。
+### 实例元数据
+从 Amazon EC2 实例中运行 AWS CLI 时，可以简化向命令提供凭证的过程。每个 Amazon EC2 实例都包含 AWS CLI 能够直接查询临时凭证的元数据。要提供这些元数据，请创建一个对所需资源有访问权限的 AWS Identity and Access Management (IAM) 角色，然后在 Amazon EC2 实例启动时向其附加该角色。
+
+启动实例并进行检查，看是否已安装了 AWS CLI（在 Amazon Linux 上是预安装的）。如有必要，安装 AWS CLI。您仍必须配置默认区域，以免在每个命令中指定它。
+
+要在命名配置文件中指定要使用托管 Amazon EC2 实例配置文件中可用的凭证，请在配置文件中指定以下行：
+```
+credential_source = Ec2InstanceMetadata 
+```
+
+以下示例说明如何通过在 Amazon EC2 实例配置文件中引用 marketingadminrole 角色来代入该角色：
+```
+[profile marketingadmin]
+role_arn = arn:aws-cn:iam::123456789012:role/marketingadminrole
+credential_source = Ec2InstanceMetadata
+```
+
+您可以通过运行 aws configure 来设置区域和默认输出格式，而无需通过按两次 Enter 跳过前两条提示来指定凭证。
+```
+aws configure
+AWS Access Key ID [None]: ENTER
+AWS Secret Access Key [None]: ENTER
+Default region name [None]: us-west-2
+Default output format [None]: json
+```
+向实例附加 IAM 角色后，AWS CLI 可以自动并且安全地从实例元数据检索凭证。有关更多信息，请参阅 IAM 用户指南 中的[向 Amazon EC2 实例中运行的应用程序授予访问 AWS 资源的权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/role-usecase-ec2app.html)。
+### 使用 HTTP 代理
+#### 使用 HTTP 代理
+要通过代理服务器访问 AWS，您可以使用代理服务器使用的 DNS 域名或 IP 地址和端口号配置 HTTP_PROXY 和 HTTPS_PROXY 环境变量。
+
+> **注意**：以下示例显示了全部使用大写字母的环境变量名称。但是，如果您指定一个变量两次 - 一次使用大写字母，一次使用小写字母，则以使用小写字母的变量为准。我们建议您只定义变量一次，以避免混淆和意外行为。
+
+以下示例显示如何使用代理的显式 IP 地址或解析为代理 IP 地址的 DNS 名称。两种情况都可以后跟冒号和应将查询发送到的端口号
+
+**Linux, OS X, or Unix**
+
+```
+export HTTP_PROXY=http://10.15.20.25:1234
+export HTTP_PROXY=http://proxy.example.com:1234
+export HTTPS_PROXY=http://10.15.20.25:5678
+export HTTPS_PROXY=http://proxy.example.com:5678
+```
+**Windows**
+
+```
+setx HTTP_PROXY http://10.15.20.25:1234
+setx HTTP_PROXY=http://proxy.example.com:1234
+setx HTTPS_PROXY=http://10.15.20.25:5678
+setx HTTPS_PROXY=http://proxy.example.com:5678 
+```
+#### 代理身份验证
+AWS CLI 支持 HTTP 基本身份验证。在代理 URL 中指定用户名和密码，如下所示：
+
+**Linux, OS X, or Unix**
+
+```
+export HTTP_PROXY=http://username:password@proxy.example.com:1234
+export HTTPS_PROXY=http://username:password@proxy.example.com:5678
+```
+**Windows**
+
+```
+setx HTTP_PROXY http://username:password@proxy.example.com:1234
+setx HTTPS_PROXY=http://username:password@proxy.example.com:5678
+```
+> **注意**：AWS CLI 不支持 NTLM 代理。如果使用 NTLM 或 Kerberos 协议代理，则可以通过身份验证代理（如 [Cntlm](http://cntlm.sourceforge.net/)）进行连接。
+#### 对 Amazon EC2 实例使用代理
+如果是在使用附加 IAM 角色启动的 Amazon EC2 实例上配置代理，请确保排除用于访问[实例元数据](https://docs.amazonaws.cn/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)的地址。为此，请将 NO_PROXY 环境变量设置为实例元数据服务的 IP 地址 169.254.169.254。该地址保持不变。
+
+**Linux, OS X, or Unix**
+
+```
+export NO_PROXY=169.254.169.254
+```
+**Windows**
+
+```
+setx NO_PROXY 169.254.169.254
+```
+### 在 AWS CLI 中使用 IAM 角色（Using an IAM Role in the AWS CLI）
+[AWS Identity and Access Management (IAM) 角色](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles.html)是一种授权工具，可让 IAM 用户获得额外（或不同）的权限或者获取使用其他 AWS 账户执行操作的权限。
+
+通过在 ~/.aws/credentials 文件中为 IAM 角色定义配置文件，您可以配置 AWS Command Line Interface (AWS CLI) 以使用该角色。
+
+以下示例显示了一个名为 marketingadmin 的角色配置文件。如果使用 --profile marketingadmin（或使用 AWS_PROFILE 环境变量指定它）运行命令，则 CLI 使用配置文件 user1 中定义的凭证代入 Amazon 资源名称 (ARN) 为 arn:aws-cn:iam::123456789012:role/marketingadminrole 的角色。您可以运行分配给该角色的权限所允许的任何操作。
+```
+[marketingadmin]
+role_arn = arn:aws-cn:iam::123456789012:role/marketingadminrole
+source_profile = user1
+```
+然后，您可以指定一个指向单独的命名配置文件的 source_profile，此配置文件包含 IAM 用户凭证及使用该角色的权限。在上一个示例中，marketingadmin 配置文件使用 user1 配置文件中的凭证。当您指定某个 AWS CLI 命令将使用配置文件 marketingadmin 时，CLI 会自动查找链接的 user1 配置文件的凭证，并使用它们为指定的 IAM 角色请求临时凭证。CLI 在后台使用 sts:AssumeRole 操作来完成该操作。然后，使用这些临时凭证来运行请求的 CLI 命令。指定的角色必须附加有允许运行请求的 CLI 命令的 IAM 权限策略。
+
+如果要在 Amazon EC2 实例或 Amazon ECS 容器中运行 CLI 命令，可以使用附加到实例配置文件或容器的 IAM 角色。如果未指定配置文件或未设置环境变量，则将直接使用该角色。这让您能够避免在实例上存储长时间生存的访问密钥。您也可以使用这些实例或容器角色仅获取其他角色的凭证。为此，请使用 credential_source（而不是 source_profile）指定如何查找凭证。credential_source 属性支持以下值：
+- Environment – 从环境变量检索源凭证。
+- Ec2InstanceMetadata – 使用附加到 Amazon EC2 实例配置文件的 IAM 角色。
+- EcsContainer – 使用附加到 Amazon ECS 容器的 IAM 角色。
+
+以下示例显示通过引用 Amazon EC2 实例配置文件来使用同一个 marketingadminrole 角色：
+```
+[profile marketingadmin]
+role_arn = arn:aws-cn:iam::123456789012:role/marketingadminrole
+credential_source = Ec2InstanceMetadata
+```
+当您调用角色时，您可以要求其他选项，例如使用多重身份验证、外部 ID（供第三方公司用于访问其客户的资源）以及指定可更容易地在 AWS CloudTrail 日志中进行审核的唯一角色会话名称。
+#### 配置和使用角色
+#### 使用多重验证
+#### 跨账户角色和外部 ID
+#### 指定角色会话名称以便于审核
+#### 通过 Web 身份代入角色
+#### 清除缓存凭证
+### 命令完成（Command Completion）
+在类 Unix 系统上，AWS CLI 包含一项命令完成功能，让您可以使用 Tab 键完成部分键入的命令。在大多数系统上，该功能不是自动安装的，需要手动配置。
+
+要配置命令完成，您必须具有两项信息：所使用的 Shell 的名称和 aws_completer 脚本的位置。
+> **Amazon Linux** 
+> 
+>  默认情况下，在运行 Amazon Linux 的 Amazon EC2 实例上自动配置和启用命令完成。
+#### 识别 Shell
+#### 定位 AWS 完成标签
+#### 将补全程序的文件夹添加到您的路径中
+#### 启用命令完成
+#### 测试命令完成
 ## Reference
 - [配置 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-configure.html)
