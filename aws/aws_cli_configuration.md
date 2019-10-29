@@ -802,8 +802,76 @@ mfa_serial = arn:aws-cn:iam::123456789012:mfa/saanvi
 external_id = 123456
 ```
 #### 指定角色会话名称以便于审核
+当某个角色被许多人共享时，审核会变得比较困难。您希望将调用的每个操作与调用该操作的个人关联。但是，当个人使用角色时，个人代入角色是一项独立于调用操作的行为，您必须手动将这两者关联起来。
+
+通过在用户代入角色时指定唯一的角色会话名称，您可以简化此过程。只需向指定某一角色的 config 文件中的每个命名配置文件添加 role_session_name 参数，即可实现这一点。role_session_name 值将传递给 AssumeRole 操作，并成为角色会话 ARN 的一部分。该值也包含在所有已记录操作的 AWS CloudTrail 日志中。
+
+例如，您可以创建基于角色的配置文件，如下所示：
+
+```
+[profile namedsessionrole]
+role_arn = arn:aws-cn:iam::234567890123:role/SomeRole
+source_profile = default
+role_session_name = Session_Maria_Garcia
+```
+这会导致角色会话具有以下 ARN：
+
+```
+arn:aws-cn:iam::234567890123:assumed-role/SomeRole/Session_Maria_Garcia
+```
+
+此外，所有 AWS CloudTrail 日志都在为每个操作捕获的信息中包含角色会话名称。
 #### 通过 Web 身份代入角色
+您可以配置一个配置文件，以指示 AWS CLI 应使用 [Web 联合身份验证和 Open ID Connect (OIDC)](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_oidc.html) 代入角色。当您在配置文件中指定此选项时，AWS CLI 会自动为您发出相应的 AWS STS AssumeRoleWithWebIdentity 调用。
+> **注意**：当您指定使用 IAM 角色的配置文件时，AWS CLI 会发出相应的调用来检索临时凭证。随后，这些凭证将存储在 ~/.aws/cli/cache 中。指定同一个配置文件的后续 AWS CLI 命令将使用缓存的临时凭证，直到它们过期。这时，AWS CLI 将自动刷新这些凭证。
+
+要通过 Web 联合身份验证检索和使用临时凭证，您可以在共享配置文件中指定以下配置值：
+- [role_arn](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-role.html)
+   
+   指定要代入的角色的 ARN。
+- web_identity_token_file
+   
+   指定一个文件的路径，该文件包含由身份提供商提供的 OAuth 2.0 访问令牌或 OpenID Connect ID 令牌。AWS CLI 加载此文件，并将其内容作为 AssumeRoleWithWebIdentity 操作的 WebIdentityToken 参数传递。
+- [role_session_name](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-role.html#cli-configure-role-session-name)
+   
+   指定应用于此代入角色会话的可选名称
+
+以下是使用 Web 身份配置文件配置代入角色所需的最少量配置的示例配置：
+```
+# In ~/.aws/config
+
+[profile web-identity]
+role_arn=arn:aws:iam:123456789012:role/RoleNameToAssume
+web_identity_token_file=/path/to/a/token
+```
+
+您也可以使用[环境变量](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-envvars.html)提供此配置：
+- AWS_ROLE_ARN
+
+   要代入的角色的 ARN。
+- AWS_WEB_IDENTITY_TOKEN_FILE
+
+   Web 身份令牌文件的路径。
+- AWS_ROLE_SESSION_NAME
+
+   应用于此代入角色会话的名称。
+
+> **注意**：这些环境变量当前仅适用于使用 Web 身份提供商的代入角色，而不适用于常规代入角色提供商配置。
 #### 清除缓存凭证
+当您使用一个角色时，AWS CLI 会在本地缓存临时凭证，直到这些凭证过期。当您下次尝试使用它们时，AWS CLI 会尝试代表您续订这些凭证。
+
+如果您的角色的临时凭证[已吊销](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html)，它们不会自动续订，并且使用它们的尝试将失败。但是，您可以删除缓存以强制 AWS CLI 检索新凭证。
+
+**Linux, OS X, or Unix**
+
+```
+rm -r ~/.aws/cli/cache
+```
+**Windows**
+
+```
+del /s /q %UserProfile%\.aws\cli\cache
+```
 ### 命令完成（Command Completion）
 在类 Unix 系统上，AWS CLI 包含一项命令完成功能，让您可以使用 Tab 键完成部分键入的命令。在大多数系统上，该功能不是自动安装的，需要手动配置。
 
@@ -812,9 +880,107 @@ external_id = 123456
 > 
 >  默认情况下，在运行 Amazon Linux 的 Amazon EC2 实例上自动配置和启用命令完成。
 #### 识别 Shell
+如果不确定所使用的 Shell，可以使用以下命令之一进行识别：
+
+echo $SHELL – 显示 Shell 的程序文件名称。这通常会与所使用的 Shell 的名称匹配，除非您在登录后启动了不同的 Shell。
+```
+$ echo $SHELL
+/bin/bash
+```
+ps： 显示为当前用户运行的进程。Shell 将是其中之一。
+```
+$ ps
+  PID TTY          TIME CMD
+ 2148 pts/1    00:00:00 bash
+ 8756 pts/1    00:00:00 ps
+```
 #### 定位 AWS 完成标签
+AWS 完成标签的位置可能随所用安装方法而异。
+
+程序包管理器 – pip、yum、brew 和 apt-get 等程序通常在标准路径位置安装 AWS 完成标签（或其符号链接）。在这种情况下，which 命令可以为您定位完成标签。
+
+如果在没有 --user 命令的情况下使用 pip，则可能会看到以下路径。
+```
+$ which aws_completer
+/usr/local/aws/bin/aws_completer
+```
+
+如果您在 pip install 命令中使用了 --user 参数，则通常可以在 $HOME 文件夹下的 local/bin 文件夹中找到完成标签。
+```
+wangbb@wangbb-ThinkPad-T420:~$ which aws_completer
+/home/wangbb/.local/bin/aws_completer
+```
+
+捆绑安装程序 – 如果根据上一节中的说明使用捆绑安装程序，AWS 完成标签将位于安装目录的 bin 子文件夹中。
+
+```
+$ ls /usr/local/aws/bin
+activate
+activate.csh
+activate.fish
+activate_this.py
+aws
+aws.cmd
+aws_completer
+...
+```
+如果所有 else 都失败，可以使用 find 在整个文件系统中搜索 AWS 完成标签。
+
+```
+$ find / -name aws_completer
+/usr/local/aws/bin/aws_completer
+```
 #### 将补全程序的文件夹添加到您的路径中
+要让 AWS 补全程序成功运行，必须先将其添加到计算机的路径中。
+1. 在您的用户文件夹中查找 Shell 的配置文件脚本。如果您不能确定所使用的 Shell，请运行 echo $SHELL。
+   
+    ```
+    $ ls -a ~
+    .  ..  .bash_logout  .bash_profile  .bashrc  Desktop  Documents  Downloads
+    ```
+
+   + Bash– .bash_profile、.profile 或 .bash_login
+    + Zsh– .zshrc
+    + Tcsh– .tcshrc、.cshrc 或 .login
+2. 在配置文件脚本末尾添加与以下示例类似的导出命令。将 /usr/local/aws/bin 替换为您在上一部分中找到的文件夹。
+   
+   ```
+   export PATH=/usr/local/aws/bin:$PATH
+   ```
+3. 将配置文件重新加载到当前会话中，以使更改生效。将 .bash_profile 替换为您在第一部分中找到的 shell 脚本的名称。
+   
+   ```
+   source ~/.bash_profile
+   ```
 #### 启用命令完成
+运行命令以启用命令完成。用来启用完成功能的命令取决于所使用的 Shell。您可以将命令添加到外壳程序的 RC 文件中，以便在每次打开一个新外壳程序时运行它。在每个命令中，将路径 /usr/local/aws/bin 替换为上一部分中在您的系统上找到的那个。
+- **bash** – 使用内置命令 complete。
+   
+   ```
+   complete -C '/usr/local/aws/bin/aws_completer' aws
+   ```
+   将命令添加到 ~/.bashrc 中，以便在每次打开一个新外壳程序时运行它。您的 ~/.bash_profile 应指定 ~/.bashrc 的来源，以确保该命令也在登录外壳程序中运行。
+- **tcsh** – tcsh 的完成采用字类型和样式来定义完成行为。
+
+   ```
+   > complete aws 'p/*/`aws_completer`/'
+   ```
+   将命令添加到 ~/.tschrc 中，以便在每次打开一个新外壳程序时运行它。
+- **zsh** – 源 bin/aws_zsh_completer.sh。
+
+   ```
+   % source /usr/local/aws/bin/aws_zsh_completer.sh
+   ```
+   WS CLI 使用 bash 兼容性自动完成 (bashcompinit) 实现 zsh 支持。有关更多详细信息，请参阅aws_zsh_completer.sh 的顶部。
+
+   将命令添加到 ~/.zshrc 中，以便在每次打开一个新外壳程序时运行它。
 #### 测试命令完成
+启用命令完成后，输入部分命令并按 Tab 查看可用命令。
+```
+$ aws sTAB
+s3              ses             sqs             sts             swf
+s3api           sns             storagegateway  support
+```
+
 ## Reference
 - [配置 AWS CLI](https://docs.amazonaws.cn/cli/latest/userguide/cli-chap-configure.html)
