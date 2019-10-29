@@ -1,4 +1,4 @@
-## 配置 AWS CLI
+## 第三章 配置 AWS CLI
 本节介绍如何配置 AWS Command Line Interface (AWS CLI) 在与 AWS 交互时使用的设置，包括您的安全凭证、默认输出格式和默认 AWS 区域。
 > 注意:
 >
@@ -67,7 +67,7 @@ AWS CLI 使用一组凭证提供程序 查找 AWS 凭证。每个凭证提供程
 4. [CLI 配置文件](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-files.html) – 这是运行命令 aws configure 时更新的另一个文件。该文件位于 ~/.aws/config（在 Linux, OS X, or Unix 上）或 C:\Users\USERNAME\.aws\config（在 Windows 上）。该文件包含默认配置文件和任何命名配置文件的配置设置。
 5. [容器凭证](https://docs.amazonaws.cn/AmazonECS/latest/developerguide/task-iam-roles.html) – 您可以将 IAM 角色与每个 Amazon Elastic Container Service (Amazon ECS) 任务定义相关联。之后，该任务的容器就可以使用该角色的临时凭证。有关更多信息，请参阅 Amazon Elastic Container Service Developer Guide 中的[适用于任务的 IAM 角色](https://docs.amazonaws.cn/AmazonECS/latest/developerguide/task-iam-roles.html)。
 6. [实例配置文件凭证](https://docs.amazonaws.cn/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) – 您可以将 IAM 角色与每个 Amazon Elastic Compute Cloud (Amazon EC2) 实例相关联。之后，在该实例上运行的代码就可以使用该角色的临时凭证。凭证通过 Amazon EC2 元数据服务提供。有关更多信息，请参阅 Amazon EC2 用户指南（适用于 Linux 实例） 中的[适用于 Amazon EC2 的 IAM 角色](https://docs.amazonaws.cn/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)和 IAM 用户指南 中的[使用实例配置文件](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)。
-### 配置和证书文件
+### 3.1 配置和证书文件
 您可以将常用的配置设置和凭证保存在由 AWS CLI 维护的文件中。这些文件分为可按名称引用的多个部分。这称为“配置文件”。除非您另行指定，否则 CLI 将使用在名为 default 的配置文件中找到的设置。要使用备用设置，您可以创建和引用其他配置文件。您也可以通过设置某个支持的环境变量或使用命令行参数来覆盖个别设置。
 #### 配置设置存储在何处？
 AWS CLI 将使用 aws configure 指定的凭证存储在主目录中名为 .aws 的文件夹中名为 credentials 的本地文件中。使用 aws configure 指定的其他配置选项存储在名为 config 的本地文件中，该文件也存储在主目录的 .aws 文件夹中。主目录位置因操作系统而异，但在 Windows 中使用环境变量 %UserProfile% 引用，在基于 Unix 的系统中使用 $HOME 或 ~（波形符）引用。
@@ -368,7 +368,7 @@ s3 =
   use_accelerate_endpoint = true
   addressing_style = path
 ```
-### 命名配置文件（Named Profiles）
+### 3.2 命名配置文件（Named Profiles）
 #### 命名配置文件
 AWS CLI 支持使用存储在 config 和 credentials 文件中的多个命名配置文件中的任何一个。您可以通过在 aws configure 中使用 --profile 选项或通过向 config 和 credentials 文件中添加条目来配置其他配置文件。
 
@@ -421,7 +421,7 @@ setx AWS_PROFILE user1
 使用 [set](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/set_1) 设置环境变量会更改使用的值，直到当前命令提示符会话结束，或者直到您将该变量设置为其他值。
 
 使用 [setx](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/setx) 设置环境变量会更改运行命令后创建的所有命令 Shell 中的值。这不会 影响运行命令时已在运行的任何命令 Shell。关闭并重新启动命令 Shell 可查看这一更改的效果。
-### 环境变量
+### 3.3 环境变量
 环境变量提供了另一种指定配置选项和凭证的方法；若要编写脚本或将一个命名配置文件临时设置为默认配置文件，环境变量会很有用。
 
 **选项的优先顺序：**
@@ -468,7 +468,7 @@ $Env:AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 $Env:AWS_DEFAULT_REGION="us-west-2"
 ```
 如果在 PowerShell 提示符下设置环境变量（如前面的示例所示），则仅保存当前会话持续时间的值。要在所有 PowerShell 和命令提示符会话中使环境变量设置保持不变，请使用控制面板中的系统应用程序来存储该变量。或者，您可以通过将其添加到 PowerShell 配置文件来为将来的所有 PowerShell 会话设置该变量。有关存储环境变量或跨会话保存它们的更多信息，请参阅 [PowerShell 文档](https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_environment_variables)。
-### 命令行选项
+### 3.4 命令行选项
 您可以使用以下命令行选项来覆盖一条命令的默认配置设置。虽然您可以指定要使用的配置文件，但无法使用命令行选项直接指定凭证（credentials）。
 + **--profile <string>**
 
@@ -550,7 +550,7 @@ $ aws ec2 describe-instances --output table --region us-west-2
 ```
 
 [指定参数值](https://docs.amazonaws.cn/cli/latest/userguide/cli-usage-parameters.html)中详细描述了每个命令行选项的参数类型（例如，字符串、布尔值）。
-### 使用外部进程获取凭证
+### 3.5 使用外部进程获取凭证
 > **警告**：以下主题讨论从外部进程获取凭证。如果生成凭证的命令可由未经批准的进程或用户访问，则可能存在安全风险。我们建议您使用 CLI 和 AWS 提供的支持的安全替代方案，以降低泄露凭证的风险。请务必保管好 config 文件及任何支持文件和工具，以防泄露。
 
 如果您有 AWS CLI 不直接支持的生成或查找凭证的方法，则可以通过在 config 文件中配置 credential_process 设置来配置 CLI 使用它。
@@ -578,7 +578,7 @@ Expiration 密钥是采用 [ISO8601](https://wikipedia.org/wiki/ISO_8601) 格式
 > **注意**：AWS CLI 不 缓存外部进程凭据，这一点不同于代入角色凭证。如果需要缓存，则必须在外部进程中实现。
 
 外部进程可以返回非零返回代码，以指示在检索凭证时发生错误。
-### 实例元数据
+### 3.6 实例元数据
 从 Amazon EC2 实例中运行 AWS CLI 时，可以简化向命令提供凭证的过程。每个 Amazon EC2 实例都包含 AWS CLI 能够直接查询临时凭证的元数据。要提供这些元数据，请创建一个对所需资源有访问权限的 AWS Identity and Access Management (IAM) 角色，然后在 Amazon EC2 实例启动时向其附加该角色。
 
 启动实例并进行检查，看是否已安装了 AWS CLI（在 Amazon Linux 上是预安装的）。如有必要，安装 AWS CLI。您仍必须配置默认区域，以免在每个命令中指定它。
@@ -604,7 +604,7 @@ Default region name [None]: us-west-2
 Default output format [None]: json
 ```
 向实例附加 IAM 角色后，AWS CLI 可以自动并且安全地从实例元数据检索凭证。有关更多信息，请参阅 IAM 用户指南 中的[向 Amazon EC2 实例中运行的应用程序授予访问 AWS 资源的权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/role-usecase-ec2app.html)。
-### 使用 HTTP 代理
+### 3.7 使用 HTTP 代理
 #### 使用 HTTP 代理
 要通过代理服务器访问 AWS，您可以使用代理服务器使用的 DNS 域名或 IP 地址和端口号配置 HTTP_PROXY 和 HTTPS_PROXY 环境变量。
 
@@ -657,7 +657,7 @@ export NO_PROXY=169.254.169.254
 ```
 setx NO_PROXY 169.254.169.254
 ```
-### 在 AWS CLI 中使用 IAM 角色（Using an IAM Role in the AWS CLI）
+### 3.8 在 AWS CLI 中使用 IAM 角色（Using an IAM Role in the AWS CLI）
 [AWS Identity and Access Management (IAM) 角色](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles.html)是一种授权工具，可让 IAM 用户获得额外（或不同）的权限或者获取使用其他 AWS 账户执行操作的权限。
 
 通过在 ~/.aws/credentials 文件中为 IAM 角色定义配置文件，您可以配置 AWS Command Line Interface (AWS CLI) 以使用该角色。
@@ -872,7 +872,7 @@ rm -r ~/.aws/cli/cache
 ```
 del /s /q %UserProfile%\.aws\cli\cache
 ```
-### 命令完成（Command Completion）
+### 3.9 命令完成（Command Completion）
 在类 Unix 系统上，AWS CLI 包含一项命令完成功能，让您可以使用 Tab 键完成部分键入的命令。在大多数系统上，该功能不是自动安装的，需要手动配置。
 
 要配置命令完成，您必须具有两项信息：所使用的 Shell 的名称和 aws_completer 脚本的位置。
