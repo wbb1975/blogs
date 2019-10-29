@@ -69,7 +69,7 @@ AWS CLI 使用一组凭证提供程序 查找 AWS 凭证。每个凭证提供程
 6. [实例配置文件凭证](https://docs.amazonaws.cn/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) – 您可以将 IAM 角色与每个 Amazon Elastic Compute Cloud (Amazon EC2) 实例相关联。之后，在该实例上运行的代码就可以使用该角色的临时凭证。凭证通过 Amazon EC2 元数据服务提供。有关更多信息，请参阅 Amazon EC2 用户指南（适用于 Linux 实例） 中的[适用于 Amazon EC2 的 IAM 角色](https://docs.amazonaws.cn/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)和 IAM 用户指南 中的[使用实例配置文件](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)。
 ### 3.1 配置和证书文件
 您可以将常用的配置设置和凭证保存在由 AWS CLI 维护的文件中。这些文件分为可按名称引用的多个部分。这称为“配置文件”。除非您另行指定，否则 CLI 将使用在名为 default 的配置文件中找到的设置。要使用备用设置，您可以创建和引用其他配置文件。您也可以通过设置某个支持的环境变量或使用命令行参数来覆盖个别设置。
-#### 配置设置存储在何处？
+#### 3.1.1 配置设置存储在何处？
 AWS CLI 将使用 aws configure 指定的凭证存储在主目录中名为 .aws 的文件夹中名为 credentials 的本地文件中。使用 aws configure 指定的其他配置选项存储在名为 config 的本地文件中，该文件也存储在主目录的 .aws 文件夹中。主目录位置因操作系统而异，但在 Windows 中使用环境变量 %UserProfile% 引用，在基于 Unix 的系统中使用 $HOME 或 ~（波形符）引用。
 
 例如，下面的命令列出 .aws 文件夹的内容。
@@ -111,7 +111,7 @@ output=json
 > **注意**： 上面的示例介绍具有单个默认配置文件的文件。有关具有多个命名配置文件的文件的示例，请参阅[命名配置文件](https://docs.amazonaws.cn/cli/latest/userguide/cli-configure-profiles.html)。
 
 当您使用共享配置文件指定 IAM 角色时，AWS CLI 将调用 AWS STS AssumeRole 操作来检索临时凭证。随后，这些凭证将存储起来（存储在 ~/.aws/cli/cache 中）。后续 AWS CLI 命令将使用缓存的临时凭证，直到它们过期，这时 AWS CLI 将自动刷新这些凭证。
-#### 支持的 config 文件设置
+#### 3.1.2 支持的 config 文件设置
 config 文件支持以下设置。将使用指定（或默认）配置文件中列出的值，除非它们被具有相同名称的环境变量或具有相同名称的命令行选项覆盖。
 
 您可以通过直接使用文本编辑器编辑配置文件或使用 aws configure set 命令来配置这些设置。使用 --profile 设置指定要修改的配置文件。例如，以下命令设置名为 integ 的配置文件中的 region 设置。
@@ -126,7 +126,7 @@ us-west-2
 ```
 
 如果输出为空，则没有显式设置该设置，并将使用默认值。
-##### 全局设置
+##### 3.1.2.1 全局设置
 - api_versions
    
    某些 AWS 服务维护多个 API 版本以支持向后兼容性。默认情况下，CLI 命令使用最新的可用 API 版本。您可以通过在 config 文件中包含 api_versions 设置来指定要用于配置文件的 API 版本。
@@ -288,7 +288,7 @@ us-west-2
   ```
   tcp_keepalive = false
   ``` 
-##### S3 自定义命令设置
+##### 3.1.2.2 S3 自定义命令设置
 Amazon S3 支持多项配置 CLI 如何执行 S3 操作的设置。一些设置适用于 s3api 和 s3 命名空间中的所有 S3 命令。其他的则专门用于抽象常见操作的 S3“自定义”命令，而不仅仅是对 API 操作的一对一映射。aws s3 传输命令 cp、sync、mv 和 rm 具有可用于控制 S3 传输的其他设置。
 
 可以通过在 config 文件中指定 s3 嵌套设置来配置所有这些选项。每个设置在其自己的行上缩进。
@@ -879,7 +879,7 @@ del /s /q %UserProfile%\.aws\cli\cache
 > **Amazon Linux** 
 > 
 >  默认情况下，在运行 Amazon Linux 的 Amazon EC2 实例上自动配置和启用命令完成。
-#### 识别 Shell
+#### 3.9.1 识别 Shell
 如果不确定所使用的 Shell，可以使用以下命令之一进行识别：
 
 echo $SHELL – 显示 Shell 的程序文件名称。这通常会与所使用的 Shell 的名称匹配，除非您在登录后启动了不同的 Shell。
@@ -894,7 +894,7 @@ $ ps
  2148 pts/1    00:00:00 bash
  8756 pts/1    00:00:00 ps
 ```
-#### 定位 AWS 完成标签
+#### 3.9.2 定位 AWS 完成标签
 AWS 完成标签的位置可能随所用安装方法而异。
 
 程序包管理器 – pip、yum、brew 和 apt-get 等程序通常在标准路径位置安装 AWS 完成标签（或其符号链接）。在这种情况下，which 命令可以为您定位完成标签。
@@ -930,7 +930,7 @@ aws_completer
 $ find / -name aws_completer
 /usr/local/aws/bin/aws_completer
 ```
-#### 将补全程序的文件夹添加到您的路径中
+#### 3.9.3 将补全程序的文件夹添加到您的路径中
 要让 AWS 补全程序成功运行，必须先将其添加到计算机的路径中。
 1. 在您的用户文件夹中查找 Shell 的配置文件脚本。如果您不能确定所使用的 Shell，请运行 echo $SHELL。
    
@@ -952,7 +952,7 @@ $ find / -name aws_completer
    ```
    source ~/.bash_profile
    ```
-#### 启用命令完成
+#### 3.9.4 启用命令完成
 运行命令以启用命令完成。用来启用完成功能的命令取决于所使用的 Shell。您可以将命令添加到外壳程序的 RC 文件中，以便在每次打开一个新外壳程序时运行它。在每个命令中，将路径 /usr/local/aws/bin 替换为上一部分中在您的系统上找到的那个。
 - **bash** – 使用内置命令 complete。
    
@@ -974,7 +974,7 @@ $ find / -name aws_completer
    WS CLI 使用 bash 兼容性自动完成 (bashcompinit) 实现 zsh 支持。有关更多详细信息，请参阅aws_zsh_completer.sh 的顶部。
 
    将命令添加到 ~/.zshrc 中，以便在每次打开一个新外壳程序时运行它。
-#### 测试命令完成
+#### 3.9.5 测试命令完成
 启用命令完成后，输入部分命令并按 Tab 查看可用命令。
 ```
 $ aws sTAB
