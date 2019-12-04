@@ -22,6 +22,7 @@ AWS Lambda 将限制可用来运行和存储函数的计算和存储资源量。
 有关并发以及 Lambda 如何扩展您的函数并发以响应流量的详细信息，请参阅[AWS Lambda 函数扩展](https://docs.amazonaws.cn/lambda/latest/dg/scaling.html)。
 
 以下限制适用于函数配置、部署和执行。无法对其进行更改。
+
 资源|限制
 --|--
 函数内存分配|128 MB 到 3,008 MB，以 64 MB 为增量。
