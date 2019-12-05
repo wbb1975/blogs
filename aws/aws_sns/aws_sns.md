@@ -7,8 +7,8 @@ Amazon Simple Notification Service (Amazon SNS) 是一项 Web 服务，用于协
 # 第二章 设置 Amazon SNS 的访问权限
 必须先完成以下步骤，然后才能使用 Amazon SNS。
 ## 步骤 1：创建 AWS 账户和 IAM 管理员用户
-要访问任何 AWS 服务，您必须首先创建一个 AWS 账户。这是一个可以使用 AWS 产品的 Amazon 账户。您可以使用 AWS 账户查看您的活动和使用率报告并管理身份验证和访问。
-1. 导航到 [AWS 主页](https://aws.amazon.com/)，然后选择 Create an AWS Account (创建 AWS 账户)。
+要访问任何 AWS 服务，您必须首先创建一个[AWS 账户](http://www.amazonaws.cn/)。这是一个可以使用 AWS 产品的 Amazon 账户。您可以使用 AWS 账户查看您的活动和使用率报告并管理身份验证和访问。
+1. 导航到 [AWS 主页](http://www.amazonaws.cn/)，然后选择 **Create an AWS Account (创建 AWS 账户)**。
 2. 按照说明进行操作。
 
    作为注册流程的一部分，您会收到一个电话，需要您使用电话键盘输入一个 PIN 码。
@@ -18,26 +18,26 @@ Amazon Simple Notification Service (Amazon SNS) 是一项 Web 服务，用于协
 
 要使用 Amazon SNS，您需要与您的 IAM 用户关联的 AmazonSNSFullAccess 策略和 AWS 凭证。这些凭证由访问密钥 ID 和秘密访问密钥组成。有关更多信息，请参阅 IAM 用户指南 中的[什么是 IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_Introduction.html)？以及 AWS General Reference 中的 [AWS 安全凭证](https://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)。
 1. 登录 [AWS Identity and Access Management 控制台](https://console.aws.amazon.com/iam/)。
-2. 依次选择 Users (用户) 和 Add user (添加用户)。
-3. 键入 User name (用户名)，例如 AmazonSNSAdmin。
-4. 选择 Programmatic access (编程访问) 和 AWS 管理控制台 access (AWS 管理控制台访问)。
-5. 设置 Console password (控制台密码)，然后选择 Next: Permissions (下一步: 权限)。
-6. 在 Set permissions (设置权限) 页面上，选择 Attach existing policies directly (直接附加现有策略)。
-7. 在筛选条件中键入 AmazonSNS，选择 AmazonSNSFullAccess，然后选择 Next: Tags (下一步: 标签)。
-8. 在 Add tags (optional) (添加标签(可选)) 页面上，选择 Next: Review (下一步: 审核)。
-9. 在 Review (审核) 页面上，选择 Create user (创建用户)。
+2. 依次选择** Users (用户) **和 **Add user (添加用户)**。
+3. 键入 **User name (用户名)**，例如 AmazonSNSAdmin。
+4. 选择 **Programmatic access (编程访问)**和 **AWS 管理控制台 access (AWS 管理控制台访问)**。
+5. 设置 **Console password (控制台密码)**，然后选择 **Next: Permissions (下一步: 权限)**。
+6. 在 **Set permissions (设置权限)** 页面上，选择 **Attach existing policies directly (直接附加现有策略)**。
+7. 在筛选条件中键入 AmazonSNS，选择**AmazonSNSFullAccess**，然后选择 **Next: Tags (下一步: 标签)**。
+8. 在 **Add tags (optional) (添加标签(可选))**页面上，选择 **Next: Review (下一步: 审核)**。
+9. 在 **Review (审核)** 页面上，选择 **Create user (创建用户)**。
    
-    将创建 IAM 用户并显示 Access key ID (访问密钥 ID)，例如：
+    将创建 IAM 用户并显示**Access key ID (访问密钥 ID)**，例如：
 
-    AKIAIOSFODNN7EXAMPLE
-10. 要显示您的 Secret access key (秘密访问密钥)，请选择 Show (显示)，例如：
+    **AKIAIOSFODNN7EXAMPLE**
+10. 要显示您的 **Secret access key (秘密访问密钥)**，请选择 **Show (显示)**，例如：
 
-      wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      **wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY**
 
       > **重要** 您只能 在创建凭证时查看或下载秘密访问密钥（但是，您随时可以创建新的凭证）。
-11. 要下载凭证，请选择 Download .csv (下载 .csv)。将此文件保存在安全位置。
+11. 要下载凭证，请选择**Download .csv (下载 .csv)**。将此文件保存在安全位置。
 ## 后续步骤
-现在您已准备好使用 Amazon SNS，通过创建主题、为主题创建订阅、向主题发布消息以及删除订阅和主题来开始。
+现在您已准备好使用 Amazon SNS，通过创建主题、为主题创建订阅、向主题发布消息以及删除订阅和主题来[开始](https://docs.amazonaws.cn/sns/latest/dg/sns-getting-started.html)。
 # 第三章 Amazon SNS 入门
 ## 步骤 1：创建主题
 ## 步骤 2：为终端节点创建主题订阅
