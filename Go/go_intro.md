@@ -3,7 +3,7 @@ Go语言最初被构思为一门可充分利用分布式系统以及多核联网
 
 Go is expressive, concise, clean, and efficient. Its concurrency mechanisms make it easy to write programs that get the most out of multicore and networked machines, while its novel type system enables flexible and modular program construction. Go compiles quickly to machine code yet has the convenience of garbage collection and the power of run-time reflection. It's a fast, statically typed, compiled language that feels like a dynamically typed, interpreted language.
 
-> 注：Go表达力强，简洁，干净并高效。它的并发机制使你可以轻易写出应用来适用于多核和联网计算机（集群）的场合，它的新奇的类型系统使得弹性和模块化程序结构成为可能。Go编译机器码的速度飞快，有垃圾回收的便利，并具有运行期反射的功能。它是快速的，静态类型的编译型语言，但感觉就像是动态类型的解释型语言。
+> 注：Go表达力强，简洁，干净并高效。它的并发机制使你可以轻易写出适用于多核和联网计算机（集群）环境的应用，它的新奇的类型系统使得弹性和模块化程序结构成为可能。Go编译机器码的速度飞快，有垃圾回收的便利，并具有运行期反射的强大功能。它是快速的，静态类型的编译型语言，但（使用起来）感觉就像是动态类型的解释型语言。
 
 Go语言的主要特性：
 - 自动垃圾回收
@@ -23,7 +23,7 @@ Go生态系统提供许多编辑器插件和集成开发环境来提升日常编
 - [GoLand](https://www.jetbrains.com/go): GoLand以一个独立IDE或IntelliJ IDEA旗舰版插件的模式提供
 - [Atom](https://atom.io/packages/go-plus): Go-Plus是一个Atom包提供了对Go的增强支持。
 
-注意这些只是一些靠前的选择；一个更综合的由社区维护的[集成开发环境和编辑器插件](https://github.com/golang/go/wiki/IDEsAndTextEditorPlugins)列表可以在Wiki上获取到。
+注意这些只是一些靠前的选择；一个更综合的由社区维护的[集成开发环境和编辑器插件](https://github.com/golang/go/wiki/IDEsAndTextEditorPlugins)列表可以在Wiki上获得。
 
 ## 第一个简单的Go程序
 ```
@@ -45,15 +45,8 @@ def main() {
 ```
 **注意：**
 1. main函数不带参数，也不能定义返回值
-2. Go代码注释与C/C++一样，支持行注释和快注释
-3. 导入可以在小括号中导入多个包，如
-   ```
-   import (
-       "fmt"
-       "os"
-       "strconv"
-   )
-   ```
+2. Go代码注释与C/C++一样，支持行注释和块注释
+3. 可以在小括号中导入多个包，也可以一行到入一个包
 4. 每个Go源代码文件的开头都是一个包声明，表示该代码所属的包，Go可执行程序必须在main包中。
 ## 变量和常量
 ### 变量声明的3种方式：
@@ -61,7 +54,7 @@ def main() {
 - var v2 = 10
 - v3 := 10        // 快速变量声明，Go可以从其初始化之中推导出其类型
 
-> 注意：
+> **注意：**
 > 1. 如果变量未提供显示初始化，Go语言总会将零值赋值给该变量。这意味着每一个数值变量的默认值保证为0，而每个字符串都默认为空，其它为nil。
 > 2. 变量赋值与变量初始化是两个不同的概念：
 >    ```
@@ -107,7 +100,6 @@ const (
 )
 ```
 > **注意：Go语言并支持众多其它语言支持的enum关键字。**
-
 ## 类型
 ## 流程控制
 ## 函数
