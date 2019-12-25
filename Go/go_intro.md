@@ -16,6 +16,19 @@ Go语言的主要特性：
 - 反射
 - 语言交互性（Cgo）
 
+## 编辑器插件和集成开发环境（Editor plugins and IDEs）
+Go生态系统提供许多编辑器插件和集成开发环境来提升日常编辑，导航，测试及调试的体验。
+- [vim](https://github.com/fatih/vim-go): vim-go插件提供Go编程语言支持
+- [Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=lukehoban.Go): Go扩展提供了对Go编程语言的支持 。
+- [GoLand](https://www.jetbrains.com/go): GoLand以一个独立IDE或IntelliJ IDEA旗舰版插件的模式提供
+- [Atom](https://atom.io/packages/go-plus): Go-Plus是一个Atom包提供了对Go的增强支持。
+
+注意这些只是一些靠前的选择；一个更综合的由社区维护的[集成开发环境和编辑器插件](https://github.com/golang/go/wiki/IDEsAndTextEditorPlugins)列表可以在Wiki上获取到。
+
+## 一个简单的Go程序
+```
+
+```
 
 # Reference
 - [Go 主页](https://golang.google.cn/)
