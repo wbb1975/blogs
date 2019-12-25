@@ -7,12 +7,12 @@ Go is expressive, concise, clean, and efficient. Its concurrency mechanisms make
 
 Go语言的主要特性：
 - 自动垃圾回收
-- 更丰富的内置类型
+- 更丰富的内置类型（slice和map）
 - 函数多返回值
 - 错误处理
 - 匿名函数和闭包
 - 类型和接口
-- 并发编程（Gorouting和通道）
+- 并发编程（goroutine和channel（通道））
 - 反射
 - 语言交互性（Cgo）
 
