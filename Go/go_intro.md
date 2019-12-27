@@ -368,6 +368,41 @@ case ".zip":
 }
 ```
 #### 类型开关
+Go语言的类型开关语句语法如下：
+```
+switch optionalStaement; typeSwitchGuard {
+case typeList1: block1
+...
+case typeListN: blockN
+default: blockD
+}
+```
+
+类型开关守护（guard）是一个结果为类型的表达式。如果表达式是使用:=操作符赋值的，那么创建的变量的值为类型开关守护表达式中的值，但其类型则决定于case子句。在一个列表只有一个类型的子句中，该变量的类型即为该类型；在一个列表包含两个或更多类型的case子句中，该变量的类型则为类型开关守护表达式的类型。
+```
+func classifier(items...interface{}) {
+}
+    for i, x := range itemd {
+        switch x.(type) {
+        case bool:
+            fmt.Printf("param #%d is a bool\n", i)
+        case float64:
+            fmt.Printf("param #%d is a float64\n", i)
+        case int, int8, int16, int32, int64:
+            fmt.Printf("param #%d is a int\n", i)
+        case uint, uint8, uint16, uint32, uint64:
+            fmt.Printf("param #%d is a uint\n", i)
+        case nil:
+            fmt.Printf("param #%d is a nil\n", i)
+        case string:
+            fmt.Printf("param #%d is a string\n", i)
+        default:
+            fmt.Printf("param #%d is unknown\n", i)
+        }
+    }
+}
+```
+
 ### for循环语句
 ## 函数
 ## 错误处理
