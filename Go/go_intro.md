@@ -289,6 +289,29 @@ for city, population := range populationForCity {
 }
 ```
 ### 指针
+指针是指保存了另一个变量地址的变量。通过使用指针，我们可以让参数的传递成本最低并且内容可修改，而且还可以让变量的生命周期独立于作用域。
+
+&被称为取址操作符，它返回的是操作数的地址；
+*则被称为内容操作符，间接操作符或者接引用操作符。
+
+Go语言提供了两种创建变量的语法，同事获得指向它们的指针，其中一种方法是使用内置的new()函数，另一种方法是使用取地址操作符。
+```
+type composer struct {
+    name string
+    birthday int
+}
+
+agnes := new(composer)   //指向composer的指针
+agnes.nae, agnes.birthday = "Agnes Zimmermann", 1845
+
+junia := &composer{}        //指向composer的指针
+junia.nae, junia.birthday = "Junia Ward Howe", 1847
+
+anguste := &composer{"Anhuste Holema", 1878}         //指向composer的指针
+```
+
+**new(Type) === &Type{}**
+这两种语法都分配了一个Type类型的空值，同时返回了一个指向该值的指针。如果Type不是一个可以使用大括号初始化的类型，我们只可以使用new()函数。使用结构体的&Type{}语法的一个好处是我们可以为其指定初始值，就像我们这里创建anguste指针时所做的那样。
 ## 流程控制
 ## 函数
 ## 错误处理
