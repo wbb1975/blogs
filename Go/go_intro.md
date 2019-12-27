@@ -272,6 +272,22 @@ v := m[k]|从映射m中取得键k对应的值并将其赋值给v。如果k在映
 v, found := m[k]|从映射m中取得键k对应的值并将其赋值给v，并将found的值赋值为true。如果k在映射中不存在，则将映射类型的0值赋值给v，并将found的值赋值为false
 len(m)|返回映射m中的项（“键/值”对）的数目
 
+**应为映射属于引用类型，所以不管一个映射保存了多少数据，传递都是很廉价的（在64位机器上只需要8个字节，在32位机器上则只需要4个字节）**
+
+映射的创建方式如下：
+```
+make(map[KeyType]ValueType, initialCapacity)
+make(map[KeyType]ValueType)
+map[KeyType]ValueType{}
+map[KeyType]ValueType{key1:value1, key2:value2, ., keyN:valueN}
+```
+
+映射遍历：
+```
+for city, population := range populationForCity {
+    fmt.Println("%s has %d people", city, population)
+}
+```
 ### 指针
 ## 流程控制
 ## 函数
