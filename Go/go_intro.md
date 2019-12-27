@@ -339,6 +339,35 @@ if a := compute(); a < 0 {                                                    {
                                                                                                     }
 ```
 ### switch语句
+Go语言中有两种类型的switch语句：**表达式开关（expression switch）和类型开关（type switch）**。不同于C， C++和Java的是，Go语言的switch语句不会自动向下贯穿（因此不必在每一个case自居的末尾都添加一个break语句）。相反，我们可以在需要的时候通过显式地调用fallthrough语句来这样做。
+#### 表达式开关
+Go语言的表达式开关语法如下：
+```
+switch optionalStaement; optionalExpression {
+case expressionList1: block1
+...
+case expressionListN: blockN
+default: blockD
+}
+```
+
+用法比较：
+```
+// 原始的经典用法                                                  //经典用法
+switch suffix := Suffix(file); suffix {                           switch Suffix(file) {
+case ".gz":                                                       case ".gz":
+    return GzipFileList(file)                                         return GzipFileList(file)
+case ".tar":                                                      case ".tar", ".tar.gz", "tgz":
+    fallthrough                                                       return TarFileList(file)
+case ".tar.gz":                                                   case ".zip":
+    fallthrough                                                       return ZipFileList(file)
+case ".tgz":                                                      }
+    return TarFileList(file)
+case ".zip":
+    return ZipFileList(file)
+}
+```
+#### 类型开关
 ### for循环语句
 ## 函数
 ## 错误处理
