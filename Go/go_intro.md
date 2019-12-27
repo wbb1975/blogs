@@ -199,9 +199,67 @@ fmt.Println(t, s, "=", s[]:4], "+", s[4:])
 > **注意：**
 > 1. 对于一个切片s和一个索引值i（0 <= i <= len(s))， s等于s[:i]与s[i:]的连接。即s == s[:i] + s[i:]        // s是一个字符串，i是整数，0<= i <= len(s)
 > 2. 切片不支持+或+=操作符。，然而可以很容易地往切片后面追加以及插入和删除元素
-#### 便利切片
+#### 遍历切片
+```
+amounts := []float64{237.81, 26187, 273.93, 279.99, 281.07, 303.17, 231.47, 227.33, 209.23, 197.09}
+sum := 0.0
+for _, amount := range amounts {
+    sum += amount
+}
+fmt.Println("sum of %.1f -> %1f", amounts, sum)
+```
+
+> 注意：上步中amount只是切片元素的副本，如果期望修改元素，可以如下面的循环：
+```
+amounts := []float64{237.81, 26187, 273.93, 279.99, 281.07, 303.17, 231.47, 227.33, 209.23, 197.09}
+sum := 0.0
+for i := range amounts {
+    amounts[i] *= 1.05
+    sum += amount
+}
+fmt.Println("sum of %.1f -> %1f", amounts, sum)
+```
 #### 修改切片
+如果我们需要往切片中追加元素，可以使用内置的append()函数。这个函数接受一个需要被追加的切片，以及一个或者多个要被追加的元素。**如果我们希望往一个切片中追加另一个切片，那么我们必须使用...（省略号）操作符来告诉Go语言将被添加进来的切片当做多个元素。**
+```
+s := []string{"A", "B", "C", "D", "E", "F", "G"}
+t := []string{"K", "L", "M", "N"}
+u := []string{"m", "n", "o", "p", "q", "r"}
+
+s = append(s, "h", "i", "j")            //添加单一的值
+s = append(s, t...)                             //添加切片中的所有值
+s = append(s, u[2:5])                      //添加一个子切片
+
+b := []byte{'U', 'V'}
+letters := "WXY"
+b = append(b, letters...)               //讲一个字符串添加进一个字节切片中
+fmt.Println("%v\n%s", s, b)
+```
+
+Go语言支持的另一个内置函数copy()可用于切片--它用于将一个切片复制到另一个切片。如果源切片和目标切片不一样大，就会按照其中较小的那个数组切片的元素个数进行复制：
+```
+slice1 := []int{1, 2, 3, 4, 5}
+slice2 := []int{5, 4, 3}
+
+copy(slice2, slice1)           //只会复制slice1的3个元素到slice2中
+copy(slice1, slice2)           //只会复制slice2的3个元素到slice1中
+```
 #### 排序和搜索切片
+标准库中的sort包提供了对整型，浮点型和字符串类型切片进行排序的函数。
+语法|含义/结果
+--|--
+sort.Float64s(fs)|将[]float64按升序排序
+sort.Float64AreSorted(fs)|如果[]float64是有序的则返回true
+sort.Ints(is)|将[]int按升序排序
+sort.IntsAreSorted(is)|如果[]int是有序的则返回true
+sort.IsSorted(d)|如果sort.Interface的值d是有序的则返回true
+sort.Search(size, fn)|在一个排好序的数组中根据函数签名为func(int) bool的函数fn进行搜索，返回第一个使得fn返回值为true的索引
+sort.SearchFloat64s(fs, f)|返回有序[]float64切片中类型为float64的值f的索引
+sort.SearchInts(is, i)|返回有序[]int切片中类型为int的值i的索引
+sort.SearchStrings(ss, s)|返回有序[]string切片中类型为string的值s的索引
+sort.Sort(d)|排序类型为sort.Interface的切片d
+sort.Strings(ss)|按升序排序[]string类型的切片ss
+sort.StringsAsSorted(ss)|如果[]string类型的切片ss是有序的则返回true
 ### 映射
 ### 指针
 ## 流程控制
