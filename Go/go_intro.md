@@ -354,14 +354,14 @@ default: blockD
 用法比较：
 ```
 // 原始的经典用法                                                  //经典用法
-switch suffix := Suffix(file); suffix {                           switch Suffix(file) {
-case ".gz":                                                       case ".gz":
+switch suffix := Suffix(file); suffix {                 switch Suffix(file) {
+case ".gz":                                                                case ".gz":
     return GzipFileList(file)                                         return GzipFileList(file)
-case ".tar":                                                      case ".tar", ".tar.gz", "tgz":
-    fallthrough                                                       return TarFileList(file)
-case ".tar.gz":                                                   case ".zip":
-    fallthrough                                                       return ZipFileList(file)
-case ".tgz":                                                      }
+case ".tar":                                                               case ".tar", ".tar.gz", "tgz":
+    fallthrough                                                                 return TarFileList(file)
+case ".tar.gz":                                                          case ".zip":
+    fallthrough                                                                return ZipFileList(file)
+case ".tgz":                                                              }
     return TarFileList(file)
 case ".zip":
     return ZipFileList(file)
