@@ -381,7 +381,6 @@ default: blockD
 类型开关守护（guard）是一个结果为类型的表达式。如果表达式是使用:=操作符赋值的，那么创建的变量的值为类型开关守护表达式中的值，但其类型则决定于case子句。在一个列表只有一个类型的子句中，该变量的类型即为该类型；在一个列表包含两个或更多类型的case子句中，该变量的类型则为类型开关守护表达式的类型。
 ```
 func classifier(items...interface{}) {
-}
     for i, x := range itemd {
         switch x.(type) {
         case bool:
