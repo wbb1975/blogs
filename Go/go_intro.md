@@ -313,6 +313,33 @@ anguste := &composer{"Anhuste Holema", 1878}         //指向composer的指针
 **new(Type) === &Type{}**
 这两种语法都分配了一个Type类型的空值，同时返回了一个指向该值的指针。如果Type不是一个可以使用大括号初始化的类型，我们只可以使用new()函数。使用结构体的&Type{}语法的一个好处是我们可以为其指定初始值，就像我们这里创建anguste指针时所做的那样。
 ## 流程控制
+### if语句
+Go语言的if语句语法如下：
+```
+if optionalStatement1; booleanExpression1 {
+    block1
+} else if optionalStatement2; booleanExpression2 {
+    block2
+} else {
+    block3
+}
+```
+一个if语句中可能包含0个到多个 else if子句，以及0到1个else子句。每一个代码块都由0个到多个语句组成。
+
+语句中的大括号是强制性的，但条件判断中的分号只有在可选的声明语句optionalStatement1出现的情况下才需要，该可选的声明语句用Go语言的术语来说叫做“简单语句”。这意味着它只能是一个表达式，发送到通道（使用<-操作符），增减值语句，赋值语句或者短变量声明语句。如果变量是在一个可选的声明语句中创建的（即使用:=操作符创建的），它们的作用域会从声明处扩展到if语句的完成处，因此它们在声明它们的if或者else if语句以及相应的分支中一直存在着，直到if语句的末尾。
+```
+//景点用法                                                                               //啰嗦用法
+if a := compute(); a < 0 {                                                    {
+    fmt.Printf("(%d)\n", -a)                                                    a := compute()
+} else {                                                                                           if a < 0 {
+    fmt.Println(a)                                                                             fmt.Printf("(%d)\n", -a)
+}                                                                                                       } else {
+                                                                                                             fmt.Println(a)
+                                                                                                        }
+                                                                                                    }
+```
+### switch语句
+### for循环语句
 ## 函数
 ## 错误处理
 
