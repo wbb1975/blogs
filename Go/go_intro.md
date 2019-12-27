@@ -401,8 +401,45 @@ func classifier(items...interface{}) {
     }
 }
 ```
-
 ### for循环语句
+Go语言使用两种类型的for语句来进行循环，一种是无格式的for语句，另一种是for...range语句，下面是它们的语法：
+```
+for {      //无限循环
+    block
+}
+
+for booleanExpression {      // while循环
+    block
+}
+
+for optinalPreStatement; booleanExpression; optionalPostStatement {
+    block
+}
+
+for index, char := range aString {    //一个字符一个字符地迭代一个字符串
+    block
+}
+
+for index := range aString {             //一个字符一个字符地迭代一个字符串
+    block    // char, size := utf8.DecodeRuneInString(aString[index:])
+}
+
+for index, item := range anArrayOrSlice {          //数组或切片迭代
+    block
+}
+
+for index := range anArrayOrSlice {          //数组或切片迭代
+    block
+}
+
+for  key, value := range aMap {                 //映射迭代
+    block
+}
+
+for item := range aChannel {                    //通道迭代
+    block
+}
+```
 ## 函数
 ## 错误处理
 
