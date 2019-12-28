@@ -484,8 +484,8 @@ for item := range aChannel {                    //通道迭代
 }
 ```
 ## 6. 错误处理
-### 6.1 error借口
-Go语言引入了一个关于错误处理的标准模式，即error借口，该接口的定义如下：
+### 6.1 error接口
+Go语言引入了一个关于错误处理的标准模式，即error接口，该接口的定义如下：
 ```
 type error interface {
     Error() string
