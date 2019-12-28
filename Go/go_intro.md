@@ -323,6 +323,7 @@ resultType := Type(expression)
 对于数字，本质上讲我们可以将任意的整型或者浮点型数据转换成别的整型或者浮点型（如果目标类型比源类型小，则可能丢失精度）。同样的规则也适用于complex128和complex64类型之间的转换。
 
 一个字符串可以转换成一个[]byte（其底层为UTF-8的字节）或者一个[]rune（它的Unicode码点），并且[]byte和[]rune都可以转换成一个字符串类型。单个字符是一个rune类型数据（即int32），可以转换成一个单字符的字符串。
+
 语法|描述/结果
 --|--
 s[n]|字符串s中索引位置为n处的原始字节（uint8类型）
@@ -333,6 +334,27 @@ len([]rune(s))|字符串s中字符的个数--可以使用更快的utf8.RuneCount
 string(bytes)|无副本地将[]byte或者[]uint8转换成一个字符串类型，不保证转换的字节是合法的UTF-8编码字节
 string(i)|将任意数字类型i转换成字符串，假设i是一个Unicode码点。例如，如果i是65，那么其返回值为“A”
 ### 4.10 类型断言
+类型断言有两种语法：
+```
+resultOfType, boolean := expression.(Type)         //安全类型断言
+resultOfType := expression.(Type)                            //非安全类型断言，失败时panic()
+```
+成功的安全类型断言将返回目标类型的值和标识成功的true。如果安全类型断言失败（即表达式的雷星宇声明的类型不兼容），将返回目标类型的零值和false。非安全类型断言要么返回一个目标类型的值，要么调用内置的panic()韩式抛出一个异常。如果异常没有被恢复，那么该异常会导致程序终止。
+
+```
+var i interface{} = 99
+var s interface{} = []string{"left", "right"}
+
+j := i.(int)                                                   //非安全类型断言
+fmt.Printf("%T -> %d\n", j, j)
+if i, ok := i.(int); ok {                              //安全类型断言
+    fmt.Printf("%T -> %d\n", i, j)
+}
+
+if s, ok := s.([]string); ok {                 //安全类型断言
+    fmt.Printf("%T -> %q\n", s, s)
+}
+```
 ## 5. 流程控制
 ### 5.1 if语句
 Go语言的if语句语法如下：
