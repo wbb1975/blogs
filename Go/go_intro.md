@@ -500,7 +500,7 @@ type PathError struct {
     Err   error
 }
 
-func (e *PathError) Error() string {
+func (e *PathError) Error() string {                       //以*PathError为Receiver，故下面的Stat函数必须返回*PathError
     return e.Op + " " + e.Path + " " + e.Err.Error()
 }
 
@@ -520,8 +520,26 @@ func main() {
     }
 }
 ```
+
+> **注意：**因为上面的Error()以*PathError为Receiver，故下面的Stat函数必须返回*PathError；如果改为以PathError为Receiver，下面的Stat函数必须返回PathError{}。
 ### 6.2 defer
+defer语句用于延迟一个函数或者方法（或者当前所创建的匿名函数）的执行，它会在外围函数或者方法返回之前但是其返回值计算之后执行。这样就可能在一个被延迟执行的函数内部修改函数的命名返回值（例如，使用赋值操作符给它们赋新值）。如果一个函数或者方法中有多个defer语句，它们会以LIFO（Last InFirst Out）的顺序执行。
+
+defer语句最常用的用法是，保证使用完一个文件后将其成功关闭，或者将一个不再使用的通道关闭，或者捕获异常：
+ ```
+ var file *os.File
+ var err error
+
+ if file, err = os.Open(filename); err != nil {
+     log.Println("failed to open the file", err)
+     return
+ }
+ defer file.close()
+ ```
 ### 6.3 panic()和recover()
+通过内置的panic()和recover()函数，Go语言提供了一套异常处理机制。类似于其它语言（例如，C++， java和Python）中所提供的异常机制，这些函数也可以用于实现通用的异常处理机制，但是这样做在Go语言中是不好的风格。
+
+Go语言将错误和异常两者区分对待。错误是指可能出错的东西，程序需要以优雅的方式将其处理（例如，文件不能被打开）。而异常是指“不可能”发生的事情（例如，一个应该永远为true的条件在实际环境中却是false的）。
 ## 7. 函数
 
 # Reference
