@@ -483,10 +483,47 @@ for item := range aChannel {                    //通道迭代
     block
 }
 ```
-## 6. 函数
-## 7. 错误处理
+## 6. 错误处理
+### 6.1 error借口
+Go语言引入了一个关于错误处理的标准模式，即error借口，该接口的定义如下：
+```
+type error interface {
+    Error() string
+}
+```
 
+一个实际的例子：
+```
+type PathError struct {
+    Op   string
+    Path  string
+    Err   error
+}
+
+func (e *PathError) Error() string {
+    return e.Op + " " + e.Path + " " + e.Err.Error()
+}
+
+func Stat(name string) (err error) {
+    var stat  syscall.Stat_t
+    err = syscall.Stat(name, &stat)
+    if err != nil {
+        return &PathError{"stat", name, err}
+    }
+    return nil
+}
+func main() {
+    err := Stat("a.txt")
+
+    if err != nil {
+            fmt.Printf("err = %T\n", err)
+    }
+}
+```
+### 6.2 defer
+### 6.3 panic()和recover()
+## 7. 函数
 
 # Reference
 - [Go 主页](https://golang.google.cn/)
-- [Go字符串](https://github.com/wbb1975/blogs/blob/master/Go/go_string.md))
+- [Go字符串](https://github.com/wbb1975/blogs/blob/master/Go/go_string.md)
