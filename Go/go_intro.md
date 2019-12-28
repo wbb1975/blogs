@@ -577,6 +577,16 @@ func IntFromInt64(x int64) (i int, err error) {
 > **如 IntFromInt64()函数所示，我们可以非常容易地将异常转换为错误。**
 
 第二个例子展示了如何让程序变得更健壮：
+```
+func homePage(writer http.ResponseWriter, request *http.Request) {
+    def func() {                          //每一个页面都需要
+        if x := recover(); x != nil {
+            log.Printf("[%v] caught panic: %v", request.RemoteAddr, x)
+        }
+    }
+}
+```
+如上，该页面如果发生了异常，将被recover()捕获，从而不会被传播到main()函数。
 ## 7. 函数
 
 # Reference
