@@ -674,6 +674,7 @@ func ArchiveFileListMap(file string) ([]string, error) {
 }
 ```
 **动态函数的创建**
+
 在运行时动态创建函数的另一个场景是，当我们有两个或者更多的函数实现了相同的功能时，比如说使用了不同的算法，我们不希望在程序编译时静态绑定到其中任一个函数，相反，我们可以动态选择它们来做性能测试或回归测试。
 ```
 var IsPalindrom func(string) bool          //保存到函数的引用
@@ -696,8 +697,6 @@ func init() {
     }
 }
 ```
-### 7.6 泛型参数
-### 7.7 高阶参数
 
 # Reference
 - [Go 主页](https://golang.google.cn/)
