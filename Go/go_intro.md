@@ -658,6 +658,44 @@ fmt.Println(addZip(:filename"), addPng("filename"))
 
 **尾递归：当一个函数使用尾递归，也就是在最后一句执行递归调用，在这种情况下我们可以简单地将它转换成一个循环。**
 ### 7.5 运行时选择参数
+在Go语言里，函数属于第一类值（first-class value），也就是说，你可以将它保存到一个变量（实际上是一个引用）里，这样我们就可以在运行时决定要执行哪一个函数。再者，Go语言能够创建闭包意味着我们可以在运行时创建函数，所以我们对同一个函数可以有两个或多个不同的实现（例如使用不同的算法），在使用的时候创建它们其中的一个就行。
+
+**使用映射和函数引用来制造分支**
+```
+var FunctionForSuffix = map[string]func(string) ([]string, error) {
+    ".gz":GzipFileList, ".tar":TarFileList, ".tar.gz":TarFileList,
+    ".tgz":TarFileList, ".zip":ZipFileList}
+func ArchiveFileListMap(file string) ([]string, error) {
+    if function, ok = FunctionForSuffix[Suffix(file)]; ok {
+        return function(file)
+    }
+
+    return nil, errors.New("unrecognized archive")
+}
+```
+**动态函数的创建**
+在运行时动态创建函数的另一个场景是，当我们有两个或者更多的函数实现了相同的功能时，比如说使用了不同的算法，我们不希望在程序编译时静态绑定到其中任一个函数，相反，我们可以动态选择它们来做性能测试或回归测试。
+```
+var IsPalindrom func(string) bool          //保存到函数的引用
+func init() {
+    if len(os.Args) > 1 && (os.Args[1] == "-a" || os.Args[1] =="--ascii") {
+        os.Args = append(os.Args{:1], os.Args[2:]...)              //去掉参数
+        IsPalindrom = func(s string) bool {                                 //简单的ascii版本
+            if len(s) <= 1 {
+                return true
+            }
+            if s[0] != s[len(s)-1] {
+                return false
+            }
+            return IsPalindrom(s[1:len(s)-1])
+        }
+    } else {
+        IsPalindrom = func(s string) bool {                //UTF-8的版本
+            // ...
+        }
+    }
+}
+```
 ### 7.6 泛型参数
 ### 7.7 高阶参数
 
