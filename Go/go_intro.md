@@ -588,6 +588,27 @@ func homePage(writer http.ResponseWriter, request *http.Request) {
 ```
 如上，该页面如果发生了异常，将被recover()捕获，从而不会被传播到main()函数。
 ## 7. 函数
+函数是面向过程编程的根本，Go语言原生支持函数，Go语言的方法和函数是很相似的。函数定义的基本语法如下：
+```
+func functionName(optionalParameters) optionalReturnType {
+    block
+}
+func functionName(optionalParameters) (optionalReturnValues) {
+    block
+}
+```
+函数可以有任意多个参数，如果没有参数那圆括号就是空的。如果要实现可变参数，可以将最后一个参数的类型之前写上省略号，也就是说，函数可以接收任意多个那个类型的值，在函数里，实际上这个参数的类型是[]type。
+
+函数的返回值可以是任意个，如果没有，那么返回值列表的右括号后面是紧接着左大括号的。如果只有一个返回值类型可以直接写返回的类型，如果有两个或者多个没有命名的返回值，也必须使用括号而且得这样写(type1, ..., typeN)。如果有一个或多个命名的返回值，也必须使用括号，要写成这样(type1 value1, ..., typeN valueN)，其中value1是一个返回值的名称，多个返回值之间必须使用逗号分隔开。函数的返回值可以全部命名或者全都不命名，但不能只是部分命名的。
+
+如果函数有返回值，则函数必须至少有一个return语句或最后执行panic()调用。如果返回值不是命名的，则return语句必须制定和返回值一样多的值。如果返回值是命名的，则return语句可以像没有命名的返回值方式一样或者一个空的return语句。主要尽管空的return语句是合法的，但它被认为是一种拙劣的写法。
+### 7.1 函数参数
+### 7.2  init()函数和main()函数
+### 7.3 闭包
+### 7.4 递归参数
+### 7.5 运行时选择参数
+### 7.6 泛型参数
+### 7.7 高阶参数
 
 # Reference
 - [Go 主页](https://golang.google.cn/)
