@@ -84,5 +84,35 @@ for {
 fmt.Print(buffer.String(0, "\n"))
 ```
 ### 4. 字符串索引与切片
+Go语言支持Python中字符串分割语法的一个子集，而且这个语法可以用于任意类型的切片。由于Go语言的字符串将其文本保存为UTF-8编码的字节，因此我们必须非常小心地只在字符边界处进行切片。有个能够确定按字符边界进行切片得到索引位置的方法是，使用Go语言的strings包中的函数如strings.Index()或者strings.LastIndex()。下图给出了Unicode字符，码点，字节以及一些合法的索引位置和一对切片：
+// TODO: add the picture
 ### 5. 使用fmt包来格式化字符串
+Go语言标准库中的fmt包提供了打印函数将数据以字符串形式输出到控制台，文件，其它满足io.Writer接口的值以及其它字符串中。
+
+语法|含义/结果
+--|--
+fmt.Errorf(format, args...)|返回一个包含给定的格式化字符串以及args参数的错误值
+fmt.Fprint(writer, args...)|按照格式%v和空格分割的非字符串将args写入writer中，返回写入的字节数和一个值为error或者nil的错误值
+fmt.Fprintf(writer, format, args...)|按照字符串格式format将args写入writer中，返回写入的字节数和一个值为error或者nil的错误值
+fmt.Fprintln(writer, args...)|按照格式%v以空格分割以换行结尾将参数args写入writer中，返回写入的字节数和一个值为error或者nil的错误值
+fmt.Print(args...)|按照格式%v和空格分割的非字符串将args写入os.Stdout中，返回写入的字节数和一个值为error或者nil的错误值
+fmt.Printf(format, args...)|按照字符串格式format将args写入os.Stdout中，返回写入的字节数和一个值为error或者nil的错误值
+fmt.Println(args...)|按照格式%v以空格分割以换行结尾将参数args写入os.Stdout中，返回写入的字节数和一个值为error或者nil的错误值
+fmt.Sprint(args...)|按照格式%v和空格分割的非字符串返回由args组成的字符串
+fmt.Sprintf(format, args...)|返回使用格式format格式化的args字符串
+fmt.Println(args...)|返回使用格式%v格式化args后的字符串，以空格分隔以换行结尾
+
+fmt包也提供了一系列扫描函数（如fmt.Scan()、fmt.Scanf()以及fmt.Scanln()函数）用于从控制台、文件以及其它字符串类型中读取数据。扫描函数的一种替代是使用strings.Fields()函数将字符串分隔为若干字段然后使用strconv包中的转换函数将那些非字符串的字段转换为相应的值（如数值）。
+
+用于fmt.Errorf()，fmt.Printf()，fmt.Fprintf()以及fmt.Sprintf()函数的格式化字符串包含一个或多个格式指令，这些格式指令的形式是%ML，其中M表示一个或者多个可选的格式指令修饰符，而L则表示一个特定的格式指令字符。
+
+**fmt包中的格式指令**
+
+格式指令|含义/结果
+--|--
+%%|一个%字面量
+%b|一个二进制整数（基数为2），或者是一个（高级的）用科学计数法表示的指数为2的浮点数
+%c|一个Unicode字符的码点值
+%d|一个十进制整数（基数为10）
+
 ### 6. 其它字符串处理相关的包
