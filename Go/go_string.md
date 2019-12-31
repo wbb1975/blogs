@@ -158,7 +158,48 @@ func IntForBool(b bool) int {
 fmt.Printf("%d %d\n", IntForBool(true), IntForBool(false))
 ```
 #### 5.2 格式化整数
+**二进制输出**
+```
+fmt.Printf("|%b|%9b|%-9b|%09b|% 9b|\n", 37, 37, 37, 37, 37)
+|100101|   100101|100101   |000100101|   100101|
+```
+
+**八进制输出**
+```
+fmt.Printf("|%o|%#o|%# 8o|%+ 8o|%+08o|\n", 41, 41, 41, 41, -41)
+|51|051|     051|    +051| -0000051|
+```
+
+**十六进制输出**
+```
+i：= 3931
+fmt.Printf("|%x|%X|%8x|%08x|%#04X|0x%04X|\n", i, i, i, i, i, i)
+|f5b|F5B|     f5b|00000f5b|0X0F5B|0x0F5B|
+```
+
+**十进制输出**
+```
+i：= 569
+fmt.Printf("|$%d|$%06d|$%+06d|$%s|\n", i, i, i, Pad(i, 6, '*'))
+|$569|$000569|$+00569|$***569|
+
+func Pad(number, width int, pad rune) string {
+    s := fmt.Sprint(number)
+    gap := width - utf8.RuneCountInString(s)
+    if gap > 0 {
+        return strings.Repeat(string(pad), gap) + s
+    }
+    return s
+}
+```
 #### 5.3 格式化字符
+Go语言的字符都是rune（即int32）值，它们可以以数字或Unicode字符（%c）的形式输出。
+
+```
+fmt.Printf(%d %#04x %U '%c'\n", 0x3A6, 934, '\u03a6', '\U000003A6')
+```
+
+注意这里我们使用%U格式指令输出Unicode码点，使用%从格式指令来输出Unicode字符。
 #### 5.4 格式化浮点数
 #### 5.5 格式化字符串和切片
 #### 5.6 未调试格式化
