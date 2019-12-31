@@ -275,6 +275,7 @@ strings.TrimSpace(s)|返回一个新的字符串，从s两端过滤掉空格
 > strconv包提供了许多可以在字符串和其它类型之间进行转换的函数。参数bs是一个[]byte切片，base是一个进制单位（2 ～ 36），bits是指其结果必须满足的比位数（对于int型的数据而言，可以是8， 16， 32， 64或者0 ，对于float64型的数据而言，可能使32或64），而s是一个字符串。
 
 > **所有的strconv转换函数返回一个结果和error变量，如果转换成功的话error为nil**。
+
 语法|含义/结果
 --|--
 strconv.AppendBool(bs, b)|根据布尔变量b的值，在bs后追加”true“或者”false“字符
@@ -285,15 +286,15 @@ strconv.AppendQuoteRune(bs, char)|使用strconv.QuoteRune(char)追加char到bs�
 strconv.AppendQuoteRuneToASCII(bs, char)|使用strconv.QuoteRuneToASCII(char)追加char到bs后面
 strconv.AppendQuoteToASCII(bs, s)|使用strconv.QuoteToASCII()追加s到bs后面
 strconv.AppendUint(bs, u, base)|根据base指定的进制在bs后面追加uint64数字
-strconv.Atoi(s)|
-strconv.CanBackquote(s)|
-strconv.FormatBool(tr)|
-strconv.FormatFloat(f, fmt, prec, bits))|
-strconv.FormatInt(i, base)|
-strconv.FormatUint(u, base)|
-strconv.IsPrint(c)|
-strconv..Itoa(i)|
-strconv.ParseBool(s)|
+strconv.Atoi(s)|返回转换后的int类型值和一个error（出错时error不为空），可参考strconv.ParseInt()
+strconv.CanBackquote(s)|检查s是否是一个符合Go语言语法的字符串常量，s中不能出现反引号
+strconv.FormatBool(tr)|格式化布尔变量tr，返回”true“或”false“字符串
+strconv.FormatFloat(f, fmt, prec, bits))|将浮点数f格式化成字符串，fmt是格式化动作，bits通常是64
+strconv.FormatInt(i, base)|将整数i以base指定进制形式格式化成字符串
+strconv.FormatUint(u, base)|将整数u以base指定进制形式格式化成字符串
+strconv.IsPrint(c)|判断c是否为可打印字符
+strconv..Itoa(i)|将十进制整数i转换成字符串，可参考strconv.FormatInt()
+strconv.ParseBool(s)|如果s是"1"，"t"，"T"，"true"，"TRUE"则返回true和nil；如果s是"0"，"f"， "F"，"false"，"False"或"FALSE"则返回false和nil；否则返回false和一个error
 strconv..ParseFloat(s, bits)|
 strconv.ParseInt(s, base, bits)|
 strconv.ParseUint(s, base, bits)|
