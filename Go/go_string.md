@@ -225,6 +225,55 @@ fmt.Printf("%s\n%q\n%+q\n%#q\n", slogan, slogan, slogan, slogan)
 chars := []rune(slogan)
 fmt.Printf("%x\n%#x\n%#X\n", chars, chars, chars)
 ```
-#### 5.6 未调试格式化
+#### 5.6 为调试格式化
 %T(类型)格式指令用于打印一个内置的或者自定义值的类型，而%v格式指令则用于打印一个内置值的值。事实上，%v也可以打印自定义类型的值，对于没有定义String()方法的值使用其默认格式，对于定义了String()方法的值则使用该方法打印。**与%v一起使用可选的格式化指令修饰符#只对结构体类型起作用，这使得结构体输出它们的类型名字和字段名字**。
 ### 6. 其它字符串处理相关的包
+#### 6.1 strings包
+> 变量s和t都是字符串类型，xs则是字符串切片，i是int型，f是一个签名为func(rune)bool的函数引用。索引位置是指匹配Unicode码点或者字符串的第一个UTF-8字节的位置，如果没有找到匹配的字符串则为-1.
+
+语法|含义/结果
+--|--
+strings.Contains(s, t)|如果t在s中则返回true
+strings.Count(s, t)|t在s中出现了多少次
+strings.EqualFold(s, t)|如果字符串相等的话则返回true，注意此函数比较时是区分大小写的
+strings.Fields(s)|在字符串空白处进行切分，返回字符串切片
+strings.FieldsFunc(s, f)|按照f的返回结果进行切分，如果f返回true，则在那个字符上进行切分
+strings.HasPrefix(s, t)|如果字符串s是以t开头的则返回true
+strings.HasSuffix(s, t)|如果字符串s是以t结尾的则返回true
+strings.Index(s, t)|t在s中第一次出现的索引位置
+strings.IndexAny(s, t)|s中第一个出在t中的字符的索引位置
+strings.IndexFunc(s, f)|s中第一次令f函数返回true的字符的索引位置
+strings.IndexRune(s, char)|返回字符char在s中第一次出现的索引位置
+strings.Join(xs, t)|将xs中的所有字符串按照t分隔符进行合并（t可能为""）
+strings.LastIndex(s, t)|t在s中最后一次出现的索引位置
+strings.LastIndexAny(s, t)|s中最后一个出在t中的字符的索引位置
+strings.LastIndexFunc(s, f)|s中最后一次令f函数返回true的字符的索引位置
+strings.Map(mf, t)|按照mf函数规则（func(rune)rune）替换t中所有的字符
+strings.NewReader(s)|创建一个字符串s的对象，支持Read()，ReadByte()和ReadRune()方法
+strings.NewReplacer(...)|创建一个替换器能够处理多对旧新字符串的替换
+strings.Repeat(s, i)|重复i次字符串s
+strings.Replace(s, old, new, i)|返回一个新的字符串，对s中的旧的非重叠字符串用新的字符串进行替换，执行i次替换操作。如果i=-1则全部替换
+strings.Split(s, t)|返回一个新的字符串切片，在源s上所有出现t的位置进行切分
+strings.SplitAfter(s, t)|同上，但是保留分隔符
+strings.SplitAfterN(s, t)|同上，但是只进行前i次分割操作
+strings.SplitN(s, t, i)同strings.Split(s, t)，但是只执行前i次分割操作
+strings.Title(s)|返回一个新的字符串，对原字符串中每一个单词进行标题首字母大写处理
+strings.ToLower(s)|返回一个新的字符串，对原s进行字母小写转换
+strings.ToLowerSpecial(r, s)|返回一个新的字符串，按照指定的优先规则对原s中的相应的Unicode字符进行小写转换
+strings.ToTitle(s)|返回一个新的字符串，对原字符串是s进行标题格式转换
+strings.ToTitleSpecial(r, s)|返回一个新的字符串，对原s按照指定的优先规则r进行标题格式转换
+strings.ToUpper(s)|返回一个新的字符串，对原s进行字母大写转换
+strings.ToUpperSpecial(r, s)|返回一个新的字符串，按照指定的优先规则对原s中的相应的Unicode字符进行大写转换
+strings.Trim(s, t)|返回一个新的字符串，从s两端过滤掉t
+strings.TrimFunc(s, f)|返回一个新的字符串，从s两端过滤掉f返回true的每一个字符
+strings.TrimLeft(s, t)|返回一个新的字符串，从s左边开始过滤掉t
+strings.TrimLeftFunc(s, f)|返回一个新的字符串，从s左边开始过滤掉f返回true的每一个字符
+strings.TrimRight(s, t)|返回一个新的字符串，从s右边开始过滤掉t
+strings.TrimRightFunc(s, f)|返回一个新的字符串，从s右边开始过滤掉f返回true的每一个字符
+strings.TrimSpace(s)|返回一个新的字符串，从s两端过滤掉空格
+#### 6.2 strconv包
+> strconv包提供了许多可以在字符串和其它类型之间进行转换的函数。参数bs是一个[]byte切片，base是一个进制单位（2 ～ 36），bits是指其结果必须满足的比位数（对于int型的数据而言，可以是8， 16， 32， 64或者0.对于float64型的数据而言，可能使32或64），而s是一个字符串。
+
+#### 6.3 utf8包
+#### 6.4 unicode包
+#### 6.5 regexp包
