@@ -272,10 +272,37 @@ strings.TrimRight(s, t)|返回一个新的字符串，从s右边开始过滤掉t
 strings.TrimRightFunc(s, f)|返回一个新的字符串，从s右边开始过滤掉f返回true的每一个字符
 strings.TrimSpace(s)|返回一个新的字符串，从s两端过滤掉空格
 #### 6.2 strconv包
-> strconv包提供了许多可以在字符串和其它类型之间进行转换的函数。参数bs是一个[]byte切片，base是一个进制单位（2 ～ 36），bits是指其结果必须满足的比位数（对于int型的数据而言，可以是8， 16， 32， 64或者0.对于float64型的数据而言，可能使32或64），而s是一个字符串。
+> strconv包提供了许多可以在字符串和其它类型之间进行转换的函数。参数bs是一个[]byte切片，base是一个进制单位（2 ～ 36），bits是指其结果必须满足的比位数（对于int型的数据而言，可以是8， 16， 32， 64或者0 ，对于float64型的数据而言，可能使32或64），而s是一个字符串。
 
-> 所有的strconv转换函数返回一个结果和error变量，如果转换成功的话error为nil。
-
+> **所有的strconv转换函数返回一个结果和error变量，如果转换成功的话error为nil**。
+语法|含义/结果
+--|--
+strconv.AppendBool(bs, b)|根据布尔变量b的值，在bs后追加”true“或者”false“字符
+strconv.AppendFloat(bs, f, fmt, prec, bits)|在bs后面追加浮点数f，其它参数请参考strconv.Format.Float()函数
+strconv.AppendInt(bs, i, base)|根据base指定的进制在bs后面追加int64数字
+strconv.AppendQuote(bs, s)|使用strconv.Quote()追加s到bs后面
+strconv.AppendQuoteRune(bs, char)|使用strconv.QuoteRune(char)追加char到bs后面
+strconv.AppendQuoteRuneToASCII(bs, char)|使用strconv.QuoteRuneToASCII(char)追加char到bs后面
+strconv.AppendQuoteToASCII(bs, s)|使用strconv.QuoteToASCII()追加s到bs后面
+strconv.AppendUint(bs, u, base)|根据base指定的进制在bs后面追加uint64数字
+strconv.Atoi(s)|
+strconv.CanBackquote(s)|
+strconv.FormatBool(tr)|
+strconv.FormatFloat(f, fmt, prec, bits))|
+strconv.FormatInt(i, base)|
+strconv.FormatUint(u, base)|
+strconv.IsPrint(c)|
+strconv..Itoa(i)|
+strconv.ParseBool(s)|
+strconv..ParseFloat(s, bits)|
+strconv.ParseInt(s, base, bits)|
+strconv.ParseUint(s, base, bits)|
+strconv.Quote(s)|
+strconv.QuoteRune(char)|
+strconv.QuoteRuneToASCII(char)|
+strconv.QuoteToASCII(s)|
+strconv..Unquote(s)|
+strconv.UnquoteChar(s, b)|
 #### 6.3 utf8包
 #### 6.4 unicode包
 #### 6.5 regexp包
