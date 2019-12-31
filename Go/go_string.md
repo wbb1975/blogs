@@ -256,7 +256,7 @@ strings.Replace(s, old, new, i)|返回一个新的字符串，对s中的旧的�
 strings.Split(s, t)|返回一个新的字符串切片，在源s上所有出现t的位置进行切分
 strings.SplitAfter(s, t)|同上，但是保留分隔符
 strings.SplitAfterN(s, t)|同上，但是只进行前i次分割操作
-strings.SplitN(s, t, i)同strings.Split(s, t)，但是只执行前i次分割操作
+strings.SplitN(s, t, i)|同strings.Split(s, t)，但是只执行前i次分割操作
 strings.Title(s)|返回一个新的字符串，对原字符串中每一个单词进行标题首字母大写处理
 strings.ToLower(s)|返回一个新的字符串，对原s进行字母小写转换
 strings.ToLowerSpecial(r, s)|返回一个新的字符串，按照指定的优先规则对原s中的相应的Unicode字符进行小写转换
