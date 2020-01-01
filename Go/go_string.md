@@ -389,3 +389,13 @@ regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regex
 [:name:]|任何在name字符类中的ASCII字符：[[:alnum:]] == [0-9A-Za-z]，[[:lower:]] == [a-z]，[[:alpha:]] == [A-Za-z]，[[:print:]] == [ -~]，[[:ascii:]] == [\x00-\x7F]，[[:punct:]] == [!-/:-@[-'{-~}]，[[:blank:]] == [ \t]，[[:space:]] == [ \t\t\n\v\f]，[[:cntrl:]] == [\x00-\x1F\x7F]，[[:upper:]] == [A-Z]，[[:digit:]] == [0-9]，[[:word:]] == [0-9A-Za-z_]，[[:graph:]] == [!-~]，[[:xdigit:]] == [0-9A-Za-z]
 [:^name:]|任何不在name字符类中的ASCII字符
 .|任何字符（如果指定s标识的话，还包括换行符）
+\d|任何ASCII数字： 【0-9】
+\D|任何非数字的ASCII：【^0-9】
+\s|任何ASCII的空白字符：[ \t\r\n\f]
+\S|任何ASCII的非空白字符：[^ \t\r\n\f]
+\w|任何ASCII的单词字符：[0-9A-Za-z_]
+\W|任何ASCII的非单词字符：[^0-9A-Za-z_]
+\pN|任何一个在N指定的字符类里的Unicode字符，N是一个单字母字符类，例如\pL匹配一个Unicode字母
+\PN|任何一个不在N指定的字符类里的Unicode字符，N是一个单字母字符类，例如\PL匹配一个Unicode字母
+\p{name}|任何在name指定的字符类里的Unicode字符，例如\p{L1}将匹配小写字母，\p{Lu}匹配大写字母，\p{Greek}匹配一个希腊字母
+\P{name}|任何不在name字符类里的Unicode字符
