@@ -467,3 +467,18 @@ rx.FindString(s)|返回一个最左匹配值或者空字符串
 rx.FindStringIndex(s)|返回一个每个元素含有2项的[]int类型的切片，每个元素对应一个最左匹配或者nil
 rx.FindStringSubmatch(s)|返回一个[]string类型的切片或者nil，对应最左匹配和捕获
 rx.FindStringSubmatchIndex(s)|返回一个[]int类型切片或者nil，对应最左匹配和捕获
+rx.FindSubMatch(b)|返回最左匹配或者捕获或者nil
+rx.FindSubmatchIndex(b)|返回最左匹配或者捕获的索引或者nil
+rx.LiteralPrefix()|返回所有匹配共有的原生前缀，和一个布尔变量（表明原生前缀能否匹配整个正则表达式）
+rx.Match(b)|如果正则表达式匹配b，返回true
+rx.MatchReader(r)|同rx.Match()，但是从io.RuneReader里读取待匹配的数据
+rx.MatchString(s)|同rx.Match()，但是匹配字符串s
+rx.NumSubexp()|返回正则表达式里有多少括起来的组（子表达式）
+rx.ReplaceAll(b, br)|返回一个[]byte类型的b的副本，其中b中被匹配的部分都使用[]byte类型的br进行$替换
+rx.ReplaceAllFunc(b, f)|返回一个[]byte类型的b的副本，其中b中被匹配的部分都使用函数f的返回值来替代，f的原型为func([]byte)[]byte，其参数为一个匹配项
+rx.ReplaceAllLiteral(b, br)|返回一个[]byte类型的b的副本，其中b中被匹配的部分都使用[]byte类型的br进行替换
+rx.ReplaceAllLiteralString(s, sr)|返回一个字符串类型的s的副本，其中s中被匹配的部分都使用字符串类型的sr进行替换
+rx.ReplaceAllString(s, sr)|返回一个字符串类型的s的副本，其中s中被匹配的部分都使用字符串类型的sr进行替换
+rx.ReplaceAllStringFunc(s, f)|返回一个字符串类型的s的副本，其中s中被匹配的部分都使用函数f的返回值来替代，f的原型为func(string)string，其参数为一个匹配项
+rx.String()|返回正则表达式的字符串表示形式
+rx.SubexpNames()|返回一个字符串（不能用于修改目的），包含所有已命名的字符类子表达式
