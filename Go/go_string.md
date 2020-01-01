@@ -450,3 +450,20 @@ U|将贪婪模式和惰性模式进行反转（例如通常量词后面带？表
 语法|含义/结果
 --|--
 rx.Expand(...)|由ReplaceAll()方法执行$替换，很少直接使用（高级用法）
+rx.ExpandString(...)|由ReplaceAllString()方法执行$替换，很少直接使用（高级用法）
+rx.Find(b)|使用最左匹配策略返回一个[]byte类型的切片或者nil
+rx.FindAll(b, n)|返回所有非重叠匹配的[][]byte类型切片或nil
+rx.FindAllIndex(b, n)|返回一个[][]int类型的切片（每一个元素是一个包含2项的切片）其中每一个元素标识一个匹配或者nil。例如b[pos[0]:pos[1]]，其中pos就是一个包含两个的切片
+rx.FindAllString(s, n)|返回[]string类型的非重叠匹配或者nil
+rx.FindAllStringIndex(s, n)|返回一个[][]int类型的切片（每一个元素是一个包含2项的切片）其中每一个元素标识一个匹配或者nil。例如s[pos[0]:pos[1]]，其中pos就是一个包含两个的切片
+rx.FindAllStringSubmatch(s, n)|返回[][]string类型的切片（一个字符串切片的切片，其中每一个字符串对应一个捕获）或者nil
+rx.FindAllStringSubmatchIndex(s, n)|返回一个[][]int类型的切片（每一个元素是一个包含2项的切片，每个元素对应一个匹配）
+rx.FindAllSubmatch(b, n)|返回一个类型为[][][]byte的三维切片（该切片的元素是一个切片，其中每一个切片又是一个[]byte类型的切片，其中每一个切片对应一个捕获）或者nil
+rx.FindAllSubmatchIndex(b, n)|返回[][]int类型的切片（一个其元素为包含2项的int类型切片，每一个元素对应一个匹配）或者nil
+rx.FindIndex(b)|返回一个每个元素含有2项的[]int类型的切片，每个元素对应一个最左匹配或者nil。例如b[pos[0]:pos[1]]，其中pos是一个包含2项的切片
+rx.FindReaderIndex(b)|返回一个每个元素含有2项的[]int类型的切片，每个元素对应一个最左匹配或者nil。
+rx.FindReaderSubmatchIndex(r)|返回一个[]int类型的切片或者nil，对应一个最左匹配或者nil。
+rx.FindString(s)|返回一个最左匹配值或者空字符串
+rx.FindStringIndex(s)|返回一个每个元素含有2项的[]int类型的切片，每个元素对应一个最左匹配或者nil
+rx.FindStringSubmatch(s)|返回一个[]string类型的切片或者nil，对应最左匹配和捕获
+rx.FindStringSubmatchIndex(s)|返回一个[]int类型切片或者nil，对应最左匹配和捕获
