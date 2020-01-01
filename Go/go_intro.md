@@ -701,3 +701,5 @@ func init() {
 # Reference
 - [Go 主页](https://golang.google.cn/)
 - [Go字符串](https://github.com/wbb1975/blogs/blob/master/Go/go_string.md)
+- [Go面向对象编程](https://github.com/wbb1975/blogs/blob/master/Go/go_object_oriented_programming.md)
+- [Go并发编程](https://github.com/wbb1975/blogs/blob/master/Go/go_concurrent_programming.md)
