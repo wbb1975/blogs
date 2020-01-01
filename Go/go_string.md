@@ -323,4 +323,28 @@ utf8.RuneStart(x)|如果x可以作为rune的第一个字节的话，返回true
 utf8.Valid(b)|如果b中的字节能正确表示一个UTF-8字符串，返回true
 utf8.ValidString(s)|如果s中的字节能正确表示一个UTF-8字符串，返回true
 #### 6.4 unicode包
+> unicode包主要提供了一些用来检查Unicode码点是否符合主要标准的函数。 例如，判断一个字符是否是一个数字或者小写字母。
+> 变量c是一个rune类型变量，表示一个Unicode码点。
+
+语法|含义/结果
+--|--
+unicode.Is(table, c)|如果c在table中，返回true
+unicode.IsControl(c)|如果c是一个控制字符，返回true
+unicode.IsDigit(c)|如果c是一个十进制数字，返回true
+unicode.IsGraphic(c)|如果c是一个“图形”字符，如字母，数字，标记，符号或者空格则返回true
+unicode.IsLetter(c)|如果c是一个字母，返回true
+unicode.IsLower(c)|如果c是一个小写字母，返回true
+unicode.IsMark(c)|如果c是一个标记，返回true
+unicode.IsOneOf(tables, c)|如果c在tables中的任何一个table中，返回true
+unicode.IsPrint(c)|如果c是一个可打印字符，返回true
+unicode.IsPunct(c)|如果c是一个标点符号，返回true
+unicode.IsSpace(c)|如果c是一个空格，返回true
+unicode.IsSymbol(c)|如果c是一个符号，返回true
+unicode.IsTitle(c)|如果c是一个标题大写字符，返回true
+unicode.IsUpper(c)|如果c是一个大写字符，返回true
+unicode.SimpleFold(c)|在与c的码点等价的码点集中，该方法返回最小的大于等于c的码点；否者如果不存在与此等价的码点集，则返回的是最小的大于等于0的码点
+unicode.To(case, c)|字符c的case版本，其中case可以使unicode.LowerCase、unicode.TitleCase或者inicode.UpperCase
+unicode.ToLower(c)|返回字符c的小写形式
+unicode.ToTitle(c)|返回字符c的标题形式
+unicode.ToUpper(c)|返回字符c的大写形式
 #### 6.5 regexp包
