@@ -305,5 +305,22 @@ strconv.QuoteToASCII(s)|同strconv.Quote()，但对于非ASCII码字符进行转
 strconv..Unquote(s)|对于一个用Go语法如单引号、双引号、反引号等表示的字符或字符串，返回引号中的字符串和一个error值
 strconv.UnquoteChar(s, b)|对引用字符串s的第一个字符或字节解码，返回4个值：一个rune（第一个字符），一个bool（表示第一个字符的UTF-8表示需要多个字节），一个string（剩下的字符串）以及一个error。如果b被设置为一个单引号或者双引号，那么引号必须要被转义
 #### 6.3 utf8包
+> unicode/utf8包中的函数主要用来查询和操作UTF-8编码的字符串或者字节切片。使用utf8包里的函数需要在程序中导入“unicode/utf”，变量b是一个[]byte类型的切片，s是字符串，c是一个rune类型的Unicode码点。
+
+语法|含义/结果
+--|--
+utf8.DecodeLastRune(b)|返回b中最后一个rune和它占用的字节数，或者U+FFFD（Unicode替换字符？）和0，如果b的最后一个rune是非法的
+utf8.DecodeLastRuneInString(s)|同上，但它输入的是字符串
+utf8.DecodeRune(b)|返回b中第一个rune和它占用的字节数，或者U+FFFD（Unicode替换字符？）和0，如果b的第一个rune是非法的
+utf8.DecodeRuneInString(s)|同上，但它输入的是字符串
+utf8.EncodeRune(b, c)|将c作为一个UTF-8字符并返回写入的字节数（b必须有足够的存储空间）
+utf8.FullRune(b)|如果b的第一个rune是UTF-8编码的话，返回true
+utf8.FullRuneInString(s)|如果s的第一个rune是UTF-8编码的话，返回true
+utf8.RuneCount(b)|返回b的rune个数，如果存在非ASCII字符的话这个只可能小于len(s)
+utf8.RuneCountInString(s)|同上，但它输入的是字符串
+utf8.RuneLen(c)|对c进行编码所需的字节数
+utf8.RuneStart(x)|如果x可以作为rune的第一个字节的话，返回true
+utf8.Valid(b)|如果b中的字节能正确表示一个UTF-8字符串，返回true
+utf8.ValidString(s)|如果s中的字节能正确表示一个UTF-8字符串，返回true
 #### 6.4 unicode包
 #### 6.5 regexp包
