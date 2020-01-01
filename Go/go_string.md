@@ -386,4 +386,6 @@ regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regex
 --|--
 [chars]|char中的任何字符
 [^char]|任何不在char中的字符
-[:name:]|任何在name字符类中的ASCII字符
+[:name:]|任何在name字符类中的ASCII字符：[[:alnum:]] == [0-9A-Za-z]，[[:lower:]] == [a-z]，[[:alpha:]] == [A-Za-z]，[[:print:]] == [ -~]，[[:ascii:]] == [\x00-\x7F]，[[:punct:]] == [!-/:-@[-'{-~}]，[[:blank:]] == [ \t]，[[:space:]] == [ \t\t\n\v\f]，[[:cntrl:]] == [\x00-\x1F\x7F]，[[:upper:]] == [A-Z]，[[:digit:]] == [0-9]，[[:word:]] == [0-9A-Za-z_]，[[:graph:]] == [!-~]，[[:xdigit:]] == [0-9A-Za-z]
+[:^name:]|任何不在name字符类中的ASCII字符
+.|任何字符（如果指定s标识的话，还包括换行符）
