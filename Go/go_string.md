@@ -361,11 +361,26 @@ regexp.MatchString(p, s)|如果s和模式p匹配，返回true和nil
 regexp.QuoteMeta(s)|用引号安全地括起来的与正则表达式元字符相匹配的字符串
 regexp.Compile(p)|如果模式p编译成功，返回一个*regexp.Regexp和nil
 regexp.CompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp和nil
-regexp.MustCompile(p)|如果模式p编译成功，返回一个*regexp.Regexp，否者发生异常
-regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp，否者发生异常
+regexp.MustCompile(p)|如果模式p编译成功，返回一个*regexp.Regexp，否则发生异常
+regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp，否则发生异常
 
 **regexp包支持的转移符号**
 
 语法|含义/结果
 --|--
 \c|原生字符c，例如\*表示 *是一个原生字符而不是一个量词
+\000|表示一个八进制的码点
+\xHH|表示指定的两个数字是十六进制
+\x{HHHH}|表示给定的1~6个数字是十六进制的
+\a|ASCII的响铃字符，等于\007
+\f|ASCII的响铃字符，等于\014
+\n|ASCII的换行符，等于\012
+\r|ASCII的回车符，等于\015
+\t|ASCII的制表符，等于\011
+\v|ASCII的垂直制表符，等于\013
+\Q...\E|原生匹配...中的所有字符即使它包含*
+
+**regexp包支持的字符类**
+
+语法|含义/结果
+--|--
