@@ -348,3 +348,11 @@ unicode.ToLower(c)|返回字符c的小写形式
 unicode.ToTitle(c)|返回字符c的标题形式
 unicode.ToUpper(c)|返回字符c的大写形式
 #### 6.5 regexp包
+> regexp包是Russ Cox的RE2正则表达式的Go语言实现。这个引擎非常快而且是线程安全的。RE2引擎并不使用回溯，所以能够保证线性的执行时间O(n)，n是匹配字符串的长度。
+
+**regexp包函数列表**
+> 变量p和s都是字符串类型，p表示正则匹配的模式。
+
+语法|含义/结果
+--|--
+regexp.Match(p, b)|如果[]byte类型的b和模式p匹配，返回true和nil
