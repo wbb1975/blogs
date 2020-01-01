@@ -364,7 +364,7 @@ regexp.CompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp和
 regexp.MustCompile(p)|如果模式p编译成功，返回一个*regexp.Regexp，否则发生异常
 regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp，否则发生异常
 
-**regexp包支持的转移符号**
+**regexp包支持的转义符号**
 
 语法|含义/结果
 --|--
@@ -384,3 +384,6 @@ regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regex
 
 语法|含义/结果
 --|--
+[chars]|char中的任何字符
+[^char]|任何不在char中的字符
+[:name:]|任何在name字符类中的ASCII字符
