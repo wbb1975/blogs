@@ -295,15 +295,15 @@ strconv.FormatUint(u, base)|将整数u以base指定进制形式格式化成字�
 strconv.IsPrint(c)|判断c是否为可打印字符
 strconv..Itoa(i)|将十进制整数i转换成字符串，可参考strconv.FormatInt()
 strconv.ParseBool(s)|如果s是"1"，"t"，"T"，"true"，"TRUE"则返回true和nil；如果s是"0"，"f"， "F"，"false"，"False"或"FALSE"则返回false和nil；否则返回false和一个error
-strconv..ParseFloat(s, bits)|
-strconv.ParseInt(s, base, bits)|
-strconv.ParseUint(s, base, bits)|
-strconv.Quote(s)|
-strconv.QuoteRune(char)|
-strconv.QuoteRuneToASCII(char)|
-strconv.QuoteToASCII(s)|
-strconv..Unquote(s)|
-strconv.UnquoteChar(s, b)|
+strconv..ParseFloat(s, bits)|如果s能够转换成浮点数，则返回一个float64类型的值和nill；否则返回0和error。bits应该是64，但如果想转换成float32的话也可设置为32
+strconv.ParseInt(s, base, bits)|如果s能够转换成整数，则返回一个int64类型的值和nill；否则返回0和error。如果base为0，则表示要从s中判断进制的大小（字符串开头是"0x"或者"0X"表示这是16进制的；开头只有"0"表示8进制；否则其它的都是10进制），或者在base中指定进制的大小（2~36）。如果需要转换成int的话bits应该为0，否则将会转换成带有长度的整型（如bits为16会转换成int16）
+strconv.ParseUint(s, base, bits)|同上，唯一不同的是转换成无符号整数
+strconv.Quote(s)|使用Go语言双引号字符串语法形式来表示一个字符串
+strconv.QuoteRune(char)|使用Go语言单引号字符语法来表示一个rune类型的Unicode码字符
+strconv.QuoteRuneToASCII(char)|同上，但对于非ASCII码字符进行转义
+strconv.QuoteToASCII(s)|同strconv.Quote()，但对于非ASCII码字符进行转义
+strconv..Unquote(s)|对于一个用Go语法如单引号、双引号、反引号等表示的字符或字符串，返回引号中的字符串和一个error值
+strconv.UnquoteChar(s, b)|对引用字符串s的第一个字符或字节解码，返回4个值：一个rune（第一个字符），一个bool（表示第一个字符的UTF-8表示需要多个字节），一个string（剩下的字符串）以及一个error。如果b被设置为一个单引号或者双引号，那么引号必须要被转义
 #### 6.3 utf8包
 #### 6.4 unicode包
 #### 6.5 regexp包
