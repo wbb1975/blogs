@@ -356,3 +356,16 @@ unicode.ToUpper(c)|返回字符c的大写形式
 语法|含义/结果
 --|--
 regexp.Match(p, b)|如果[]byte类型的b和模式p匹配，返回true和nil
+regexp.MatchReader(p, r)|如果从r中读取的数据和模式p匹配，返回true和nil，r是一个io.RuneReader
+regexp.MatchString(p, s)|如果s和模式p匹配，返回true和nil
+regexp.QuoteMeta(s)|用引号安全地括起来的与正则表达式元字符相匹配的字符串
+regexp.Compile(p)|如果模式p编译成功，返回一个*regexp.Regexp和nil
+regexp.CompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp和nil
+regexp.MustCompile(p)|如果模式p编译成功，返回一个*regexp.Regexp，否者发生异常
+regexp.MustCompilePOSIX(p)|如果模式p编译成功，返回一个*regexp.Regexp，否者发生异常
+
+**regexp包支持的转移符号**
+
+语法|含义/结果
+--|--
+\c|原生字符c，例如\*表示 *是一个原生字符而不是一个量词
