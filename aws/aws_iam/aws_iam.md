@@ -105,13 +105,13 @@ AWS 检查应用于请求上下文的每个策略。如果一个权限策略包�
 在 AWS 批准请求中的操作后，可以对您的账户中的相关资源执行这些操作。资源是位于服务中的对象。示例包括 Amazon EC2 实例、IAM 用户和 Amazon S3 存储桶。服务定义了一组可对每个资源执行的操作。如果创建一个请求以对资源执行不相关的操作，则会拒绝该请求。例如，如果您请求删除一个 IAM 角色，但提供一个 IAM 组资源，请求将失败。要查看确定操作影响哪些资源的 AWS 服务表，请参阅[AWS服务的操作、资源类型和条件键](https://docs.amazonaws.cn/en_us/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html)。
 ### 2. 身份管理概述：用户
 为实现更好的安全性和组织，您可以向特定用户（使用自定义权限创建的身份）授予对您的 AWS 账户的访问权限。通过将现有身份联合到 AWS 中，可以进一步简化这些用户的访问。
-#### 仅限首次访问：您的根用户凭证
+#### 2.1 仅限首次访问：您的根用户凭证
 创建 AWS 账户时，会创建一个用于登录 AWS 的 AWS 账户根用户身份。您可以使用此根用户身份（即，创建账户时提供的电子邮件地址和密码）登录 AWS 管理控制台。您的电子邮件地址和密码的组合也称为您的根用户凭证。
 
-使用根用户凭证时，您可以对 AWS 账户中的所有资源进行完全、无限制的访问，包括访问您的账单信息，您还能更改自己的密码。当您首次设置账户时，需要此访问级别。但是，我们不建议使用根用户凭证进行日常访问。我们特别建议您不要与任何人共享您的根用户凭证，因为如果这样做，他们可对您的账户进行无限制的访问。无法限制向根用户授予的权限。
+使用根用户凭证时，您可以对 AWS 账户中的所有资源进行完全、无限制的访问，包括访问您的账单信息，您还能更改自己的密码。当您首次设置账户时，需要此访问级别。但是，我们**不建议**使用根用户凭证进行日常访问。我们特别建议您不要与任何人共享您的根用户凭证，因为如果这样做，他们可对您的账户进行无限制的访问。无法限制向根用户授予的权限。
 
 以下几节说明如何使用 IAM 创建和管理用户身份和权限以提供对您 AWS 资源的安全、有限访问，适用于您自己以及需要使用您 AWS 资源的其他人员。
-#### IAM 用户
+#### 2.2 IAM 用户
 AWS Identity and Access Management (IAM) 的“身份”方面可帮助您解决问题“该用户是谁？”（通常称为身份验证）。您可以在账户中创建与组织中的用户对应的各 IAM 用户，而不是与他人共享您的根用户凭证。IAM 用户不是单独的账户；它们是您账户中的用户。每个用户都可以有自己的密码以用于访问 AWS 管理控制台。您还可以为每个用户创建单独的访问密钥，以便用户可以发出编程请求以使用账户中的资源。在下图中，用户 Li、Mateo、DevApp1、DevApp2、TestApp1 和 TestApp2 已添加到单个 AWS 账户。每个用户都有自己的凭证。
 
 ![IAM Account With Users](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-account-with-users.diagram.png)
@@ -119,23 +119,26 @@ AWS Identity and Access Management (IAM) 的“身份”方面可帮助您解决
 请注意，某些用户实际上是应用程序（例如 DevApp1）。IAM 用户不必表示实际人员；您可以创建 IAM 用户以便为在公司网络中运行并需要 AWS 访问权限的应用程序生成访问密钥。
 
 我们建议您为自己创建 IAM 用户，然后向自己分配账户的管理权限。您随后可以作为该用户登录以根据需要添加更多用户。
-#### 联合现有用户
+#### 2.3 联合现有用户
 如果您的组织中的用户已通过某种方法进行身份验证 (例如，通过登录到您的公司网络)，则不必为他们创建单独的 IAM 用户。相反，您可以在 AWS 中对这些用户身份进行联合身份验证。
 
 下图介绍用户如何使用 IAM 获取临时 AWS 安全凭证以访问您 AWS 账户中的资源。
 ![IAM Federation](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-federation.diagram.png)
 
 联合在这些情况下尤其有用：
-- 您的用户已在公司目录中拥有身份。
+- **您的用户已在公司目录中拥有身份**
+  
    如果您的公司目录与安全断言标记语言 2.0 (SAML 2.0) 兼容，则可以配置公司目录以便为用户提供对 AWS 管理控制台的单一登录 (SSO) 访问。有关更多信息，请参阅[临时凭证的常见情形](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_credentials_temp.html#sts-introduction)。
 
-  如果您的公司目录不与 SAML 2.0 兼容，则可以创建身份代理应用程序以便为用户提供对 AWS 管理控制台的单一登录 (SSO) 访问。有关更多信息，请参阅[创建一个使联合用户能够访问 AWS 管理控制台（自定义联合代理）的 URL](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html)。
+   如果您的公司目录不与 SAML 2.0 兼容，则可以创建身份代理应用程序以便为用户提供对 AWS 管理控制台的单一登录 (SSO) 访问。有关更多信息，请参阅[创建一个使联合用户能够访问 AWS 管理控制台（自定义联合代理）的 URL](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_enable-console-custom-url.html)。
 
-  如果您的公司目录是 Microsoft Active Directory，则可以使用 [AWS Directory Service](http://www.amazonaws.cn/directoryservice/)在公司目录与您的 AWS 账户之间建立信任。
-- 您的用户已有 Internet 身份。
-   如果您创建的移动应用程序或基于 Web 的应用程序可以允许用户通过 Internet 身份提供商 (如 Login with Amazon、Facebook、Google 或任何与 OpenID Connect (OIDC) 兼容的身份提供商) 标识自己，则应用程序可以使用联合访问 AWS。有关更多信息，请参阅关于 [Web 联合身份验证](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_oidc.html)。
+   如果您的公司目录是 Microsoft Active Directory，则可以使用 [AWS Directory Service](http://www.amazonaws.cn/directoryservice/)在公司目录与您的 AWS 账户之间建立信任。
+- **您的用户已有 Internet 身份**
+
+    如果您创建的移动应用程序或基于 Web 的应用程序可以允许用户通过 Internet 身份提供商 (如 Login with Amazon、Facebook、Google 或任何与 OpenID Connect (OIDC) 兼容的身份提供商) 标识自己，则应用程序可以使用联合访问 AWS。有关更多信息，请参阅关于 [Web 联合身份验证](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_providers_oidc.html)。
+
    > 提示：要使用与 Internet 身份提供商的联合身份，我们建议使用 [Amazon Cognito](https://docs.amazonaws.cn/cognito/devguide/)。
-### 访问管理概述：权限和策略(Permissions and Policies)
+### 3. 访问管理概述：权限和策略(Permissions and Policies)
 AWS Identity and Access Management (IAM) 的访问管理部分帮助定义委托人实体可在账户内执行的操作。委托人实体是指使用 IAM 实体（用户或角色）进行身份验证的人员或应用程序。访问管理通常称为授权。您在 AWS 中通过创建策略并将其附加到 IAM 身份（用户、用户组或角色）或 AWS 资源来管理访问权限。策略是 AWS 中的对象；在与身份或资源相关联时，策略定义它们的权限。在委托人使用 IAM 实体（如用户或角色）发出请求时，AWS 将评估这些策略。策略中的权限确定是允许还是拒绝请求。大多数策略在 AWS 中存储为 JSON 文档。有关策略类型和用法的更多信息，请参阅[策略和权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies.html)。
 #### 策略和账户
 如果您管理 AWS 中的单个账户，则使用策略定义该账户中的权限。如果您管理跨多个账户的权限，则管理用户的权限会比较困难。您可以将 IAM 角色、基于资源的策略或访问控制列表 (ACL) 用于跨账户权限。但是，如果您拥有多个账户，那我们建议您改用该 AWS Organizations 服务来帮助您管理这些权限。有关更多信息，请参阅[组织用户指南 中的什么是 AWS Organizations](https://docs.amazonaws.cn/organizations/latest/userguide/orgs_introduction.html)？。
