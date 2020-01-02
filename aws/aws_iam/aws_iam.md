@@ -140,9 +140,9 @@ AWS Identity and Access Management (IAM) 的“身份”方面可帮助您解决
    > 提示：要使用与 Internet 身份提供商的联合身份，我们建议使用 [Amazon Cognito](https://docs.amazonaws.cn/cognito/devguide/)。
 ### 3. 访问管理概述：权限和策略(Permissions and Policies)
 AWS Identity and Access Management (IAM) 的访问管理部分帮助定义委托人实体可在账户内执行的操作。委托人实体是指使用 IAM 实体（用户或角色）进行身份验证的人员或应用程序。访问管理通常称为授权。您在 AWS 中通过创建策略并将其附加到 IAM 身份（用户、用户组或角色）或 AWS 资源来管理访问权限。策略是 AWS 中的对象；在与身份或资源相关联时，策略定义它们的权限。在委托人使用 IAM 实体（如用户或角色）发出请求时，AWS 将评估这些策略。策略中的权限确定是允许还是拒绝请求。大多数策略在 AWS 中存储为 JSON 文档。有关策略类型和用法的更多信息，请参阅[策略和权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies.html)。
-#### 策略和账户
-如果您管理 AWS 中的单个账户，则使用策略定义该账户中的权限。如果您管理跨多个账户的权限，则管理用户的权限会比较困难。您可以将 IAM 角色、基于资源的策略或访问控制列表 (ACL) 用于跨账户权限。但是，如果您拥有多个账户，那我们建议您改用该 AWS Organizations 服务来帮助您管理这些权限。有关更多信息，请参阅[组织用户指南 中的什么是 AWS Organizations](https://docs.amazonaws.cn/organizations/latest/userguide/orgs_introduction.html)？。
-#### 策略和用户
+#### 3.1 策略和账户
+如果您管理 AWS 中的单个账户，则使用策略定义该账户中的权限。如果您管理跨多个账户的权限，则管理用户的权限会比较困难。您可以将 IAM 角色、基于资源的策略或访问控制列表 (ACL) 用于跨账户权限。但是，如果您拥有多个账户，那我们建议您改用该 AWS Organizations 服务来帮助您管理这些权限。有关更多信息，请参阅[组织用户指南 中的什么是AWS Organizations](https://docs.amazonaws.cn/organizations/latest/userguide/orgs_introduction.html)？。
+#### 3.2 策略和用户
 IAM 用户是服务中的身份。当您创建 IAM 用户时，他们无法访问您账户中的任何内容，直到您向他们授予权限。向用户授予权限的方法是创建基于身份的策略，这是附加到用户或用户所属组的策略。下面的示例演示一个 JSON 策略，该策略允许用户对 us-west-2 区域内的 123456789012 账户中的 Books 表执行所有 Amazon DynamoDB 操作 (dynamodb:*)。
 ```
 {
@@ -165,7 +165,7 @@ IAM 控制台中提供了策略摘要 表，这些表总结了策略中对每个
 ![Policies Summary DynamoDB Example](https://github.com/wbb1975/blogs/blob/master/aws/images/policies-summary-dynamodbexample.png)
 
 您还可以查看策略的 JSON 文档。有关查看摘要或 JSON 文档的信息，请参阅[了解策略授予的权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_understand.html)。
-#### 策略和组
+#### 3.3 策略和组
 可以将 IAM 用户组织为 IAM 组，然后将策略附加到组。这种情况下，各用户仍有自己的凭证，但是组中的所有用户都具有附加到组的权限。使用组可更轻松地管理权限，并遵循我们的[IAM 最佳实践](https://docs.amazonaws.cn/IAM/latest/UserGuide/best-practices.html)。
 
 ![IAM Users And Groups](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-users-and-groups.diagram.png)
