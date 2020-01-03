@@ -171,23 +171,46 @@ IAM 控制台中提供了策略摘要 表，这些表总结了策略中对每个
 ![IAM Users And Groups](https://github.com/wbb1975/blogs/blob/master/aws/images/iam-intro-users-and-groups.diagram.png)
 
 用户或组可以附加授予不同权限的多个策略。这种情况下，用户的权限基于策略组合进行计算。不过基本原则仍然适用：如果未向用户授予针对操作和资源的显式权限，则用户没有这些权限。
-#### 联合身份用户和角色(Federated Users and Roles)
+#### 3.4 联合身份用户和角色(Federated Users and Roles)
 联合身份用户无法通过与 IAM 用户相同的方式在您的 AWS 账户中获得永久身份。要向联合身份用户分配权限，可以创建称为角色 的实体，并为角色定义权限。当联合用户登录 AWS 时，该用户会与角色关联，被授予角色中定义的权限。有关更多信息，请参阅[针对第三方身份提供商创建角色 (联合)](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_create_for-idp.html)。
-#### 基于身份和基于资源的策略(Identity-based and Resource-based Policies)
+#### 3.5 基于身份和基于资源的策略(Identity-based and Resource-based Policies)
 基于身份的策略是附加到 IAM 身份（如 IAM 用户、组或角色）的权限策略。基于资源的策略是附加到资源（如 Amazon S3 存储桶或 IAM 角色信任策略）的权限策略。
 
-基于身份的策略控制身份可以在哪些条件下对哪些资源执行哪些操作。基于身份的策略可以进一步分类：
-- 托管策略 – 基于身份的独立策略，可附加到您的 AWS 账户中的多个用户、组和角色。您可以使用两个类型的托管策略：
-   + AWS 托管策略 – 由 AWS 创建和管理的托管策略。如果您刚开始使用策略，建议先使用 AWS 托管策略。
-   + 客户托管策略 – 您在 AWS 账户中创建和管理的托管策略。与 AWS 托管策略相比，客户托管策略可以更精确地控制策略。您可以在可视化编辑器中创建和编辑 IAM 策略，也可以直接创建 JSON 策略文档以创建和编辑该策略。有关更多信息，请参阅[创建 IAM 策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_create.html)和[编辑 IAM 策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_manage-edit.html)。
-- 内联策略 – 由您创建和管理的策略，直接嵌入在单个用户、组或角色中。大多数情况下，我们不建议使用内联策略。
+**基于身份的策略**控制身份可以在哪些条件下对哪些资源执行哪些操作。基于身份的策略可以进一步分类：
+- **托管策略** – 基于身份的独立策略，可附加到您的 AWS 账户中的多个用户、组和角色。您可以使用两个类型的托管策略：
+   + **AWS 托管策略** – 由 AWS 创建和管理的托管策略。如果您刚开始使用策略，建议先使用 AWS 托管策略。
+   + **客户托管策略** – 您在 AWS 账户中创建和管理的托管策略。与 AWS 托管策略相比，客户托管策略可以更精确地控制策略。您可以在可视化编辑器中创建和编辑 IAM 策略，也可以直接创建 JSON 策略文档以创建和编辑该策略。有关更多信息，请参阅[创建 IAM 策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_create.html)和[编辑 IAM 策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_manage-edit.html)。
+- **内联策略** – 由您创建和管理的策略，直接嵌入在单个用户、组或角色中。**大多数情况下，我们不建议使用内联策略**。
 
-基于资源的策略控制指定的委托人可以在何种条件下对该资源执行哪些操作。基于资源的策略是内联策略，没有基于资源的托管策略。要启用跨账户访问，您可以将整个账户或其他账户中的 IAM 实体指定为基于资源的策略中的委托人。
+**基于资源的策略**控制指定的委托人可以在何种条件下对该资源执行哪些操作。基于资源的策略是内联策略，没有基于资源的托管策略。要启用跨账户访问，您可以将整个账户或其他账户中的 IAM 实体指定为基于资源的策略中的委托人。
 
 IAM 服务仅支持一种类型的基于资源的策略（称为角色信任策略），这种策略附加到 IAM 角色。由于 IAM 角色同时是支持基于资源的策略的身份和资源，因此，您必须同时将信任策略和基于身份的策略附加到 IAM 角色。信任策略定义哪些委托人实体（账户、用户、角色和联合身份用户）可以代入该角色。要了解 IAM 角色如何与其他基于资源的策略不同，请参阅[IAM 角色与基于资源的策略有何不同](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_roles_compare-resource-policies.html)。
 
 要了解哪些服务支持基于资源的策略，请参阅[使用IAM 的 AWS 服务](https://docs.amazonaws.cn/IAM/latest/UserGuide/reference_aws-services-that-work-with-iam.html)。要了解基于资源的策略的更多信息，请参阅[基于身份的策略和基于资源的策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_identity-vs-resource.html)。
-### IAM 外部的安全功能
+### 4. 什么是适用于 AWS 的 ABAC（Attribute-based access control (ABAC)）？
+基于属性的访问控制（ABAC）是一种授权策略，基于属性来定义权限。在 AWS 中，这些属性称为标签。标签可以附加到 IAM 委托人（用户或角色）以及 AWS 资源。您可以为 IAM 委托人创建单个 ABAC 策略或者一小组策略。这些 ABAC 策略可设计为在委托人的标签与资源标签匹配时允许操作。ABAC 在快速增长的环境中非常有用，并在策略管理变得繁琐的情况下可以提供帮助。
+
+例如，您可以创建具有 access-project 标签键的三个角色。将第一个角色的标签值设置为 Heart，第二个为 Sun，第三个为 Lightning。然后，您可以使用单个策略，在角色和资源标记了 access-project 的相同值时允许访问。有关演示如何在 AWS 中使用 ABAC 的详细教程，请参阅教程：[将标签用于 AWS 中的基于属性的访问控制](https://docs.amazonaws.cn/IAM/latest/UserGuide/tutorial_attribute-based-access-control.html)。
+
+![tutorial-abac-concept](https://github.com/wbb1975/blogs/blob/master/aws/images/tutorial-abac-concept.png)
+#### 4.1 ABAC 与传统 RBAC 模型的对比
+IAM 中使用的传统授权模型称为基于角色的访问控制 (RBAC)。RBAC 根据用户的工作职能定义权限，在 AWS 之外称为角色。在 AWS 中，角色通常指 IAM 角色，这是您可以代入的 IAM 中的身份。IAM 包括[适用于工作职能的托管策略](https://docs.amazonaws.cn/IAM/latest/UserGuide/access_policies_job-functions.html)，将权限与 RBAC 模型中的工作职能相匹配。
+
+在 IAM 中，您通过为不同工作职能创建不同策略来实施 RBAC。然后，您可将策略附加到身份（IAM 用户、用户组或 IAM 角色）。作为最佳实践，您向工作职能授予所需的最小权限。这称为[授予最小权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)。通过列出工作职能可以访问的特定资源来完成此操作。使用传统 RBAC 模型的缺点在于，当员工添加新资源时，您必须更新策略以允许访问这些资源。
+
+例如，假设您的员工在处理三个项目，名为 Heart、Sun 和 Lightning。您可以为每个项目创建一个 IAM 角色。然后，您将策略附加到各个 IAM 角色，定义允许代入该角色的任何用户可以访问的资源。如果员工更换了公司中的工作，您可向其分配不同的 IAM 角色。用户或计划可以分配到多个角色。但是，Sun 项目可能需要额外的资源，例如新的 Amazon S3 存储桶。在这种情况下，您必须更新附加到 Sun 角色的策略来指定新存储桶资源。否则，Sun 项目成员不允许访问新的存储桶。
+
+![tutorial-abac-rbac-concept](https://github.com/wbb1975/blogs/blob/master/aws/images/tutorial-abac-rbac-concept.png)
+
+**相比传统 RBAC 模型，ABAC 具备以下优势**：
+- **ABAC 权限随着创新扩展**。它不再需要管理员更新现有策略以允许对新资源的访问。例如，假设您使用 access-project 标签指定了 ABAC 策略。开发人员使用 access-project = Heart 标签的角色。当 Heart 项目中的员工需要额外的 Amazon EC2 资源时，开发人员可以使用 access-project = Heart 标签创建新 Amazon EC2 实例。这样，Heart 项目中的任何员工可以启动和停止这些实例，因为其标签值匹配。
+- **ABAC 需要较少的策略**。由于您无需为不同工作职能创建不同策略，需要创建的策略数量减少。这些策略更易于管理。
+- **使用 ABAC，团队可以进行更改和扩展**。 这是因为新资源的权限根据属性自动授予。例如，如果您的公司已经使用 ABAC 支持 Heart 和 Sun 项目，则可以轻松地添加新 Lightning 项目。IAM 管理员创建具有 access-project = Lightning 标签的新角色。无需更改策略以支持新项目。有权代入该角色的任何用户可以创建和查看使用 access-project = Lightning 标记的实例。此外，团队成员可以从 Heart 项目转向 Lightning 项目。IAM 管理员将用户分配到不同 IAM 角色。无需更改权限策略。
+- **使用 ABAC 可以实现精细权限**。 在您创建策略时，最佳实践是[授予最小权限](https://docs.amazonaws.cn/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)。使用传统 RBAC，您必须编写一个策略，仅允许访问特定资源。但是，如果使用 ABAC，您可以允许在所有资源上的操作，但仅在资源标签与委托人标签匹配时。
+- **通过 ABAC 使用来自您公司目录的员工属性**。 您可以对基于 SAML 的身份提供商或 Web 身份提供商进行配置，将会话标签传递给 AWS。当您的员工希望联合身份到 AWS 中时，其属性将应用到 AWS 中所得到的委托人。然后，您可以使用 ABAC 来允许或拒绝基于这些属性的权限。
+
+有关演示如何在 AWS 中使用 ABAC 的详细教程，请参阅教程：[将标签用于 AWS 中的基于属性的访问控制](https://docs.amazonaws.cn/IAM/latest/UserGuide/tutorial_attribute-based-access-control.html)。
+### 5. IAM 外部的安全功能
 通过 IAM 可以控制对使用 AWS 管理控制台、AWS 命令行工具或服务 API 操作（通过使用 AWS 开发工具包）执行的任务的访问。某些 AWS 产品还有其他方法来保护其资源。以下列表提供了一些示例，不过并不详尽。
 - Amazon EC2
    在 Amazon Elastic Compute Cloud 中，需要使用密钥对 (对于 Linux 实例) 或使用用户名称和密码 (对于 Windows 实例) 来登录实例。
