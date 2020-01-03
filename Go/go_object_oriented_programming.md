@@ -143,8 +143,11 @@ asStringP := (*Part).String        //有效签名：  func(*Part) string
 sp := asStringP(&part)
 lower := (*Part).LowerCase        //有效签名：  func(*Part)
 lower(&part)
-fmt.Println(sv, sp, hasPrefix(part, "w"), aprt)
+fmt.Println(sv, sp, hasPrefix(part, "w"), part)
 ```
+这里我们创建了4个方法表达式：asStringV()接收一个Part值作为其唯一的参数；hasPrefix（）接收一个Part的值作为其第一个参数以及一个字符串作为其第二个参数；asStringP()和lower()都接受一个*Part作为其第一个参数。
+
+方法表达式是一种高级特性，在关键时刻非常有用。
 ### 2.2 验证类型
 ## 3. 接口
 ## 4. 结构体
