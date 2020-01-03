@@ -79,13 +79,72 @@ fmt.Println(part, partHasPrefix("w"))
 
 **类型的方法集是指可以被该类型的值所调用所有方法的集合**。
 
-一个指向自定义类型的值的指针，它的方法集由为该类型定义的所有方法组成，无论这些方法接收的是一个值还是一个指针。如果在指针上调用一个接收值的方法，Go语言会聪明地将该指针解引用，并将指针所指的底层值作为方法的接收者。
+**一个指向自定义类型的值的指针，它的方法集由为该类型定义的所有方法组成，无论这些方法接收的是一个值还是一个指针**。如果在指针上调用一个接收值的方法，Go语言会聪明地将该指针解引用，并将指针所指的底层值作为方法的接收者。
 
-一个自定义类型值的方法集则由为该类型定义的接收者类型为值类型的方法组成，但是不包括那些接收这类型为指针的方法。但这种限制通常并不像这里所说的那样，因为如果我们只有一个值，仍然可以调用一个接收者为指针类型的方法，这可以借助于Go语言传值的地址的能力实现，前提是该值是可寻址的（即它是一个变量，一个解引用指针，一个数组或切片项，或者结构体中的一个可寻址字段）。因此，加入我们这样调用value.Method()，其中Method()需要一个指针接收者，而value是一个可寻址的值，Go语言会把这个调用等同于(&value).Method()。
+**一个自定义类型值的方法集则由为该类型定义的接收者类型为值类型的方法组成，但是不包括那些接收这类型为指针的方法**。但这种限制通常并不像这里所说的那样，因为如果我们只有一个值，仍然可以调用一个接收者为指针类型的方法，这可以借助于Go语言传值的地址的能力实现，前提是该值是可寻址的（即它是一个变量，一个解引用指针，一个数组或切片项，或者结构体中的一个可寻址字段）。因此，加入我们这样调用value.Method()，其中Method()需要一个指针接收者，而value是一个可寻址的值，Go语言会把这个调用等同于(&value).Method()。
 
 *Count类型的方法集包含3个方法：Increment()、Decrement()和IsZero()。然而Count类型的方法集则只哟一个方法：IsZero()。所有这些方法都可以在*Count上调用。同时，正如我们在前面的代码片段上看到的，只要Count值是可寻址的，这些函数也可以在*Count值上调用。
 
 将方法的接收者定义为值类型对于小数据类型来说是可行的，如数值类型。这些方法不能修改它们所调用的值，因为只能得到接收者的一个副本。如果我们的数据类型的值很大，或者需要修改值，则需要让方法接受一个指针类型的接收者，这样可以使得方法调用的开销尽可能的小。
+#### 2.1.1 重写方法
+Go语言可以创建包含一个或者多个类型作为嵌入字段的自定义结构体--这种方法非常方便的一点是，在任何嵌入类型中的方法都可以当作该自定义结构体自身的方法被调用，并且可以将其嵌套类型作为其接收者。
+```
+type Item struct {
+    id               string        //具名字段（聚合）
+    price         float64     //具名字段（聚合）
+    quantity  int             //具名字段（聚合）
+}
+
+func (item *Item) Cost() float64 {
+    return item.price * float64(item.quantity)
+}
+
+type SpecialItem struct {
+    Item                        //匿名字段（嵌入）
+    catalogId    int    //具名字段（聚合）
+}
+```
+> **注意**：这里SpeicialItem嵌入了一个Item类型，这意味着我们可以在一个SpecialItem上调用Item的Cost()方法。
+```
+special := SpecialItem{Item{"Green", 3, 5,}, 207}
+fmt.Println(special.id, special.price, special.quantity, special.catalogId)
+fmt.Println(special.Cost())
+```
+**当调用special.Cost()的时候，SpecialItem类型没有它自身的Cost()方法，Go语言使用Item.Cost()方法。同时，传入其嵌入的Item值，而非整个调用该方法的SpecialItem值**。
+
+同时也可以在自定义结构体中创建与所嵌入的字段中的方法同名的方法，来覆盖被嵌入字段中的方法。例如，假设我们有一个新的Item类型：
+```
+type Luxurytem struct {
+    Item                        //匿名字段（嵌入）
+    markup    flaot64    //具名字段（聚合）
+}
+```
+如上所述，如果我们在LururyItem上调用Cost()方法，就会使用嵌入的Item.Cost()方法，就像SpecialItem中一样。下面提供了3种不同的覆盖嵌入方法的实现：
+```
+func (item *LuxuryItem) Cost() float64 {                   //没必要这么冗长
+    return item.Item.price * float64(item.Item.quantity) * item.markUp
+}
+
+func (item *LuxuryItem) Cost() float64 {                  //没必要的重复
+    return item.price * float64(item.Item.quantity) * item.markUp
+}
+
+func (item *LuxuryItem) Cost() float64 {                //完美
+    return item.Item.Cost() * item.markUp
+}
+```
+#### 2.1.2 方法表达式
+方法表达式是一个必须将方法类型作为为第一个参数的函数（在其它语言中常常使用术语“未绑定方法（unbound method）来表示类似的概念”）。
+```
+asStringV := Part.String          //有效签名：  func(Part) string
+sv  := asStringV(part)
+hasPrefix := Part.HasPrefix     //有效签名：  func(Part, string) bool
+asStringP := (*Part).String        //有效签名：  func(*Part) string
+sp := asStringP(&part)
+lower := (*Part).LowerCase        //有效签名：  func(*Part)
+lower(&part)
+fmt.Println(sv, sp, hasPrefix(part, "w"), aprt)
+```
 ### 2.2 验证类型
 ## 3. 接口
 ## 4. 结构体
