@@ -391,5 +391,25 @@ type FloatOption  struct {
     Value float64                  // 具名字段（聚合）
 }
 ```
+这是FloatOption类型的完全实现。嵌入的Optioner字段意味着当我们创建一个FloatOption时，必须给该字段赋一个满足该接口的值。
+```
+type GenericOption struct {
+    OptionCommon        // 匿名字段（嵌入）
+}
+
+func (option GenericOption) Name() string {
+    return name(option.ShortName, option.LongName)
+}
+
+func (option GenericOption) IsValid() bool {
+    return true
+}
+```
+这是GenericOption类型的完全实现，它满足Optioner接口。
+
+FloatOption类型有一个嵌入的Optioner类型的字段，因此FloatOption值需要一个具体的类型来满足该字段的Optioner接口。**这可以通过给FloatOption值的Optioner字段赋一个GenericOption类型的值来实现**。
+```
+sizeOption := FloatOption{GenericOption{OptionCommon{"s", "size"}}, 19.5}
+```
 ## Reference
 - [An Introduction to Programming in Go](http://www.golang-book.com/books/intro)
