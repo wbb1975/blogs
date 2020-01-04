@@ -479,7 +479,61 @@ func main() {
 ### 5.2 Shapes--一系列自定义类型
 #### 5.2.1 包级便捷函数
 #### 5.2.2 且套接口的层次结构
+有传统的面向对象编程背景的程序员可能倾向于使用Go语言的嵌套接口的能力来创建具有层次结构的接口。我们将在下一节看到，推荐方式是使用组合。下面是在基于层次结构的Shapes1形状包中所使用的接口。
+```
+type Shaper interface {
+    Fill() color.Color
+    SetFill(fill color.Color)
+    Draw(img draw.Image, x, y int) error
+}
+
+type CircularShaper interface {
+    Shaper              // Fill(), SetFill() and Draw()
+    Radius()    int
+    SetRadius(radius int)
+}
+
+type RegularPoligonalShaper interface {
+    CircularShaper             // Fill(), SetFill() and Draw(), Radius(), SetRadius()
+    Sides() int
+    SetSides(side int)
+}
+```
+我们创建了一个由3个接口组成的层次结构（使用嵌入而非继承），这3个接口声明了我们希望定义的形状值具备的方法。
+
+**虽然像这样创建层次结构可能更熟悉，并且也确实能够完成工作，但在Go语言中它并不是完成工作的最好方式**。这是因为在我们根本没必要使用层次结构的时候它也能将我们锁在层次结构的世界里，我们真正需要的仅仅是声明下这些特定类型的接口支持一些相关接口。下一节我们将看到，这给了我们更多的灵活性。
 #### 5.2.3 自由组合的相互独立接口
+不失一般性，对于这些形状而言，我们最想描述的是他们所能做的事情（挥着、获取或设置填充色、获取或设置半径等）。下面是组合的Shapes2形状包中的接口。
+```
+type Shaper interface {
+    Drawer      // Draw()
+    Filler          // Fill(); SetFill()
+}
+
+type Drawer interface {
+    Draw(img draw.Image, x, y int) error
+}
+
+type Filler interface {
+    Fill() color.Color
+    SetFill(fill color.Color)
+}
+
+type Radiuser interface {
+    Radius()    int
+    SetRadius(radius int)
+}
+
+type Sideser interface {
+    Sides() int
+    SetSides(side int)
+}
+```
+该包的Shaper接口是一个描述形状的便利途径，即声明该形状可以被绘制且可以获取和设置填充色。每一个其它的接口都声明了一个非常具体的行为（将获取和设置算作一个）。
+
+**声明许多独立的借口比使用层次结构灵活得多**。例如，与使用层次结构相比，我们可以传入更具体的类型给DrawShapes()函数。同时，因为无需保持层次结构，我们可以更加自由地添加其他接口。
+
+这两个版本的形状包接口完全不一样，然而，由于接口和具体类型是完全分离且独立的，这些区别并不影响满足它们的任何具体类型的实现。
 #### 5.2.4 具体类型和方法
 ### 5.3 有序映射--一个通用的集合类型
 
