@@ -285,6 +285,74 @@ for _, x := range []FixCaser{&toaskRack, &lobilia} {
 ```
 上面代码所示的方式是最好的，**我们将切片声明为符合我们需求的FixCaser而不是原始的]interface{}接口做类型检查，从而把类型检查工作交给编译器**。
 ## 4. 结构体
+匿名结构体有时可以使得代码紧凑而高效：
+```
+points := []struct{x, y int} {{4, 5}, {}, {-7, 11}, {15, 17}, {11, 8}}
+for _, point := range points {
+    fmt.Printf("{%d, %d}", point.x, point.y)
+}
+```
+上面的代码片段中的points变量是一个struct{x, y int}结构体的切片。虽然该结构体本身是匿名的，我们仍然可以通过具名字段来访问其数据，这比前面所使用的数组索引更为简便和安全。
+### 4.1 结构体的聚合与嵌入
+我们可以像嵌入接口或者其它类型的方式那样来嵌入结构体，也就是通过将一个结构体名字的名字以匿名字段的方式放入另一个结构体中来实现。通常一个嵌入式字段的字段可以通过使用.（点）操作符来访问，而无需提及其类型名。但是如果外部结构体有一个字段的名字与嵌入式结构体中某个字段名字相同，那么为了避免歧义，我们使用时必须带上嵌入结构体的名字。
+
+结构体中的没一个字段的名字都必须是唯一的。
+#### 4.1.1 嵌入值
+```
+type Person struct {
+    Title                  string      //具名字段（聚合）
+    Forenames    []string   //具名字段（聚合）
+    Surname         string    //具名字段（聚合）
+}
+
+type Author1 struct {
+    Names      Person        //具名字段（聚合）
+    Title          []string        //具名字段（聚合）
+    YearBorn int                //具名字段（聚合）
+}
+
+type Author2 struct {
+    Person                            //匿名字段（嵌入）
+    Title          []string        //具名字段（聚合）
+    YearBorn int                //具名字段（聚合）
+}
+```
+使用区别：可以看到，由于Person中的Title字段与Author2中的Title字段有冲突，为了消除歧义，必须加上Person类型名来消除歧义。
+```
+author1  := Author1{Person{"Mr", []string{"Robert", "Louis", "Balfour"}, "Stevenson}, []string{"Kidnapped", "Treasure Island"}, 1850}
+author1.Names.Title = ""
+author1.Names.Forenames = []string{"Oscar", "Fingal", "Wills"}
+author1.Names.Surname = "Wilde"
+author1.Title = []string{"The picture of Dorian Gray"}
+author1.YearBorn += 4
+
+author2  := Author2{Person{"Mr", []string{"Robert", "Louis", "Balfour"}, "Stevenson}, []string{"Kidnapped", "Treasure Island"}, 1850}
+author2.Title = []string{"The picture of Dorian Gray"}
+author2.Person.Title = ""                                              //必须使用类型名以消除歧义
+author2.Forenames = []string{"Oscar", "Fingal", "Wills"}
+author2.Surname = "Wilde"
+author2.YearBorn += 4
+```
+#### 4.1.2 嵌入带方法的匿名值
+如果一个嵌入字段带方法，那我们就可以在外部结构体中直接调用它，并且只有嵌入的字段（而不是整个外部结构体）会作为接收者传递给这些方法。
+```
+type Tasks struct {
+    slice       []string                     //具名字段（聚合）
+    Count                                       //匿名字段（嵌入）
+}
+
+func (tasks *Tasks) Add(task string) {
+    tasks.slice = append(tasks.slice, task)
+    tasks.Increment()                // 就像写tasks.Count.Increment()一样
+}
+
+func (tasks *Tasks) Tally() int {
+    return int(tasks.Count)
+}
+```
+需重点注意的是，当调用嵌入字段的某个方法时，传递该方法的只是嵌入字段自身。因此，当我们调用Tasks。IsZero()，Tasks.Increment()，或者任何其它在某个Tasks值上调用的Count方法时，这些方法接收到的是一个Count（或者*Count值），而非Tasks值。
+#### 4.1.3 嵌入接口
+
 
 ## Reference
 - [An Introduction to Programming in Go](http://www.golang-book.com/books/intro)
