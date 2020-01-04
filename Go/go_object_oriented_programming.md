@@ -352,7 +352,44 @@ func (tasks *Tasks) Tally() int {
 ```
 需重点注意的是，当调用嵌入字段的某个方法时，传递该方法的只是嵌入字段自身。因此，当我们调用Tasks。IsZero()，Tasks.Increment()，或者任何其它在某个Tasks值上调用的Count方法时，这些方法接收到的是一个Count（或者*Count值），而非Tasks值。
 #### 4.1.3 嵌入接口
+结构体除了可以聚合和嵌入具体的类型外，也可以聚合和嵌入接口。自然地，繁殖在接口中聚合或者嵌入结构体是行不通的，因为接口是完全抽象的概念，所以这样的聚合与嵌入毫无意义。当一个结构体包含聚合（具名的）或者嵌入（匿名的）接口类型的字段时，这意味着该结构体可以将任意满足该接口规格的值存储在该字段中。
+```
+type Optioner interface {
+    Name() string
+    IsValid() bool
+}
 
+type OptionCommon struct {
+    ShortName   string  "short option name"        // 功能等同于注释，但支持通过Go语言的反射访问
+    LongName     string "long option name"          // 功能等同于注释，但支持通过Go语言的反射访问
+}
+```
+Optioner接口声明了所有选项类型都必须提供的通用方法。OptionCommon结构体定义了每一个选项常用到的字段。Go语言允许我们用字符串（用Go语言的术语来说是标签）对结构体的字段进行注释。这些标签并没有什么功能性的作用，但与注释不同的是，它们可以通过Go语言的反射来支持访问。有些程序员使用标签来声明字段验证，例如，对字符串使用像“check:len(2, 30)”这样的标签，或者对数字使用check:range(0, 500)”这样的标签，或者使用程序员自定义的任何语义。
+```
+type IntOption struct {
+    OptionCommon             // 匿名字段（嵌入）
+    Value, Min, Max int        // 具名字段（聚合）
+}
 
+func (option IntOption) Name() string {
+    return name(option.ShortName, option.LongName)
+}
+
+func (option IntOption) IsValid() bool {
+    return option.Min <= option.Value && option.Value <= option,Max
+}
+
+func name(shortName, longName string) string {              // 辅助函数
+    if longName == "" {
+        return shortName
+    }
+    return longName
+}
+
+type FloatOption  struct {
+    Optioner                          // 匿名字段（接口嵌入，需要具体的类型）
+    Value float64                  // 具名字段（聚合）
+}
+```
 ## Reference
 - [An Introduction to Programming in Go](http://www.golang-book.com/books/intro)
