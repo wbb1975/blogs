@@ -149,7 +149,83 @@ fmt.Println(sv, sp, hasPrefix(part, "w"), part)
 
 方法表达式是一种高级特性，在关键时刻非常有用。
 ### 2.2 验证类型
+对于非零值构造函数不能满足条件的情况下，我们可以创建一个构造函数。Go语言不支持构造函数，因此我们必须显示地调用构造函数。为了支持这些，我们必须假设该类型有一个非法的零值，同时提供一个或者多个构造函数用于构建合法的值。
+
+当碰到其字段必须被验证时，我们也可以使用类似的方法。我们可以将这些字段设为非导出的，同事使用导出的访问函数来做一些必要的验证。
+```
+type Place struct {
+    latitude, longtitude float64
+    Name                             string
+}
+
+func New(latitude, longtitude float64, name string) *Place {
+    return &Place{saneAngle(0, latitude), saneAngle(0, longtitude), name}
+}
+
+func (place *Place) Latitude() float64 {return place.latitude}
+func (place *Place) SetLatitude(latitude float64) {
+    place.latitude = saneAngle(place.latitude, latitude)
+}
+
+func (place *Place) Longtitude() float64 {return place.longtitude}
+func (place *Place) SetLongtitude(longtitude float64) {
+    place.longtitude = saneAngle(place.longtitude, longtitude)
+}
+
+func (place *Place String() string {
+    return fmt.Sprintf("(%.3f, %.3f) %q", place.latitude, place.longtitude, place.Name)
+}
+
+func (original *Place) Copy() *Place {
+    return &Place{original.latitude, original.longtitude, original.Name}
+}
+```
+类型Place是导出（在place包中）的，但是它的latitude和longtitude字段是非导出的，因为它们需要验证。我们创建了一个构造函数New()来保证总是能够创建一个合法的*place.Place。Go语言的惯例是调用New()构造函数，如果定义了多个构造函数，则调用以New开头的那些。同时通过提供未导出字段的getter和setter函数，我们可以保证只为其设置合法的值。
+```
+newYork := place.New(40.716667, -74, "New York")
+fmt.Println(newWork)
+```
 ## 3. 接口
+在Go语言中，接口是一个自定义类型，它声明了一个或多个方法签名。接口是完全抽象地，因此不能将其实例化。然而，可以创建一个类型为接口的变量，它可以被赋值为任何满足该接口类型的实际类型的值。
+
+interface{}类型是声明了空方法集的接口类。无论包含不包含方法，任何一个值都满足interface{}类型。毕竟，如果一个值有方法，那么其方法集包含空的方法集以及它实际包含的方法。这也是interface{}类型可以用于任意值的原因。我们不能直接在一个以interface{}类型值传入的参数上调用方法（虽然该值可能有一些方法），因为该值满足的接口没有方法。因此，通常而言，最好以实际类型的形式传入值，或者传入一个包含我们想要的方法的接口。
+```
+type Exchanger interface {
+    Exchange()
+}
+```
+Exchanger接口声明了一个方法Exchange()，它不接受输入值也不返回输出。根据Go语言的惯例，**定义接口时接口名字需以er结尾**。定义只包含一个方法的接口是非常普遍的。需注意的是，接口实际上声明的是一个API（Applicatiion Programing Interface，程序编程接口），即0个或多个方法，虽然并不明确规定这些方法所需的功能。
+```
+type StringPair struct {
+    first, second string
+}
+
+func (pair *StringPair) Exchange() {
+    pair.first, pair.second = pair.second, pair.first
+}
+
+type Point [2]int
+func (point *Point) Exchange() {
+    point[0], point[1] = point[1], point[0]
+}
+```
+自定义的类型StringPair和Point完全不同，但是由于它们都提供了Exchange()方法，因此两个都能满足Exchanger接口。这意味着我们可以创建StringPair和Point值，并将它们传递给接受Exchanger的函数。
+```
+jeky11 := StringPair{"Henry", "Jeky11"}
+point := Point{5, -3}
+jeky11.Exchange()         //当做 (&jeky11).Exchange()
+point.Exchange()           //当做 (&point).Exchange()
+exchangeThese(&jeky11, &point)
+
+func exchangeThese(exchangers...Exchanger) {
+    for _, exchanger := range exchangers {
+        exchanger.Exchange()
+    }
+}
+```
+上面所创建的都是值，然而Exchange()方法需要的是一个指针类型接收者。我们之前也注意到，这并不是什么问题，因为我们调用一个需要指针参数的方法而实际传入的只是可寻址的值时，Go语言会智能地将该值的地址传给方法。因此，在上面的代码片段中，jeky11.Exchange() 会自动地被当做 (&jeky11).Exchange()使用，其他的方法调用情况也类似。
+### 3.1 接口嵌入
+
 ## 4. 结构体
 
 ## Reference
