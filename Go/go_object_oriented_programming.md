@@ -411,5 +411,73 @@ FloatOption类型有一个嵌入的Optioner类型的字段，因此FloatOption�
 ```
 sizeOption := FloatOption{GenericOption{OptionCommon{"s", "size"}}, 19.5}
 ```
+## 5. 例子
+### 5.1 FuzzyBool--一个单值自定义类型
+```
+type FuzzyBool struct {
+    value float32
+}
+
+func New(value interface{}) (*FuzzyBool, error) {
+    amount, err := float32FroValue(value)
+    return &FuzzyBool(amount), err
+}
+
+func (fuzzy *FuzzyBool) String() string {
+    return fmr.Sprintf("%.0f%%", 100 * fuzzy.value)
+}
+
+func (fuzzy *FuzzyBool) Set(value interface{}) (err error) {
+    fuzzy.value, err =  float32FroValue(value)
+    return err
+}
+
+func (fuzzy *FuzzyBool) Copy() *FuzzyBool {
+    freturn &FuzzyBool{fuzzy.value}
+}
+
+func (fuzzy *FuzzyBool) Not() *FuzzyBool {
+    freturn &FuzzyBool{1 - fuzzy.value}
+}
+
+func float32FroValue(value interface{}) (fuzzy float32, error) {           //辅助函数
+    switch value := value.(type) {
+    case float32:
+        fuzzy = value
+    case float64:
+        fuzzy = float32(value)
+    case int:
+        fuzzy = float(value)
+    case bool:
+        fuzzy = 0
+        if value {
+            fuzzy = 1
+        }
+    default:
+        return 0, fmt.Errorf("float32FroValue(): %v is not a number or boolean", value)
+    }
+    if fuzzy < 0 {
+        fuzzy = 0
+    } else if fuzzy > 1 {
+        fuzzy = 1
+    }
+
+    return fuzzy, nil
+}
+
+func main() {
+    a, _ := fuzzybool.New(0)          //使用时可以安全地忽略err值
+    b, _ := fuzzybool.New(.25)
+    c, _ := fuzzybool.New(.75)
+    d := c.Copy()
+    if err := d.Set(1); err != nil {
+        fmt.Println(err)
+    }
+    s := []*fuzzybool.FuzzyBool{a, b, c, d}
+}
+```
+### 5.2 Shapes--一系列自定义类型
+### 5.3 有序映射--一个通用的集合类型
+
 ## Reference
 - [An Introduction to Programming in Go](http://www.golang-book.com/books/intro)
