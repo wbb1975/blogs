@@ -225,7 +225,65 @@ func exchangeThese(exchangers...Exchanger) {
 ```
 上面所创建的都是值，然而Exchange()方法需要的是一个指针类型接收者。我们之前也注意到，这并不是什么问题，因为我们调用一个需要指针参数的方法而实际传入的只是可寻址的值时，Go语言会智能地将该值的地址传给方法。因此，在上面的代码片段中，jeky11.Exchange() 会自动地被当做 (&jeky11).Exchange()使用，其他的方法调用情况也类似。
 ### 3.1 接口嵌入
+Go语言的接口对嵌入的支持非常好，接口可以嵌入其它接口，其效果与接口中直接添加被嵌入接口的方法一样。
+```
+type LowerCaser interface {
+    LowerCase()
+}
 
+type UpperCaser interface {
+    UpperCase()
+}
+
+type LowerUpperCaser interface {
+    LowerCaser                   // 就像在这里写了LowerCase()一样
+    UpperCaser                   // 就像在这里写了UpperCase()一样
+}
+
+type FixCaser interface {
+    FixCase()
+}
+
+type ChangeCaser interface {
+    LowerUpperCaser
+    FixCaser
+}
+
+func (part *Part) FixCase() {
+    part.Name = fixCase(part.Name)
+}
+
+func (pair *StringPair) FixCase() {
+    pair.first = fixCase(pair.first)
+    pair.second = fixCase(pair.second)
+}
+
+toaskRack := Part{8427, "TOAST RACK"}
+lobilia := StringPair{"LOBILIA", "Secahloweu"}
+```
+如果我们有一对这样的值而想在它们之上调用方法呢？下面的做法不太好：
+```
+for _, x := range []interface{}{&toaskRack, &lobilia} {                 //不安全
+    x.(LowerUpperCaser).UpperCase()                                               //未检查的类型断言
+}
+```
+这里是使用的方法有两点缺陷。**相对较小的一个缺陷是该未经检查的类型断言是作用于LowerUpperCaser接口的，它比我们实际需要的接口更泛化**。更糟糕的一种做法是 使用更泛化的ChangeCaser接口。但是我们不能使用FixCaser接口，因为它只提供了FixCase()方法。**我们应该采用刚好能满足条件的特定接口**，这个例子中就是UpperCaser接口。**该方法最主要的缺陷是使用了一个未经检查的类型断言没可能导致抛出异常**。
+
+```
+for _, x := range []interface{}{&toaskRack, &lobilia} {
+    if x, ok := x(LowerCaser); ok {         //影子变量
+        x.LowerCase() 
+    } 
+}
+```
+上面的代码片段使用了一种更安全的方式且使用了最合适的特定接口来完成工作。但这相当笨拙。**这里的问题是，我们使用的是一个通用的interface{}值的切片，而非一个具体类型的值或者满足某个特殊类型接口的切片**。当然，如果所给的都是[]interface{}，那么这种做法使我们所能做到的最好的。
+
+```
+for _, x := range []FixCaser{&toaskRack, &lobilia} {
+    x.FixCase()
+}
+```
+上面代码所示的方式是最好的，**我们将切片声明为符合我们需求的FixCaser而不是原始的]interface{}接口做类型检查，从而把类型检查工作交给编译器**。
 ## 4. 结构体
 
 ## Reference
