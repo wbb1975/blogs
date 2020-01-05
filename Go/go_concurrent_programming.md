@@ -123,6 +123,30 @@ const allDone = 2
 doneCount := 0
 answerA := make(chan int)
 answerB := make(chan int)
+defer func() {
+    close(answerA)
+    close(answerB)
+}()
+sone := make(chan bool)
+defer func() {close(done)}()
+go expensiveComputation(data1, answerA, done)
+go expensiveComputation(data2, answerB, done)
+for doneCount != allDone {
+    var which, result  int
+    select {
+    case result = <- answerA:
+        which = 'A'
+    case result = <- answerB:
+        which = 'B'
+    case <- Done:
+        doneCount++
+    }
+
+    if which != 0 {
+        fmt.Printf("%c->%d ", which, result)
+    }
+}
+fmt.Println(0)
 ```
 ## 1. 关键概念
 ## 2. 例子
