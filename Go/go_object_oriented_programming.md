@@ -535,6 +535,117 @@ type Sideser interface {
 
 这两个版本的形状包接口完全不一样，然而，由于接口和具体类型是完全分离且独立的，这些区别并不影响满足它们的任何具体类型的实现。
 #### 5.2.4 具体类型和方法
+这是讲解形状包的最后一节，在本节中，我们将讲解满足上面两节中所述接口的具体实现。
+```
+tpe shape struct {
+    fill color.Color
+}
+
+func newShape(fill color.Color) shape {
+    if fill == nil {                    //默认将空值颜色设置为黑色
+        fill = color.Black
+    }
+    return shape{fill}
+}
+
+func (shape shape) Fill() color.Color {return shape.ffill}
+
+func (shape *shape) SetFill(fill color.Color) {
+    if fill == nil {                    //默认将空值颜色设置为黑色
+        fill = color.Black
+    }
+    shape.fill = fill
+}
+```
+该简单类型是未导出的，因此只能在相同的形状包内访问，这也意味着在包外无法创建该形状的值。
+
+在层次结构的Shaper1形状包中，该类没有满足任何接口，因为它没有提供一个Draw()方法。但是在组合类型的Shaper2形状包中，它能够满足Filler接口。
+```
+type Circle struct {
+    shape
+    radius int
+}
+
+func NewCircle(fill color.Color, radius int) *Circle {
+    return &Circle{newShape{fill}, saneRadius{radius}}
+}
+
+func (circle *Circle) Radius() int {
+    return circle.radius
+}
+
+func (circle *Circle) SetRadius(radius int) {
+    circle.radius = saneRadius(radius)
+}
+
+func  (circle *Circle) Draw(img draw.Image, x, y int) error {
+    // ... 省略了大约30行代码
+}
+
+func  (circle *Circle) String() string {
+    return fmt.Sprintf("circle(fill=%v, dadius=%d)", circle.fill, circle.radius)
+}
+```
+在基于层次结构的Shaper1图形包中，该类型满足CircularShaper、Shaper和fmt.Stringer接口。在基于组合的Shaper2图形包中，它满足Filler、Radiuser、Drawer、Shaper和fmt.Stringer接口。
+
+由于Go语言没有构造函数，而我们有未导出字段，因此我们必须提供构造函数以被显式调用。Circle的构造函数是NewCircle()，守候我们将看到该包还有一个New()函数可以用于创建该包中任意形状的值。
+
+Draw()的代码被省略了，因为本章所关心的重点是创建自定义的接口以及类型而非图形处理相关的内容。
+```
+type RegularPolygon struct {
+    *Circle
+    sides int
+}
+
+func NewRegularPolygon(fill color.Color, radius, sides int) *RegularPolygon {
+    return &RegularPolygon{NewCircle{fill}, radius}, saneSides(sides)}
+}
+
+func (polygon *RegularPolygon) Sides() int {
+    return polygon.sides
+}
+
+func (polygon *RegularPolygon) SetSides(sides int) {
+    polygon.radsidesius = saneSides(sides)
+}
+
+func  (polygon *RegularPolygon) Draw(img draw.Image, x, y int) error {
+    // ... 省略了大约55行代码，其中包括两个帮助函数...
+}
+
+func  (polygon *RegularPolygon) String() string {
+    return fmt.Sprintf("polygon(fill=%v, dadius=%d sides=%d)", polygon.Fill(), polygon.Radius(), polygon.sides)
+}
+```
+在基于层次结构的Shaper1图形包中，该类型满足RegularPolygonShaper、CircularShaper、Shaper和fmt.Stringer接口。在基于组合的Shaper2图形包中，它满足Filler、Radiuser、Sideser、Drawer、Shaper和fmt.Stringer接口。
+
+由于两个类型包中的Shaper接口不一样，因此showShapeDetails()函数的实现也有两种，下面这种是针对层次结构的Shaper1的版本：
+```
+func showShapeDetails(shapes shapes.Shaper) {               //所有图形都有一个填充色
+    fmt.Print("fill=", shae.Fill(), " ")
+    if shape, ok = shape.(shapes.CircularShaper); ok {          //影子变量
+        fmt.Print("radius=", shape.Radius(), " ")
+        if shape, ok = shape.(shapes.RegularPoligonShaper); ok {              //影子变量
+            fmt.Print("sides=", shape.Sides(), " ")
+        }
+    }
+    fmt.Println()
+}
+```
+Shaper2版本的showShapeDetails()函数类似于Shaper1版本：
+```
+func showShapeDetails(shapes shapes.Shaper) {               //所有图形都有一个填充色
+    fmt.Print("fill=", shae.Fill(), " ")
+    if shape, ok = shape.(shapes.Radiuser); ok {          //影子变量
+        fmt.Print("radius=", shape.Radius(), " ")
+    }
+    if shape, ok = shape.(shapes.Sideser); ok {              //影子变量
+        fmt.Print("sides=", shape.Sides(), " ")
+    }
+   fmt.Println() f
+}
+```
+对于接口，我们推荐使用组合而非继承的方式。**我们推荐使用Go语言风格来做结构体嵌套，也就是定义相互独立的结构体，而非试图模拟继承**。当然，一旦有了足够多的Go语言编程经验，做出这样的决定就是出于技术优势而非移植的便利性或者纯粹是习惯问题。
 ### 5.3 有序映射--一个通用的集合类型
 
 ## Reference
