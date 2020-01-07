@@ -200,7 +200,7 @@ channel2 := filterSuffixes(suffixes, channel1)
 channel3 := filterSize(minSize, maxSize, cahnnel2)
 sink(channel3)
 ```
-传递给source()函数的files是一个保存文件名的切片，然后得到一个chan string类型的通道。在source()函数中files里的文件名会轮流被发送到channel1.另外两个过滤函数都是传入过滤条件和chan string通道，并各自返回它们自己的chan string通道。
+传递给source()函数的files是一个保存文件名的切片，然后得到一个chan string类型的通道。在source()函数中files里的文件名会轮流被发送到channel1。另外两个过滤函数都是传入过滤条件和chan string通道，并各自返回它们自己的chan string通道。
 
 // TODO add picture
 
