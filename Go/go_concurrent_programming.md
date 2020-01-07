@@ -180,7 +180,77 @@ done := make(chan bool, len(jobList))
 1. 我们只有在后面要检查通道是否关闭（例如在一个for...range循环里，或者select，或者使用<-操作符来检查是否可以接收等）的时候才需要显式关闭通道
 2. 应该由发送端的goroutine关闭通道，而不是接收端的goroutine来完成。如果通道并不需要检查是否关闭，那么不关闭这些通道并没有什么问题，因为通道非常轻量，因此它们不会像代开文件不关闭那样耗尽系统资源。
 ## 2. 例子
+我们这里只介绍并发编程中比较常见的三种模式，分别是管道，多个独立的并发任务（需要或不需要同步的结果）以及多个相互依赖的并发任务，然后我们看下它们如何使用Go语言的并发支持来实现。
 ### 2.1 过滤器
+由Unix背景的人会很容易从Go语言的通道回忆起Unix里的管道，唯一不同的是Go语言的通道为双向而Unix管道为单项。利用管道我们可以创建一个连续管道，让一个程序的输出作为另一个程序的输入，而另一个程序的输出可以作为其它程序的输入，等等。例如，我们可以使用Unix管道从Go源码目录得到一个Go文件列表（去除所有测试文件）。
+```
+find $GOROOT/src -name "*.go" | grep -v tets.go
+```
+真正的Unix风格的管道可以使用标准库里的io.Pipe()函数来创建。除此之外，我们还可以利用Go语言的通道来创建一个Unix风格的管道，下面的例子就用到了这个技术。
+
+filter程序从命令行读取一些参数（例如，指定文件的最大最小值，以及只处理的文件文件后缀等）和一个文件列表，然后将符合要求的文件名输出，main()的主要代码如下：
+```
+minSize, maxSize, suffixes, files := handleCommandLine()
+sink(filterSize(minSize, maxSize, filterSufixes(suffixes, source(files))))
+```
+handleCommandLine()liyong标准库里的flag包来处理命令行参数。第二行代码展示了一条管道，从最里面的函数调用（source(files)）开始，到最外面的（sink()函数），为了方便大家理解，我们将管道展开如下：
+```
+channel1 := source(files)
+channel2 := filterSuffixes(suffixes, channel1)
+channel3 := filterSize(minSize, maxSize, cahnnel2)
+sink(channel3)
+```
+传递给source()函数的files是一个保存文件名的切片，然后得到一个chan string类型的通道。在source()函数中files里的文件名会轮流被发送到channel1.另外两个过滤函数都是传入过滤条件和chan string通道，并各自返回它们自己的chan string通道。
+
+// TODO add picture
+
+上图简略地阐明了整个filter程序里发生了什么事情，sink()函数主要是在主goroutine利之星的，而另外几个管道函数（如source()，filterSuffixes()和filterSize()）都会创建各自的goroutine来处理自己的工作。也就是说，主goroutine的执行过程会很快的执行到sink()这里，此时所有的goroutine都是并发执行的，他们要么在等待发送数据要么在等待接收数据，直至所有的文件处理完毕。
+```
+func source(files []string) <-chan string {
+    out := make(chan string, 1000)
+    go func() {
+        for _, filename := range files {
+            out <- filename>
+        }
+        close(out)
+    }()
+    return out
+}
+```
+之前我们提到，默认情况下通道是双向的，但我们可将一个通道限制为单向。回忆一下前一节我们讲过的，chan<-Type是一个只允许发送的通道，而<-chan Type是一个只允许接收的通道。函数最后返回的通道就被强制设置成了单向，我们可以从里面接收文件名。当然，直接返回一个双向的通道也是可以的，但我们这里这么做是为了更好地表达程序的思想。
+
+go语句之后，这个新创建的goroutine就开始执行匿名函数里的工作，它会往out通道里发送文件名，而当前的函数也会立即将out通道返回。所以，一旦调用source()函数就会执行两个goroutine，分别是主goroutine和source()函数里创建的那个工作goroutine。
+```
+func filterSuffixes(suffixes []string, in <-chan string) <-chan string {
+    out := make(chan, cap(in))
+    go func() {
+        for filename := range in {
+            if len(suffixes) == 0 {
+                out <- filename
+                continue
+            }
+            ext := strings.ToLower(filepath.Ext(filename))
+            for _, suffix := range suffixes {
+                if ext == suffix {
+                    out <- filename
+                    break
+                }
+            }
+        }()
+        close(out)
+        close(out)
+    }()
+    return out
+}
+```
+这时，有3个goroutine会在运行，它们是主goroutine和source()函数里创建的那个工作goroutine，以及这个函数里创建的goroutine。filterSize()函数调用之后会有4个goroutine，它们都会并发地执行：
+```
+func sink(in <-chan string) {
+    for filename := range in {
+        fmt.Println(filename)
+    }
+}
+```
 ### 2.2 并发的Grep
 ### 2.3 线程安全的映射
 ### 2.4 Apache报告
