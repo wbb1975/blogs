@@ -252,6 +252,38 @@ func sink(in <-chan string) {
 }
 ```
 ### 2.2 并发的Grep
+cgrep程序从命令行读取一个正则表达式和一个文件列表，然后输出文件名，行号，和每个文件里所有匹配这个表达式的行。没匹配的话就什么也不输出。
+
+cgrep1程序使用了3个通道，其中两个是用来发送和接收结构体的。
+```
+type Result syruct {
+    filename      string
+    lino                int
+    line                string
+}
+
+type Job struct {
+    filename    string
+    results         chan<- Result
+}
+```
+我们用Job来指定每一个工作，filename表示要处理的文件，results是一个通道，所有处理完的文件都会被发送到这里。每个处理结果都是一个Result类型的结构体，包含文件名，行号以及匹配的行。
+```
+func main() {
+    runtime.GOMAXPROCS(runtime.NumCPU())     // 使用所有的及其核心
+    if len(os.Args) < 3 || os.Args[1] == "-h" || os.Args[1] == "--help" {
+        fmt.Printf("usage: %s <regexp> <files>\n", filepath.Base(os.Args(0)))
+        os.Exit(1)
+    }
+
+    if lineRx, err := regexp.Compile(os.Args[1]); err != nil {
+        log.Fatal("invalid regexp: %s\n", err)
+    } else {
+        grep(lineRx, commandLineFiles(os.Args[2:]))
+    }
+}
+```
+lineRx是一个*regexp.Regexp类型的变量，传给grep()函数并被所有的goroutine共享。Go语言的文档说这个指针指向的值是线程安全的，这就意味着我们可以在多个goroutine里共享使用这个指针。
 ### 2.3 线程安全的映射
 ### 2.4 Apache报告
 ### 2.5 查找副本
