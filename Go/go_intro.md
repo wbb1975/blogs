@@ -159,7 +159,7 @@ Go语言的数组是一个定长的序列，其中的元素类型相同。任何
 以下示例展示了如何创建和索引数组：
 ```
 var buffer  [20]byte
-grid := [3][3]int{{4, 3}, {8, 6, 2}}
+grid := [3][3]int{{4, 3, 0}, {8, 6, 2}}
 cities := [...]string{"Shanghai", "Numbai", "Istanbul", "Beijing"}
 cities[len(cities])-1] = "Karachi"
 
