@@ -284,6 +284,8 @@ func main() {
 }
 ```
 lineRx是一个*regexp.Regexp类型的变量，传给grep()函数并被所有的goroutine共享。Go语言的文档说这个指针指向的值是线程安全的，这就意味着我们可以在多个goroutine里共享使用这个指针。
+
+
 ### 2.3 线程安全的映射
 ### 2.4 Apache报告
 ### 2.5 查找副本
