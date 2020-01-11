@@ -284,8 +284,23 @@ func main() {
 }
 ```
 lineRx是一个*regexp.Regexp类型的变量，传给grep()函数并被所有的goroutine共享。Go语言的文档说这个指针指向的值是线程安全的，这就意味着我们可以在多个goroutine里共享使用这个指针。
+```
+var workes = runtime.NumCPU()
+func grep(lineRx *regexp.Regexp, filenames []string) {
+    jobs := make(chan Job, workers)
+    results := make(chan Result, minimum(1000, len(filenames)))
+    done := make(chan struct{}, workers)
 
+    go addJobs(jobs, filenames, results)               //在自己的goroutine里执行
+    for i := 0; i < workers; i++ {
+        go doJobs(done, lineRx, jobs)                        //每一个都在自己的goroutine里执行
+    }
 
+    go awaitCompletion(done, resuls)                  //在自己的goroutine里执行
+    processResults(results)                                        //阻塞，直至工作完成
+}
+```
+这个函数为程序创建了3个带缓冲区的双向通道，所有的工作都会分发给工作goroutine来处理。goroutine的总数量和当前机器的处理器数相当，jobs通道和done通道的缓冲区大小也和机器的处理器数一样，将不必要的阻塞尽可能地降到最低。对于results通道我们使用了一个更大的缓冲区。
 ### 2.3 线程安全的映射
 ### 2.4 Apache报告
 ### 2.5 查找副本
