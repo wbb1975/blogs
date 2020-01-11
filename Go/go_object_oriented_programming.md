@@ -287,7 +287,7 @@ for _, x := range []FixCaser{&toaskRack, &lobilia} {
 ## 4. 结构体
 匿名结构体有时可以使得代码紧凑而高效：
 ```
-points := []struct{x, y int} {{4, 5}, {}, {-7, 11}, {15, 17}, {11, 8}  }
+points := []struct{x, y int} { {4, 5}, {}, {-7, 11}, {15, 17}, {11, 8}  }
 for _, point := range points {
     fmt.Printf("{%d, %d}", point.x, point.y)
 }
