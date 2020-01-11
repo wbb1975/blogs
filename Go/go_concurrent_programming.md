@@ -296,11 +296,43 @@ func grep(lineRx *regexp.Regexp, filenames []string) {
         go doJobs(done, lineRx, jobs)                        //每一个都在自己的goroutine里执行
     }
 
-    go awaitCompletion(done, resuls)                  //在自己的goroutine里执行
+    go awaitCompletion(done, results)                  //在自己的goroutine里执行
     processResults(results)                                        //阻塞，直至工作完成
 }
 ```
 这个函数为程序创建了3个带缓冲区的双向通道，所有的工作都会分发给工作goroutine来处理。goroutine的总数量和当前机器的处理器数相当，jobs通道和done通道的缓冲区大小也和机器的处理器数一样，将不必要的阻塞尽可能地降到最低。对于results通道我们使用了一个更大的缓冲区。
+
+和之前章节做法不同，之前通道类型是chan bool而且只关心是否发送了东西，不关心是true还是false，我们这里的通道类型是chan struct{}（一个空结构），这样可以更加清晰地表达我们的语义。我们能往通道里发送的是一个空的结构（struct{}{}），这样只是指定了一个发送操作，至于发送的值我们不关心。
+
+有了通道以后，我们开始调用addJobs()函数网jobs通道里增加工作，这个函数也是在一个单独的goroutine里运行的。再调用doJobs()函数来执行实际的工作，实际上我们调用了这个函数四次，也就是创建了4个独立的goroutine，各自做自己的事情。然后我们调用 awaitCompletion()  函数，他在自己的goroutine里等待所有的工作完成然后关闭results通道。最后，我们调用processResults() 函数，这也函数主要是在主goroutine里执行的，这个函数处理从results通道收到的结果，当通道没有结果时就会阻塞，直到接收完所有的结果才继续这行。
+```
+func addJobs(jobs chan<- Job, filenames []string, results<- Result) {
+    for _, filename := range filenames {
+        jobs <- Job{filename, results}
+    }
+    close(jobs)
+}
+
+func doJobs(done chan<- struct{}, lineRx *regexp.Regexp, jobs <-chan Job) {      // 按照惯例，目标通道在前面，源通道在后面
+    for job := range jobs {
+        job.Do(lineRx)
+    }
+    done <- strunct{}{}
+}
+
+func awaitCompletion(done chan<- struct{}, results chan Result) {
+    for i := 0; i < workers; i++ {
+        <- done
+    }
+    close(Results)
+}
+
+func processResults(results <-chan Result) {
+    for result := range results {
+        fmt.Printf("%s:%d:%s\n", result.filename, result,lino, result.line)
+    }
+}
+```
 ### 2.3 线程安全的映射
 ### 2.4 Apache报告
 ### 2.5 查找副本
