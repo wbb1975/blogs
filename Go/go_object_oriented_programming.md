@@ -289,7 +289,7 @@ for _, x := range []FixCaser{&toaskRack, &lobilia} {
 ```
 points := []struct{x, y int} { {4, 5}, {}, {-7, 11}, {15, 17}, {11, 8}  }
 for _, point := range points {
-    fmt.Printf("{%d, %d}", point.x, point.y)
+    fmt.Printf("{ %d, %d }\n", point.x, point.y)
 }
 ```
 上面的代码片段中的points变量是一个struct{x, y int}结构体的切片。虽然该结构体本身是匿名的，我们仍然可以通过具名字段来访问其数据，这比前面所使用的数组索引更为简便和安全。
