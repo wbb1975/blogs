@@ -141,6 +141,32 @@ Lambda 运行时允许不同语言的函数在同一基本执行环境中运行�
 
 有关更多信息，请参阅[调用AWS Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/lambda-invocation.html)和[将 AWS Lambda 与其他服务结合使用](https://docs.amazonaws.cn/lambda/latest/dg/lambda-services.html)。
 ## AWS Lambda 功能
+AWS Lambda 提供了用于管理和调用函数的管理控制台和 API。它提供的运行时支持一组标准功能，以便您能够根据需要轻松地在语言和框架之间进行切换。除了函数之外，您还可以创建版本、别名、层和自定义运行时。
+### 编程模型
+代码编写细节因运行时而异，但所有运行时都共用一个通用的编程模型，该模型定义了代码与运行时代码之间的接口。通过在函数配置中定义**处理程序**来告诉运行时运行哪个方法，然后运行时会运行该方法。运行时将对象（例如函数名和请求 ID）传递给包含调用**事件**以及**上下文**的处理程序。
+
+运行时捕获来自函数的**日志记录**输出，并将它发送到 Amazon CloudWatch Logs。您可以使用编程语言的标准日志记录功能。如果函数引发一个**错误**，则运行时会将该错误返回到客户端。
+
+> **注意** 日志记录需要遵循 [CloudWatch Logs 限制](https://docs.amazonaws.cn/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html)。日志数据会由于限制而丢失；在某些情况下，当[执行上下文](https://docs.amazonaws.cn/lambda/latest/dg/running-lambda-code.html)终止时也会丢失。
+
+如果您的函数退出但未出现错误，则运行时将向它发送另一个事件。函数的类保留在内存中，因此，可以重用在处理程序方法外部声明的客户端和变量。此外，您的函数有权访问 /tmp 目录中的本地存储。
+
+Lambda 通过在需求增加时运行其他实例并在需求减少时终止实例来扩展您的函数。除非另有说明，否则传入请求可能会不按次序处理或同时处理。将应用程序的状态存储在其他服务中，并且不依赖长期存在的函数实例。虽然可使用本地存储和类级别对象来提高性能，但应将部署包的大小和传输到执行环境中的数据量保持在最小值。
+
+有关您常用的编程语言中的编程模式的实际操作介绍，请参阅以下章节。
++ [使用 Node.js 构建 Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/programming-model.html)
++ [使用 Python 构建 Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/python-programming-model.html)
++ [使用 Ruby 构建 Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/lambda-ruby.html)
++ [使用 Java 构建 Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/java-programming-model.html)
++ [使用 Go 构建 Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/go-programming-model.html)
++ [使用 C# 构建 Lambda 函数](https://docs.amazonaws.cn/lambda/latest/dg/dotnet-programming-model.html)
++ [使用PowerShell构建Lambda函数](https://docs.amazonaws.cn/lambda/latest/dg/powershell-programming-model.html)
+### 扩展
+### 并发控制
+### 部署程序包
+### 函数蓝图
+### 应用程序模板
+### 层
 ## 与 AWS Lambda 一起使用的工具
 ## AWS Lambda 限制
 AWS Lambda 将限制可用来运行和存储函数的计算和存储资源量。以下限制按区域应用，并且可以提高这些限制。要请求提高限制，请使用[支持中心控制台](https://console.amazonaws.cn/support/v1#/case/create?issueType=service-limit-increase)。
