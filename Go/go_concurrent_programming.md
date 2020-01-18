@@ -334,6 +334,103 @@ func processResults(results <-chan Result) {
 }
 ```
 ### 2.3 线程安全的映射
+Go语言标准库里的sync和sync/atomic包提供了创建并发的算法和数据结构所需要的基础功能。我们也可以讲一些现有的数据结构变成线程安全，例如映射或者切片等，这样可以确保在使用上层API时所有的访问都是串行的。
+
+这一节我们会开发一个线程安全的映射，它的键是字符串，值是interface{ }类型，不需要使用锁就能够被任意多个goroutine共享（当然，如果我们存的值是一个指针或引用，我们还必须保证所指向的值是只读的或对于它们的访问是串行的）。线程安全的实现包含了一个导出的SafeMap接口，以及一个非导出的safeMap类型，safeMap实现了SafeMap接口定义的所有方法。下一节我们来看这个safeMap是怎么使用的。
+
+安全映射的实现其实就是在一个goroutine里执行一个内部的方法以操作一个普通的map数据结构。外界只能通过通道来操作这个内部映射，这样就能保证对这个映射的所有访问都是串行的。这种方法时运行着一个无限循环，阻塞等待一个输入通道中的命令（即“增加这个”，“删除那个”等）。
+
+我们先看看SafeMap接口的定义，再分析内部safeMap类型可导出的方法，然后就是safeMap包里的New()函数，然后分析未导出的safeMap.run()方法。
+```
+type SafeMap interface {
+    Insert(string, interface{})
+    Delete(string)
+    Find(string) (interface{}, bool)
+    Len()  int
+    Update(string, UpdateFunc)
+    Close() map[string]interface{}
+}
+type UpdateFunc func(interface{}, bool) interface{}
+```
+这些都是SafeMap接口必须实现的方法。
+```
+type safeMap chan  commandData        // non-buffer binary-direction channel
+type commandData struct {
+    action     commandActin
+    key           string
+    value       interface{}
+    result      chan<-interface{}
+    data         chan<-map[string]interface{}
+    updater  UpdateFunc
+}
+type commandAction int
+const {
+    remove   commandAction = iota
+    end
+    find
+    insert
+    length
+    update
+}
+```
+safeMap的实现基于一个可发送和接收commandData类型的通道。每个commandData类型值指明了一个需要执行的操作（在action字段）及相应的数据。例如，大多数方法需要一个key来指定需要处理的项，我们会在分析safeMap的方法时看到所有的字段是如何被使用的。
+
+注意，result和data通道都是被定义为只写的，也就是说，safeMap可以往里面发送数据，不能接收。但是下面我们会看到，这些通道在创建时候都是可读写的，所以它们能够接收safeMap发给它们的任何值。
+```
+func (sm safeMap) Insert(key string, value interface{}) {
+    sm <- commandData{action: insert, key: key, value: value}
+}
+```
+这种方法相当于一个线程安全版本的m[key] = value操作，其中m是map[string]interface{}类型。它创建了一个commandData值，指明这是一个insert操作，并将传入的key和value保存到commandData结构中并发送到一个安全的映射里。
+
+当我们查看safemap包里的New()函数时我们会发现该函数返回的safeMap关联了一个goroutine。safeMap.run() 里有一个底层map结构，用来保存这个安全映射的所有项，还有一个for循环遍历safeMap通道，并执行每一个从safeMap通道接收的对底层map的操作。
+```
+func New() SafeMap {
+      sm := make(safeMap) // type safeMap chan commandData
+      go sm.run()
+      return sm
+ }
+
+ func (sm safeMap) Delete(key string) {
+     sm <- commandData(action: remove, key: key)
+ }
+
+ type findResult struct {
+     value  interface{]
+     found bool}
+ }
+
+ func (sm safeMap) Find(key string) (value interface{}, found bool) {
+     reply := make(chan interface{})
+     sm <- commandData{action: find, key: key, result: reply}
+     result := (<-reply>).(findResult)
+     return result.value, result.found
+ }
+
+ func (sm safeMap) run() {
+    store := make(map[string]interface{})
+    for command := range sm {
+        switch command.action {
+        case insert:
+            store[command.key] = command.value
+        case remove:
+            delete(store, command.key)
+        case find:
+            value, found := store[command.key]
+            command.result <- findResult{value, found}
+        case length:
+            command.result <- len(store)
+        case update:
+            value, found := store[command.key]
+            store[command.key] = command.updater(value, found)
+        case end:
+            close(sm)
+            command.data <- store
+        }
+    }
+}
+```
+显然，使用一个线程安全的映射相比一个普通的map会由更大的内存开销，每一条命令我们都需要创建一个commandData结构，利用通道来达到多个goroutine串行化访问一个safeMap的目的。我们也可以使用一个普通的map配合sync.Mutex以及sync.RWMutex使用以达到线程安全的目的。另外还有一种方法就是如同相关理论所描述的那样创建一个线程安全的数据结构。还有一种方法就是，每个goroutine都有自己的映射，这样就不需要同步了，然后最终将所有goroutine的结果合并在一起即可。
 ### 2.4 Apache报告
 ### 2.5 查找副本
 
