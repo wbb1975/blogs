@@ -42,11 +42,11 @@ AWSTemplateFormatVersion属性是必须的，它指定了CloudFormation模版格
 Resources属性定义了你的栈中的所有资源--这是模版的主体，至多可包含200个资源。在前面的代码中，我们只定义了一个资源ManagementStation，它通过Type值为AWS::Cloud9::EnvironmentEC2来创建一个 Cloud9 EC2环境。所有资源必须制定一个Type属性，它定义了资源的类型，并决定了每种资源可用的各种配置属性。CloudFormation用户指南专门有一章定义了支持的各种资源类型，最新已有多达300项资源类型在列。
 
 每种资源必须包含“Properties”属性，它用于容纳该资源各种可用的配置属性。在前面的代码中，你可以看到我们定义了5种不同的属性--可用的属性随资源类型而不同，其在CloudFormation用户指南上有详细描述。
-- name：
-- Description：
-- AutomaticStopTime：
-- InstanceType：
-- SubnetId：
+- name：这指定了Cloud9 EC2环境的名字。属性的值可以是简单的标量值比如字符串或数字，但也可引用模版中的其它参数或资源。注意到这里name的属性值包括一个内部函数调用Sub，并用感叹号 (!Sub)标识。!Sub语法实际上是Fn::Sub的简写方式--你可以在Description属性中看到它。Fn::Sub内部函数允许你定义一个表达式对你的栈中其它参数或资源的引用。例如，Name属性的值为${AWS::StackName}-station，这里${AWS::StackName}是一个插入的引用，它是一个虚假参数，在实际中当你基于这个模板部署时会被CloudFormation栈的名字替换。如果你的栈名是cloud9-management，${AWS::StackName}-station的值在你的栈被部署时将会被扩展成cloud9-management-station。
+- Description：这提供了Cloud9 EC2环境的描述。这里包含了一个对Fn::Sub内部函数的长格式调用，它要求你另起一行，另一方面!Sub短格式调用允许你在同一行上指定属性和其值。。
+- AutomaticStopTime：指定了在停止Cloud9 EC2实例前的以分钟计时空闲时间。这是为了节约成本，仅仅在你使用EC2实例时你可以使用它（Cloud9将会自动启动你的EC2实例，并从你之前停顿处回复你的会话）。在前面的代码中，这个值被设置为一个简单的值15。
+- InstanceType：这是EC2实例的类型。它使用Ref内部函数引用EC2InstanceType参数（!Ref是其简写形式），这允许你引用栈中其它参数或资源。这意味着当你部署这个栈时，这个参数无论被提供了何种值，它都将会被用于InstanceType属性。
+- SubnetId：这是EC2实例将会被部署到的目标子网ID。这个属性使用了Ref内部函数的长调用格式来引用SubnetID参数，它要求你新起一行表达这个引用。
 ### 部署一个CloudFormation栈
 ### 更新一个CloudFormation栈
 ### 删除一个CloudFormation栈
