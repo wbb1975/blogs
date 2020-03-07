@@ -18,6 +18,7 @@ try {
 所有这些方法都会自己决定是否要抛出异常，但也能直接抛出方法返回的结果——例如，throw Throwables.propagate(t);—— 这样可以向编译器声明这里一定会抛出异常。
 
 Guava中的异常传播方法简要列举如下：
+
 **方法**|**解释**
 ----------|--------------
 [RuntimeException propagate(Throwable)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/base/Throwables.html#propagate-java.lang.Throwable-)|如果Throwable是Error或RuntimeException，直接抛出；否则把Throwable包装成RuntimeException抛出。保证抛出。返回类型是RuntimeException，所以你可以像上面说的那样写成throw Throwables.propagate(t)，Java编译器会意识到这行代码保证抛出异常。
@@ -122,8 +123,7 @@ try {
 }
 ```
 对这样的代码要考虑很多方面：
-- ExecutionException的cause可能是受检异常，见上文”争议一：把检查型异常转化为非检查型异常”。但如果我们确定future对应的任务不会抛出受检异常呢？（可能future表示runnable任务的结果——译者注：如ExecutorService中的submit(Runnable task, T
-result)方法）如上所述，你可以捕获异常并抛出AssertionError。尤其对于Future，请考虑 Futures.get方法。（TODO：对future.get()抛出的另一个异常InterruptedException作一些说明）
+- ExecutionException的cause可能是受检异常，见上文”争议一：把检查型异常转化为非检查型异常”。但如果我们确定future对应的任务不会抛出受检异常呢？（可能future表示runnable任务的结果。）如上所述，你可以捕获异常并抛出AssertionError。propagate并未提供更多的功能。尤其对于Future，请考虑 Futures.get方法。
 - ExecutionException的cause可能直接是Throwable类型，而不是Exception或Error。（实际上这不大可能，但你想直接重新抛出cause的话，编译器会强迫你考虑这种可能性）见上文”用法二：把抛出Throwable改为抛出Exception”。
 - ExecutionException的cause可能是非受检异常。如果是这样的话，cause会直接被Throwables.propagate抛出。不幸的是，cause的堆栈信息反映的是异常最初产生的线程，而不是传播异常的线程。通常来说，最好在异常链中同时包含这两个线程的堆栈信息，就像ExecutionException所做的那样。（这个问题并不单单和propagate方法相关；所有在其他线程中重新抛出异常的代码都需要考虑这点）
 ### 异常原因链
