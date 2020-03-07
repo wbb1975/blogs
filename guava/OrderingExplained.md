@@ -60,7 +60,7 @@ Ordering<Foo> ordering = Ordering.natural().nullsFirst().onResultOf(new Function
 ```
 Ordering<Foo> ordering = Ordering.natural().nullsFirst().onResultOf(sortKeyFunction);
 ```
-### 应用
+### 排序器应用
 Guava提供了许多利用排序器来操纵或检查值或集合的方法。我们将在下面列出一些最常用的：
 
 **方法**|**描述**|**另请参见**  
