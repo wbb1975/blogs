@@ -361,8 +361,23 @@ ListMultimap<String, Integer> myMultimap = Multimaps.newListMultimap(
 ### 9. Tables
 [Tables](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Tables.html)类提供了若干称手的工具方法。
 #### 9.1 customTable
+堪比Multimaps.newXXXMultimap(Map, Supplier)工具方法，[Tables.newCustomTable(Map, Supplier<Map>)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Tables.html#newCustomTable-java.util.Map-com.google.common.base.Supplier-)允许你指定Table用什么样的map实现行和列。
+```
+// use LinkedHashMaps instead of HashMaps
+Table<String, Character, Integer> table = Tables.newCustomTable(
+  Maps.<String, Map<Character, Integer>>newLinkedHashMap(),
+  new Supplier<Map<Character, Integer>> () {
+    public Map<Character, Integer> get() {
+      return Maps.newLinkedHashMap();
+    }
+  });
+```
 #### 9.2 transpose
+[transpose(Table<R, C, V>)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Tables.html#transpose-com.google.common.collect.Table-)方法允许你把Table<C, R, V>转置成Table<R, C, V>。例如，如果你在用Table构建加权有向图，这个方法就可以把有向图反转。
 #### 9.3 包装器
+还有很多你熟悉和喜欢的Table包装类。然而，在大多数情况下还请使用[ImmutableTable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ImmutableTable.html):
++ [unmodifiableTable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Tables.html#unmodifiableTable-com.google.common.collect.Table-)
++ [unmodifiableRowSortedTable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Tables.html#unmodifiableRowSortedTable-com.google.common.collect.RowSortedTable-)
 
 ## Reference
 - [Collection Utilities](https://github.com/google/guava/wiki/CollectionUtilitiesExplained)
