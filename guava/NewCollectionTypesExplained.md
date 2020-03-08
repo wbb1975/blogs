@@ -217,7 +217,7 @@ ClassToInstanceMap<Number> numberDefaults = MutableClassToInstanceMap.create();
 numberDefaults.putInstance(Integer.class, Integer.valueOf(0));
 ```
 
-从技术上讲，ClassToInstanceMap<B>实现了Map<Class<? extends B>, B>——或者换句话说，是一个映射B的子类型到对应实例的Map。这让ClassToInstanceMap包含的泛型声明有点令人困惑，但请记住B始终是Map所支持类型的上界——通常B就是Object。
+从技术上讲，ClassToInstanceMap`<B>`实现了Map<Class<? extends B>, B>——或者换句话说，是一个映射B的子类型到对应实例的Map。这让ClassToInstanceMap包含的泛型声明有点令人困惑，但请记住B始终是Map所支持类型的上界——通常B就是Object。
 
 对于ClassToInstanceMap，Guava提供了两种有用的实现：[MutableClassToInstanceMap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/MutableClassToInstanceMap.html)和 [ImmutableClassToInstanceMap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ImmutableClassToInstanceMap.html)。
 
