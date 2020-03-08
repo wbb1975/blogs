@@ -101,13 +101,268 @@ String theElement = Iterables.getOnlyElement(thisSetIsDefinitelyASingleton);
 [get(Iterable, int)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Iterables.html#get-java.lang.Iterable-int-)|List.get(int)|[FluentIterable.get(int)](http://google.github.io/guava/releases/12.0/api/docs/com/google/common/collect/FluentIterable.html#get-int-)
 [toString(Iterable)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Iterables.html#toString-java.lang.Iterable-)|Collection.toString()|[FluentIterable.toString()](http://google.github.io/guava/releases/12.0/api/docs/com/google/common/collect/FluentIterable.html#toString--)
 #### 2.3 FluentIterable
+除了上面和函数式编程提到的方法，FluentIterable还有一些便利方法用来把自己拷贝到不可变集合：
+结果类型|方法
+----------|---------------
+ImmutableList|[toImmutableList()](http://google.github.io/guava/releases/12.0/api/docs/com/google/common/collect/FluentIterable.html#toImmutableList--)
+ImmutableSet|[toImmutableSet()](http://google.github.io/guava/releases/12.0/api/docs/com/google/common/collect/FluentIterable.html#toImmutableSet--)
+ImmutableSortedSet|[toImmutableSortedSet(Comparator)](http://google.github.io/guava/releases/12.0/api/docs/com/google/common/collect/FluentIterable.html#toImmutableSortedSet-java.util.Comparator-)
 ### 3. Lists
+除了静态工厂方法和函数式编程方法，Lists为List类型的对象提供了若干工具方法。
+
+方法|描述
+----------|---------------
+[partition(List, int)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#partition-java.util.List-int-)|返回底层List的视图，把List按指定大小分割
+[reverse(List)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#reverse-java.util.List-)|返回给定List的反转视图。注: 如果List是不可变的，考虑改用[ImmutableList.reverse()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ImmutableList.html#reverse--)。
+
+```
+List<Integer> countUp = Ints.asList(1, 2, 3, 4, 5);
+List<Integer> countDown = Lists.reverse(theList); // {5, 4, 3, 2, 1}
+
+List<List<Integer>> parts = Lists.partition(countUp, 2); // {{1, 2}, {3, 4}, {5}}
+```
+#### 3.1 静态工厂方法
+Lists提供如下静态工厂方法：
+
+具体实现类型|工厂方法
+----------|---------------
+ArrayList|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newArrayList--), [with elements](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newArrayList-E...-), [from Iterable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newArrayList-java.lang.Iterable-), [with exact capacity](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newArrayListWithCapacity-int-), [with expected size](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newArrayListWithExpectedSize-int-), [from Iterator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newArrayList-java.util.Iterator-)
+LinkedList|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newLinkedList--), [from Iterable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Lists.html#newLinkedList-java.lang.Iterable-)
 ### 4. Sets
+[Sets](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html)工具类包含了若干好用的方法。
+#### 4.1 集合理论方法
+我们提供了很多标准的集合运算（Set-Theoretic）方法，这些方法接受Set参数并返回[SetView](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.SetView.html)，可用于：
++ 直接当作Set使用，因为SetView也实现了Set接口；
++ 用[copyInto(Set)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.SetView.html#copyInto-S-)拷贝进另一个可变集合；
++ 用[immutableCopy()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.SetView.html#immutableCopy--)对自己做不可变拷贝。
+
+方法|描述
+----------|---------------
+[union(Set, Set)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#union-java.util.Set-java.util.Set-)|
+[intersection(Set, Set)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#intersection-java.util.Set-java.util.Set-)|
+[difference(Set, Set)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#difference-java.util.Set-java.util.Set-)|
+[symmetricDifference(Set, Set)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#symmetricDifference-java.util.Set-java.util.Set-)|
+
+使用范例：
+```
+Set<String> wordsWithPrimeLength = ImmutableSet.of("one", "two", "three", "six", "seven", "eight");
+Set<String> primes = ImmutableSet.of("two", "three", "five", "seven");
+
+SetView<String> intersection = Sets.intersection(primes, wordsWithPrimeLength); // contains "two", "three", "seven"
+// I can use intersection as a Set directly, but copying it can be more efficient if I use it a lot.
+return intersection.immutableCopy();
+```
+#### 4.2 其他Set工具方法
+方法|描述|另请参见
+----------|---------------|---------------
+[cartesianProduct(List<Set>)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#cartesianProduct-java.util.List-)|返回所有集合的笛卡儿积|[cartesianProduct(Set...)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#cartesianProduct-java.util.Set...-)
+[powerSet(Set)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#powerSet-java.util.Set-)|返回给定集合的所有子集
+
+```
+Set<String> animals = ImmutableSet.of("gerbil", "hamster");
+Set<String> fruits = ImmutableSet.of("apple", "orange", "banana");
+
+Set<List<String>> product = Sets.cartesianProduct(animals, fruits);
+// {{"gerbil", "apple"}, {"gerbil", "orange"}, {"gerbil", "banana"},
+//  {"hamster", "apple"}, {"hamster", "orange"}, {"hamster", "banana"}}
+
+Set<Set<String>> animalSets = Sets.powerSet(animals);
+// {{}, {"gerbil"}, {"hamster"}, {"gerbil", "hamster"}}
+```
+#### 4.3 静态工厂方法
+Sets提供如下静态工厂方法：
+
+具体实现类型|工厂方法
+HashSet|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newHashSet--), [with elements](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newHashSet-E...-), [from Iterable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newHashSet-java.lang.Iterable-), [with expected size](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newHashSetWithExpectedSize-int-), [from Iterator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newHashSet-java.util.Iterator-)
+LinkedHashSet|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newLinkedHashSet--), [from Iterable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newLinkedHashSet-java.lang.Iterable-), [with expected size](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newLinkedHashSetWithExpectedSize-int-)
+TreeSet|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newTreeSet--), [with Comparator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newTreeSet-java.util.Comparator-), [from Iterable](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Sets.html#newTreeSet-java.lang.Iterable-)
 ### 5. Maps
+[Maps](http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/com/google/common/collect/Maps.html)类有若干值得单独说明的、很酷的方法。
+#### 5.1 uniqueIndex
+[Maps.uniqueIndex(Iterable,Function)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#uniqueIndex-java.lang.Iterable-com.google.common.base.Function-)通常针对的场景是：有一组对象，它们在某个属性上分别有独一无二的值，而我们希望能够按照这个属性值查找对象——译者注：这个方法返回一个Map，键为Function返回的属性值，值为Iterable中相应的元素，因此我们可以反复用这个Map进行查找操作。
+
+比方说，我们有一堆字符串，这些字符串的长度都是独一无二的，而我们希望能够按照特定长度查找字符串：
+```
+ImmutableMap<Integer, String> stringsByIndex = Maps.uniqueIndex(strings, new Function<String, Integer> () {
+    public Integer apply(String string) {
+      return string.length();
+    }
+  });
+```
+如果索引值不是独一无二的，请参见下面的Multimaps.index方法。
+#### 5.2 difference
+[Maps.difference(Map, Map)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#difference-java.util.Map-java.util.Map-)用来比较两个Map以获取所有不同点。该方法返回MapDifference对象，把不同点的维恩图(Venn diagram)分解为：
+
+方法|描述
+----------|---------------
+[entriesInCommon()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/MapDifference.html#entriesInCommon--)|两个Map中都有的映射项，包括匹配的键与值
+[entriesDiffering()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/MapDifference.html#entriesDiffering--)|键相同但是值不同值映射项。返回的Map的值类型为[MapDifference.ValueDifference](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/MapDifference.ValueDifference.html)，以表示左右两个不同的值
+[entriesOnlyOnLeft()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/MapDifference.html#entriesOnlyOnLeft--)|键只存在于左边Map的映射项
+[entriesOnlyOnRight()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/MapDifference.html#entriesOnlyOnRight--)|键只存在于右边Map的映射项
+
+```
+Map<String, Integer> left = ImmutableMap.of("a", 1, "b", 2, "c", 3);
+Map<String, Integer> right = ImmutableMap.of("b", 2, "c", 4, "d", 5);
+MapDifference<String, Integer> diff = Maps.difference(left, right);
+
+diff.entriesInCommon(); // {"b" => 2}
+diff.entriesDiffering(); // {"c" => (3, 4)}
+diff.entriesOnlyOnLeft(); // {"a" => 1}
+diff.entriesOnlyOnRight(); // {"d" => 5}
+```
 ### 6. BiMap工具
+Guava中处理BiMap的工具方法在Maps类中，因为BiMap也是一种Map实现。
+
+BiMap工具方法|相应的Map工具方法
+----------|---------------
+[synchronizedBiMap(BiMap)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#synchronizedBiMap-com.google.common.collect.BiMap-)|Collections.synchronizedMap(Map)
+[unmodifiableBiMap(BiMap)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#unmodifiableBiMap-com.google.common.collect.BiMap-)|Collections.unmodifiableMap(Map)
+#### 6.1 静态工厂方法
+Maps提供如下静态工厂方法：
+
+具体实现类型|工厂方法
+----------|---------------
+HashMap|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newHashMap--), [from Map](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newHashMap-java.util.Map-), [with expected size](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newHashMapWithExpectedSize-int-)
+LinkedHashMap|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newLinkedHashMap--), [from Map](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newLinkedHashMap-java.util.Map-)
+TreeMap|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newTreeMap--), [from Comparator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newTreeMap-java.util.Comparator-), [from SortedMap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newTreeMap-java.util.SortedMap-)
+EnumMap|[from Class](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newEnumMap-java.lang.Class-), [from Map](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newEnumMap-java.util.Map-)
+ConcurrentMap|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newConcurrentMap--)
+IdentityHashMap|[basic](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Maps.html#newIdentityHashMap--)
 ### 7. Multisets
+标准的Collection操作会忽略Multiset重复元素的个数，而只关心元素是否存在于Multiset中，如containsAll方法。为此，[Multisets](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html)提供了若干方法，以顾及Multiset元素的重复性：
+
+方法|说明|和Collection方法的区别
+----------|---------------|---------------
+[containsOccurrences(Multiset sup, Multiset sub)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#containsOccurrences-com.google.common.collect.Multiset-com.google.common.collect.Multiset-)|对任意o，如果sub.count(o)<=super.count(o)，返回true|Collection.containsAll忽略个数，而只关心sub的元素是否都在super中
+[removeOccurrences(Multiset removeFrom, Multiset toRemove)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#removeOccurrences-com.google.common.collect.Multiset-com.google.common.collect.Multiset-)|对toRemove中的重复元素，仅在removeFrom中删除相同个数|Collection.removeAll移除所有出现在toRemove的元素
+[retainOccurrences(Multiset removeFrom, Multiset toRetain)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#retainOccurrences-com.google.common.collect.Multiset-com.google.common.collect.Multiset-)|修改removeFrom，以保证任意o都符合removeFrom.count(o)<=toRetain.count(o)|Collection.retainAll保留所有出现在toRetain的元素
+[i]ntersection(Multiset, Multiset)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#intersection-com.google.common.collect.Multiset-com.google.common.collect.Multiset-)|返回两个multiset的交集|没有类似方法
+
+```
+Multiset<String> multiset1 = HashMultiset.create();
+multiset1.add("a", 2);
+
+Multiset<String> multiset2 = HashMultiset.create();
+multiset2.add("a", 5);
+
+multiset1.containsAll(multiset2); // returns true: all unique elements are contained,
+  // even though multiset1.count("a") == 2 < multiset2.count("a") == 5
+Multisets.containsOccurrences(multiset1, multiset2); // returns false
+
+multiset2.removeOccurrences(multiset1); // multiset2 now contains 3 occurrences of "a"
+
+multiset2.removeAll(multiset1); // removes all occurrences of "a" from multiset2, even though multiset1.count("a") == 2
+multiset2.isEmpty(); // returns true
+```
+
+Multisets中的其他工具方法还包括：
+
+方法|描述
+----------|---------------
+[copyHighestCountFirst(Multiset)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#copyHighestCountFirst-com.google.common.collect.Multiset-)|返回Multiset的不可变拷贝，并将元素按重复出现的次数做降序排列
+[unmodifiableMultiset(Multiset)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#unmodifiableMultiset-com.google.common.collect.Multiset-)|返回Multiset的只读视图
+[unmodifiableSortedMultiset(SortedMultiset)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multisets.html#unmodifiableSortedMultiset-com.google.common.collect.SortedMultiset-)|返回SortedMultiset的只读视图
+
+```
+Multiset<String> multiset = HashMultiset.create();
+multiset.add("a", 3);
+multiset.add("b", 5);
+multiset.add("c", 1);
+
+ImmutableMultiset<String> highestCountFirst = Multisets.copyHighestCountFirst(multiset);
+
+// highestCountFirst, like its entrySet and elementSet, iterates over the elements in order {"b", "a", "c"}
+```
 ### 8. Multimaps
+[Multimaps](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html)提供了若干值得单独说明的通用工具方法
+#### 8.1 index
+作为Maps.uniqueIndex的兄弟方法，[Multimaps.index(Iterable, Function)](http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/com/google/common/collect/Multimaps.html#index(java.lang.Iterable,%20com.google.common.base.Function))通常针对的场景是：有一组对象，它们有共同的特定属性，我们希望按照这个属性的值查询对象，但属性值不一定是独一无二的。
+
+比方说，我们想把字符串按长度分组。
+```
+ImmutableSet<String> digits = ImmutableSet.of(
+    "zero", "one", "two", "three", "four",
+    "five", "six", "seven", "eight", "nine");
+Function<String, Integer> lengthFunction = new Function<String, Integer>() {
+  public Integer apply(String string) {
+    return string.length();
+  }
+};
+ImmutableListMultimap<Integer, String> digitsByLength = Multimaps.index(digits, lengthFunction);
+/*
+ * digitsByLength maps:
+ *  3 => {"one", "two", "six"}
+ *  4 => {"zero", "four", "five", "nine"}
+ *  5 => {"three", "seven", "eight"}
+ */
+```
+#### 8.2 invertFrom
+鉴于Multimap可以把多个键映射到同一个值（译者注：实际上这是任何map都有的特性），也可以把一个键映射到多个值，反转Multimap也会很有用。Guava 提供了[invertFrom(Multimap toInvert,
+Multimap dest)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#invertFrom-com.google.common.collect.Multimap-M-)做这个操作，并且你可以自由选择反转后的Multimap实现。
+
+注：如果你使用的是ImmutableMultimap，考虑改用[ImmutableMultimap.inverse()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ImmutableMultimap.html#inverse--)做反转。
+
+```
+ArrayListMultimap<String, Integer> multimap = ArrayListMultimap.create();
+multimap.putAll("b", Ints.asList(2, 4, 6));
+multimap.putAll("a", Ints.asList(4, 2, 1));
+multimap.putAll("c", Ints.asList(2, 5, 3));
+
+TreeMultimap<Integer, String> inverse = Multimaps.invertFrom(multimap, TreeMultimap.<String, Integer> create());
+// note that we choose the implementation, so if we use a TreeMultimap, we get results in order
+/*
+ * inverse maps:
+ *  1 => {"a"}
+ *  2 => {"a", "b", "c"}
+ *  3 => {"c"}
+ *  4 => {"a", "b"}
+ *  5 => {"c"}
+ *  6 => {"b"}
+ */
+```
+#### 8.3 forMap
+想在Map对象上使用Multimap的方法吗？[forMap(Map)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#forMap-java.util.Map-)把Map包装成SetMultimap。这个方法特别有用，例如，与Multimaps.invertFrom结合使用，可以把多对一的Map反转为一对多的Multimap。
+
+```
+Map<String, Integer> map = ImmutableMap.of("a", 1, "b", 1, "c", 2);
+SetMultimap<String, Integer> multimap = Multimaps.forMap(map);
+// multimap maps ["a" => {1}, "b" => {1}, "c" => {2}]
+Multimap<Integer, String> inverse = Multimaps.invertFrom(multimap, HashMultimap.<Integer, String> create());
+// inverse maps [1 => {"a", "b"}, 2 => {"c"}]
+```
+#### 8.4 包装器
+Multimaps提供了传统的包装方法，以及让你选择Map和Collection类型以自定义Multimap实现的工具方法。
+
+
+Multimaps类型|只读包装|同步包装|自定义实现
+----------|---------------|---------------|---------------
+Multimap|[unmodifiableMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#unmodifiableMultimap-com.google.common.collect.Multimap-)|[synchronizedMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#synchronizedMultimap-com.google.common.collect.Multimap-)|[newMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#newMultimap-java.util.Map-com.google.common.base.Supplier-)
+ListMultimap|[unmodifiableListMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#unmodifiableListMultimap-com.google.common.collect.ListMultimap-)|[synchronizedListMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#synchronizedListMultimap-com.google.common.collect.ListMultimap-)|[newListMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#newListMultimap-java.util.Map-com.google.common.base.Supplier-)
+SetMultimap|[unmodifiableSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#unmodifiableSetMultimap-com.google.common.collect.SetMultimap-)[synchronizedSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#synchronizedSetMultimap-com.google.common.collect.SetMultimap-)|[newSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#newSetMultimap-java.util.Map-com.google.common.base.Supplier-)
+SortedSetMultimap|[unmodifiableSortedSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#unmodifiableSortedSetMultimap-com.google.common.collect.SortedSetMultimap-)|[synchronizedSortedSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#synchronizedSortedSetMultimap-com.google.common.collect.SortedSetMultimap-)|]newSortedSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Multimaps.html#newSortedSetMultimap-java.util.Map-com.google.common.base.Supplier-)
+
+自定义Multimap的方法允许你指定Multimap中的特定实现。但要注意的是：
++ Multimap假设对Map和Supplier产生的集合对象有完全所有权。这些自定义对象应避免手动更新，并且在提供给Multimap时应该是空的，此外还不应该使用软引用、弱引用或虚引用。
++ 无法保证修改了Multimap以后，底层Map的内容是什么样的。
++ 即使Map和Supplier产生的集合都是线程安全的，它们组成的Multimap也不能保证并发操作的线程安全性。并发读操作是工作正常的，但需要保证并发读写的话，请考虑用同步包装器解决。
++ 只有当Map、Supplier、Supplier产生的集合对象、以及Multimap存放的键值类型都是可序列化的，Multimap才是可序列化的。
++ Multimap.get(key)返回的集合对象和Supplier返回的集合对象并不是同一类型。但如果Supplier返回的是随机访问集合，那么Multimap.get(key)返回的集合也是可随机访问的。
+
+请注意，用来自定义Multimap的方法需要一个Supplier参数，以创建崭新的集合。下面有个实现ListMultimap的例子——用TreeMap做映射，而每个键对应的多个值用LinkedList存储。
+```
+ListMultimap<String, Integer> myMultimap = Multimaps.newListMultimap(
+  Maps.<String, Collection<Integer>>newTreeMap(),
+  new Supplier<LinkedList<Integer>>() {
+    public LinkedList<Integer> get() {
+      return Lists.newLinkedList();
+    }
+  });
+```
 ### 9. Tables
+[Tables](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Tables.html)类提供了若干称手的工具方法。
+#### 9.1 customTable
+#### 9.2 transpose
+#### 9.3 包装器
 
 ## Reference
 - [Collection Utilities](https://github.com/google/guava/wiki/CollectionUtilitiesExplained)
