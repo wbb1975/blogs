@@ -119,7 +119,7 @@ ImmutableSortedSet|[toImmutableSortedSet(Comparator)](http://google.github.io/gu
 List<Integer> countUp = Ints.asList(1, 2, 3, 4, 5);
 List<Integer> countDown = Lists.reverse(theList); // {5, 4, 3, 2, 1}
 
-List<List<Integer>> parts = Lists.partition(countUp, 2); // {{1, 2}, {3, 4}, {5}}
+List<List<Integer>> parts = Lists.partition(countUp, 2); // { {1, 2}, {3, 4}, {5} }
 ```
 #### 3.1 静态工厂方法
 Lists提供如下静态工厂方法：
