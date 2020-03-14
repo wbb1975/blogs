@@ -52,8 +52,59 @@ Multimap|[ForwardingMultimap](http://google.github.io/guava/releases/snapshot/ap
 ListMultimap|[ForwardingListMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ForwardingListMultimap.html)
 SetMultimap|[ForwardingSetMultimap](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/ForwardingSetMultimap.html)
 ### 2. PeekingIterator
-### 3. AbstractIterator
-### 4. AbstractSequentialIterator
+有时候，普通的Iterator接口还不够。
 
+Iterators提供一个[Iterators.peekingIterator(Iterator)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/Iterators.html#peekingIterator-java.util.Iterator-)方法，来把Iterator包装为[PeekingIterator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/PeekingIterator.html)，这是Iterator的子类，它能让你事先窥视[peek()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/PeekingIterator.html#peek--)到下一次调用next()返回的元素。
+
+注意：Iterators.peekingIterator返回的PeekingIterator不支持在peek()操作之后调用remove()方法。
+
+举个例子：复制一个List，并去除连续的重复元素。
+```
+List<E> result = Lists.newArrayList();
+PeekingIterator<E> iter = Iterators.peekingIterator(source.iterator());
+while (iter.hasNext()) {
+  E current = iter.next();
+  while (iter.hasNext() && iter.peek().equals(current)) {
+    // skip this duplicate element
+    iter.next();
+  }
+  result.add(current);
+}
+```
+传统的实现方式需要记录上一个元素，并在特定情况下后退，但这很难处理且容易出错。相较而言，PeekingIterator在理解和使用上就比较直接了。
+### 3. AbstractIterator
+实现你自己的Iterator？[AbstractIterator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/AbstractIterator.html)让生活更轻松。
+
+用一个例子来解释AbstractIterator最简单。比方说，我们要包装一个iterator以跳过空值。
+```
+public static Iterator<String> skipNulls(final Iterator<String> in) {
+  return new AbstractIterator<String>() {
+    protected String computeNext() {
+      while (in.hasNext()) {
+        String s = in.next();
+        if (s != null) {
+          return s;
+        }
+      }
+      return endOfData();
+    }
+  };
+}
+```
+你实现了[computeNext()](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/AbstractIterator.html#computeNext--)方法，来计算下一个值。如果循环结束了也没有找到下一个值，请返回endOfData()表明已经到达迭代的末尾。
+
+> **注意**：AbstractIterator继承了UnmodifiableIterator，所以禁止实现remove()方法。如果你需要支持remove()的迭代器，就不应该继承AbstractIterator。
+### 4. AbstractSequentialIterator
+有一些迭代器用其他方式表示会更简单。[AbstractSequentialIterator](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/AbstractSequentialIterator.html) 就提供了表示迭代的另一种方式。
+```
+Iterator<Integer> powersOfTwo = new AbstractSequentialIterator<Integer>(1) { // 注意初始值1!
+  protected Integer computeNext(Integer previous) {
+    return (previous == 1 << 30) ? null : previous * 2;
+  }
+};
+```
+我们在这儿实现了[computeNext(T)](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/collect/AbstractSequentialIterator.html#computeNext-T-)方法，它能接受前一个值作为参数。
+
+> **注意**，你必须额外传入一个初始值，或者传入null让迭代立即结束。因为computeNext(T)假定null值意味着迭代的末尾——AbstractSequentialIterator不能用来实现可能返回null的迭代器。
 ## Reference
 - [Collection Helpers Explained](https://github.com/google/guava/wiki/CollectionHelpersExplained)
