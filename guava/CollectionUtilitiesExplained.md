@@ -167,7 +167,7 @@ Set<List<String>> product = Sets.cartesianProduct(animals, fruits);
 //   {"hamster", "apple"}, {"hamster", "orange"}, {"hamster", "banana"} }
 
 Set<Set<String>> animalSets = Sets.powerSet(animals);
-// {{}, {"gerbil"}, {"hamster"}, {"gerbil", "hamster"}}
+// { {}, {"gerbil"}, {"hamster"}, {"gerbil", "hamster"} }
 ```
 #### 4.3 静态工厂方法
 Sets提供如下静态工厂方法：
