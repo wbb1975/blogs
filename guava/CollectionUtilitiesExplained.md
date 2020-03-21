@@ -163,8 +163,8 @@ Set<String> animals = ImmutableSet.of("gerbil", "hamster");
 Set<String> fruits = ImmutableSet.of("apple", "orange", "banana");
 
 Set<List<String>> product = Sets.cartesianProduct(animals, fruits);
-// {{"gerbil", "apple"}, {"gerbil", "orange"}, {"gerbil", "banana"},
-//  {"hamster", "apple"}, {"hamster", "orange"}, {"hamster", "banana"}}
+// { {"gerbil", "apple"}, {"gerbil", "orange"}, {"gerbil", "banana"},
+//   {"hamster", "apple"}, {"hamster", "orange"}, {"hamster", "banana"} }
 
 Set<Set<String>> animalSets = Sets.powerSet(animals);
 // {{}, {"gerbil"}, {"hamster"}, {"gerbil", "hamster"}}
