@@ -1,4 +1,4 @@
-# HBase????
+# HBase入门指南
 
 ## References
 - https://mapr.com/blog/in-depth-look-hbase-architecture/
