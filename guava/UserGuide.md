@@ -28,7 +28,7 @@ Guava项目包括几个Google的核心库, 这些库在Java项目中颇受依赖
 - [字符串](StringsExplained.md)：非常有用的字符串工具，包括分割、连接、填充等操作
 - [原生类型](PrimitivesExplained.md)：扩展 JDK 未提供的原生类型（如int、char）操作， 包括某些类型的无符号形式
 - 区间：可比较类型的区间API，包括连续和离散类型
-- I/O：简化I/O尤其是I/O流和文件的操作，针对Java5和6版本
+- [I/O](IOExplained.md)：简化I/O尤其是I/O流和文件的操作，针对Java5和6版本
 - [散列（Hashing）](HashingExplained.md)：提供比Object.hashCode()更复杂的散列实现，并提供布隆过滤器的实现
 - 事件总线（EventBus）：发布-订阅模式的组件通信，但组件不需要显式地注册到其他组件中
 - 数学运算（Math）：优化的、充分测试的数学工具类
