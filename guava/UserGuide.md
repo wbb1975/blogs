@@ -30,7 +30,7 @@ Guava项目包括几个Google的核心库, 这些库在Java项目中颇受依赖
 - [区间](RangesExplained.md)：可比较类型的区间API，包括连续和离散类型
 - [I/O](IOExplained.md)：简化I/O尤其是I/O流和文件的操作，针对Java5和6版本
 - [散列（Hashing）](HashingExplained.md)：提供比Object.hashCode()更复杂的散列实现，并提供布隆过滤器的实现
-- 事件总线（EventBus）：发布-订阅模式的组件通信，但组件不需要显式地注册到其他组件中
+- [事件总线（EventBus）](EventBusExplained.md)：发布-订阅模式的组件通信，但组件不需要显式地注册到其他组件中
 - 数学运算（Math）：优化的、充分测试的数学工具类
 - 反射：Guava 的 Java 反射机制工具类
 - 小提示：让你的应用以Guava的方式工作
