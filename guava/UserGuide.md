@@ -23,8 +23,8 @@ Guava项目包括几个Google的核心库, 这些库在Java项目中颇受依赖
 - [缓存](CachesExplained.md)：本地缓存实现，支持多种缓存过期策略
 - 函数式风格（Functional idioms）：Guava的函数式支持可以显著简化代码，但请谨慎使用它
 - 并发：强大而简单的抽象，让编写正确的并发代码更简单
-  + ListenableFuture: Futures, 提供当其完成时的回调
-  + 服务：一组启动并停止，把你照顾一些困难的状态逻辑的东西
+  + [ListenableFuture](ListenableFutureExplained.md.md): Futures, 提供当其完成时的回调
+  + [服务](ServiceExplained.md)：一组启动并停止，帮你照顾一些困难的状态逻辑的东西
 - [字符串](StringsExplained.md)：非常有用的字符串工具，包括分割、连接、填充等操作
 - [原生类型](PrimitivesExplained.md)：扩展 JDK 未提供的原生类型（如int、char）操作， 包括某些类型的无符号形式
 - [区间](RangesExplained.md)：可比较类型的区间API，包括连续和离散类型
