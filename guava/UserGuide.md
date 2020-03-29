@@ -35,12 +35,12 @@ Guava项目包括几个Google的核心库, 这些库在Java项目中颇受依赖
 - [反射](ReflectionExplained.md)：Guava 的 Java 反射机制工具类
 - 小提示：让你的应用以Guava的方式工作
   + 原理：Guava是什么，不是什么，以及我们的目标
-  + 在你的构建中使用Guava：包括Maven，Gradle等多种构建系统
+  + [在你的构建中使用Guava](UseGuavaInYourBuild.md)：包括Maven，Gradle等多种构建系统
   + 使用ProGuard来避免把你未使用的Guava部分集成进你的Jar中
-  + Apache Commons对等体，帮你把使用Apache Commons Collections的代码转换到使用Guava
+  + [Apache Commons对等体](ApacheCommonCollectionsEquivalents.md)，帮你把使用Apache Commons Collections的代码转换到使用Guava
   + 兼容性：Guava各个版本的兼容性细节
   + Idea Graveyard：已经被正是拒绝的特性请求
-  + 朋友：我们喜欢并尊敬的开园项目
+  + [朋友](FriendsOfGuava.md)：我们喜欢并尊敬的开园项目
   + 如何贡献：怎样帮助Guava.
   
 > **注意**：为了讨论本wiki中的内容，请加入guava-discuss邮件列表。
