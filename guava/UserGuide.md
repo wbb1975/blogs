@@ -31,8 +31,8 @@ Guava项目包括几个Google的核心库, 这些库在Java项目中颇受依赖
 - [I/O](IOExplained.md)：简化I/O尤其是I/O流和文件的操作，针对Java5和6版本
 - [散列（Hashing）](HashingExplained.md)：提供比Object.hashCode()更复杂的散列实现，并提供布隆过滤器的实现
 - [事件总线（EventBus）](EventBusExplained.md)：发布-订阅模式的组件通信，但组件不需要显式地注册到其他组件中
-- 数学运算（Math）：优化的、充分测试的数学工具类
-- 反射：Guava 的 Java 反射机制工具类
+- [数学运算（Math）](MathExplained.md)：优化的、充分测试的数学工具类
+- [反射](ReflectionExplained.md)：Guava 的 Java 反射机制工具类
 - 小提示：让你的应用以Guava的方式工作
   + 原理：Guava是什么，不是什么，以及我们的目标
   + 在你的构建中使用Guava：包括Maven，Gradle等多种构建系统
