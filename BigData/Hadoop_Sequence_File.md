@@ -17,6 +17,11 @@ SequenceFile也可能包含一个附加（secondary）的键值对列表用作Me
 
 你可在左边图上看到，一个块记录包含一个VInt指示与多少条缓存记录，4个压缩块包含一个列表，该列表包含所有键的长度，以及键值；另一个列表包含所有值的长度和所有的值。每个块之前同步标记（sync marker）被写入。
 ## 2. MapFile, SetFile, ArrayFile 及 BloomMapFile
+SequenceFile 是Hadoop 的一个基础数据文件格式，后续讲的 MapFile, SetFile, ArrayFile 及 BloomMapFile 都是基于它来实现的。
+- MapFile：Mapfile是一个目录，它包含两个SequenceFile：数据文件（"/data"） 和索引文件 （"/index"）。数据文件中包含所有需要存储的key-value对，按key的顺序(非降序)排列。这个顺序在append()操作时检查，如果检查键失败，将抛出“Key out of order”的IOException。索引文件拥有键及一个LongWritable值用以指示该记录的开始字节位置。 索引文件并不包含所有的键，而只包含一部分key值，你可以使用setIndexInterval() 方法来指定索引间隔。索引被全部读入内存，所以如果你拥有一个大的映射，你可以设置一个索引调整值（index skip value）来让你仅仅加载一部分索引键值。
+- SetFile：基于 MapFile 实现的，他只有键，值为NullWritable实例。
+- ArrayFile：也是基于 MapFile 实现，他就像我们使用的数组一样，key值为序列化的数字（count + 1）。
+- BloomMapFile：在 MapFile 的基础上增加了一个 /bloom 文件，包含的是二进制的过滤表（DynamicBloomFilter），在每一次写操作完成时，会更新这个过滤表。bloom文件在关闭时完整写入。
 
 ## Reference
 - [Hadoop I/O: Sequence, Map, Set, Array, BloomMap Files](https://clouderatemp.wpengine.com/blog/2011/01/hadoop-io-sequence-map-set-array-bloommap-files/)
