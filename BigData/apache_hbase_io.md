@@ -20,7 +20,7 @@ MapFile是很好--你可以快速查询你的键值对，但它还是有下面�
 ## HBase & MapFile
 HBase键包括：行键（rowKey），列族, 列（column qualifier），时间戳和类型。
 
-![HBase Key](HBase-Key.png)
+![HBase Key](images/HBase-Key.png)
 
 为了解决删除键值对的问题，一种思路是使用“类型（type）”字段来标记键已被删除（墓碑标记，tombstone markers）。解决替换一个键值对仅仅需要选取较新的时间戳（正确值靠近文件末尾，append-only意味着上次插入肯定靠近文件末尾）。
 
@@ -35,7 +35,10 @@ HBase键包括：行键（rowKey），列族, 列（column qualifier），时间
 HBase拥有两种类型的“compaction”：“minor compaction”仅仅将两个或多个小文件合成一个大文件；“major compaction”将选择一个Region中所有文件，合并它们并执行一些清理工作。在“major compaction” 中，删除的键值对将被移除，新文件将不再含有墓碑标记；所有重复的键值对（值替换操作）也被删除。
 
 在2.0版本之前，HBase一直使用MapFile格式来存储数据；但自0.20版本开始一种HBase特有的Mapfile文件格式被引入（HBASE-61）。
-
+## HFile v1
+## HFile v2
+### Data Block Encodings
+## HFile v3
 ## Reference
 - [Apache HBase I/O – HFile](https://blog.cloudera.com/apache-hbase-i-o-hfile/)
 - [Hadoop I/O: Sequence, Map, Set, Array, BloomMap Files](https://clouderatemp.wpengine.com/blog/2011/01/hadoop-io-sequence-map-set-array-bloommap-files/)
