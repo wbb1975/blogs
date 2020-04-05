@@ -36,6 +36,15 @@ HBase拥有两种类型的“compaction”：“minor compaction”仅仅将两�
 
 在2.0版本之前，HBase一直使用MapFile格式来存储数据；但自0.20版本开始一种HBase特有的Mapfile文件格式被引入（HBASE-61）。
 ## HFile v1
+在HBase 0.20中，MapFile被HFile替换：一种特殊的HBase映射（map）文件实现。其思路和MapFile很相似，但它在一个普通键值对文件基础上添加了许多特性。这些特性比如metadata的支持和索引一样保存在同一个文件里。
+
+和MapFile一样数据块（data block）包含实际的键值对数据。对每一个“块关闭操作”，第一个键被加进索引中，而索引在HFile关闭时被写入（磁盘）。
+
+HFile格式也加进了两种额外的“metadata”块类型：Meta和FileInfo。这两种键值对块也在文件关闭时写入。
+
+Meta块被设计用来以一个字符串的形式保存大量数据及其索引；FileInfo则为一个简单的Map，它适合以字节数组的格式来保存少量数据的键值对。Regionserver的StoreFile以Meta-Blocks来存储布隆过滤器；以FileInfo来存储最大SequenceId；Major compaction键和时间戳范围。这些信息是有用的--我们可以在以下情况下避免读文件：键不可能有机会存在（布隆过滤器）；文件太老（Max SequenceId）；文件太信（Timerange）。
+
+![HFile v1](images/HFilev1.png)
 ## HFile v2
 ### Data Block Encodings
 ## HFile v3
