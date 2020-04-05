@@ -79,6 +79,7 @@ HBASE-5313包含一个提议来重构HFile布局来进一步提升压缩率。
 - 使用与前值XOR的方法来压缩时间戳，使用VInt而非long来存储。
 
 同时，一个柱状（columnar）格式或柱状（columnar）编码处于研究状态，请参见[AVRO-806 for a columnar file format by Doug Cutting](https://github.com/cutting/trevni)。
+> **译者注**：从这个项目主页信息来看，该修改已被合并进Apache Avro。
 
 你也看到一个演化趋势是对文件包含的内容越了解，越能取得好的压缩率，或者在何处压输能更好地减少从磁盘读写数据的量。更少的I/O意味着更高的速度。
 
