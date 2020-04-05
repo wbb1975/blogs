@@ -46,8 +46,42 @@ Meta块被设计用来以一个字符串的形式保存大量数据及其索引�
 
 ![HFile v1](images/HFilev1.png)
 ## HFile v2
+在HBase 0.92中，HFile格式有一点改变（HBASE-3857），主要是改进存储大量数据时的性能。HFile v1的一个主要问题是你需要把所有的（monolithic）索引 和布隆过滤器加载进内存。为了解决这个问题，v2引入了多级索引以及块级别（block-level）布隆过滤器。这一改进的结果就是HFile v2获得了速度提升，内存和缓冲使用优化。
+
+![HFile v2](images/HFile-v2.png)
+
+HFile v2的主要特征是“内联块（inline blocks）”，其初衷是避免将整个文件的索引和布隆过滤器加载进内存，而是将索引和布隆过滤器按块加载。这样的话你只需在内存中按需加载。
+
+因为索引移到了块级别，而且你拥有多级别索引，意味着每个索引快拥有自己的索引（叶索引）。每个块的最后一个键用于创建中间索引，最终构成一个像b+树的多级索引。
+
+![Block](images/Block.png)
+
+现在块头含有下面一些信息：“Block Magic”被“Block Type”替换，它用于描述块数据，子索引，布隆，Metadata，根索引等的内容。三个字段（压缩，非压缩大小，前一块偏移量）也被加入来帮助前后快速定位。
 ### Data Block Encodings
+因为键是有序的，并通常很相似，有可能设计出一个专用压缩算法，相信它可比通用压缩算法拥有更高压缩率。
+
+![Data-Block-Encodings](images/Data-Block-Encodings.png)
+
+HBASE-4218致力于解决这个问题，在HBase 0.94中你就可以在许多不同的算法中选择：前缀编码和差异编码。
+
+![Prefix-Encoding](images/Prefix-Encoding.png)
+
+前缀编码的主要思想是将相同的前缀仅仅存储一次，因为行是排序的，典型地其开头都是相同的。
+
+![Diff-Encoding](images/Diff-Encoding.png)
+
+差异编码将这一概念推的更远。不再仅仅将键视为不透明的一段字节码，差异编码将键切分以便于对各部分更好地压缩。这里列族名仅仅存储一次。如果键长度，值长度和类型和前一行一样，这些字段就可被丢弃。同样，为了增加压缩率，时间戳也仅仅存储和前一个的差值。
+
+注意这一特性缺省被禁用，因为它会导致较慢的写入和查询速度，以及较多的数据被缓存。为了开启这一特性你可以将DATA_BLOCK_ENCODING设为PREFIX， DIFF，FAST_DIFF等任一在table info中的类型。
 ## HFile v3
+HBASE-5313包含一个提议来重构HFile布局来进一步提升压缩率。
+- 在块头将所有的键打包，在块尾将所有的值打包。这种方式下你可以为键和值使用不同的压缩算法
+- 使用与前值XOR的方法来压缩时间戳，使用VInt而非long来存储。
+
+同时，一个柱状（columnar）格式或柱状（columnar）编码处于研究状态，请参见[AVRO-806 for a columnar file format by Doug Cutting](https://github.com/cutting/trevni)。
+
+你也看到一个演化趋势是对文件包含的内容越了解，越能取得好的压缩率，或者在何处压输能更好地减少从磁盘读写数据的量。更少的I/O意味着更高的速度。
+
 ## Reference
 - [Apache HBase I/O – HFile](https://blog.cloudera.com/apache-hbase-i-o-hfile/)
 - [Hadoop I/O: Sequence, Map, Set, Array, BloomMap Files](https://clouderatemp.wpengine.com/blog/2011/01/hadoop-io-sequence-map-set-array-bloommap-files/)
