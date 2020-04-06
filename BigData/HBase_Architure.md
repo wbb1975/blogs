@@ -72,10 +72,34 @@ Zookeeper常被用于协调分布式系统各成员间的共享状态信息。Re
 每个RegionServer创建了一个临时节点，HMaster监控这些节点以发现可用的RegionServer，它同时监控节点服务失效。HMasters争夺创建临时节点，Zookeeper决定谁是第一个并确保它是为一活动的HMaster。活动的HMaster向ZooKeeper发送心跳，不活动的HMaster则监听活动HMaster失效通知。
 
 如果一个RegionServer或活动HMaster发送心跳失败，会话将会过期，对应临时节点将会被删除。更新状态监听器将会被通知节点被删除了。活动HMaster 监听RegionServers，将会恢复失效的RegionServer。不活动的HMaster监听活动HMaster失效，如果活动HMaster失效，一个不活动的HMaster则成为新的活动HMaster。
-### 4.1 HBase首次读写（HBase First Read or Write）
+### 4.1 HBase Meta Table
++ .META表是一个HBase表，持有集群中所有regions 的列表
++ .META就像一个树
++ .META表结构如下所示
+  + 键：region开始键，region id
+  + 值：RegionServer
 
-### 4.2 HBase首次读写（HBase First Read or Write）
-### 4.3 HBase首次读写（HBase First Read or Write）
+![Hbase Metadata Table](images/HBaseArchitecture-Meta_Tables.png)
+### 4.2 Region Server Components
+RegionServer运行在HDFS DataNode上，它包含以下组件：
++ WAL：预写日志是分不是文件系统的一个文件。WAL通常用于存储还没写入持久存储的新数据；它用于在失效时恢复
++ BlockCache：读缓存。它在内存中保存被频繁读取的数据。但缓存满时最少使用数据被移除。
++ MemStore：写缓存。它用于存储还没写到磁盘上的新数据。在写到磁盘之前排序。每个Region的每个列族有一个MemStore。
++ Hfiles：将行按有序键值对存储到磁盘上。
+
+
+![Hbase Metadata Table](images/HBaseArchitecture-RegionServer.png)
+### 4.3 HBase Write Steps
+### 4.4 HBase MemStore
+### 4.5 HBase Region Flush
+### 4.6 HBase HFile
+### 4.7 HBase Read Merge
+### 4.8 HBase Minor Compaction
+### 4.9 HBase Major Compaction
+### 4.10 Region Split
+### 4.11 Read Load Balancing
+## 5. HDFS Data Replication
+## 6. HBase Crash Recovery
 
 ## References
 - [HBase Working Principle: A part Hadoop Architecture](https://towardsdatascience.com/hbase-working-principle-a-part-of-hadoop-architecture-fbe0453a031b)
