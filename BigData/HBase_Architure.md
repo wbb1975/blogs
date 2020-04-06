@@ -176,8 +176,23 @@ WAL和HFile都被持久化到硬盘并复制，
 
 ![HBase WAL Replication](images/HBaseArchitecture-WALReplication.png)
 ## 6. HBase Crash Recovery
+当一个RegionServer失效时，崩溃的Regions变得不可用，直到RegionServer失效被检测到并采取了恢复措施。Zookeeper在其失去RegionServer的心跳连接后会判断该RegionServer已失效；接下来HMaster会通知该RegionServer已失效。
 
+当HMaster检测到一个RegionServer已崩溃，HMaster将把已崩溃RegionServer的Regions指派给其它活动RegionServers。为了恢复已崩溃RegionServer的MemStore中未被持久化到磁盘的数据，HMaster将把已崩溃RegionServer的WAL切分成不同的文件，并把这些文件存储到新的RegionServer的数据节点上。每个RegionServer接下来回放切分的WAL文件，以此重建那个Region的数据。
 
+![HBase Data Recovery](images/HBaseArchitecture-DataRecovery.png)
+
+![HBase WAL Replay](images/HBaseArchitecture-WALReplay.png)
+## 7. HBase读写过程
+下面的图是RegionServer的数据存储关系图。上面提到，HBase利用MemStore和StoreFile来把更新写到表中。当数据更新时它首先写到HLog和MemStore，数据在MemStore中是排序的。
+
+![RegionServer Storage](images/HBase_IO_Flow.png)
+
+当MemStore数据累积到一定阀值后，一个新的MemStore被创建，老的MemStore被加入到刷写队列（Flush queue），一个单独的线程刷写MemStore到磁盘成为一个新的StoreFile。同时，系统将在ZooKeeper中记录一个CheckPoint，指示在这之前的数据已经被持久化了。当一个异常事件发生时，MemStore中的数据可能丢失。
+
+在这个例子中，HLog被用来恢复CheckPoint之后的数据。
+
+StoreFile是只读的，一旦创建就不能更改。因此，HBase的更新是一个附加的操作。当StoreFile数量达到一个阀值后，一个合并操作被触发，对同一个键的修改将被合并到一个大的StoreFile中。当一个StoreFile大小超过一个阀值后，StoreFile被切分成两个StoreFiles。
 
 ## References
 - [HBase Working Principle: A part Hadoop Architecture](https://towardsdatascience.com/hbase-working-principle-a-part-of-hadoop-architecture-fbe0453a031b)
