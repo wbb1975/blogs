@@ -48,7 +48,7 @@ Hadoop DataNode存储Region Server管理的数据。所有的HBase数据都存�
 ### 3.1 Regions
 HBase被行键（row key）范围水平切分成“Regions”。一个Region包含一个表中开始键和结束键范围内的所有行。Regions被指派给集群内的节点“RegionServers”，这些RegionServer服务于数据读写。一个RegionServer可以服务于1000个Region。
 
-![Hbase Metadata Table](images/HBaseArchitecture-Regions.png)
+![Hbase Regions](images/HBaseArchitecture-Regions.png)
 ### 3.2 HBase HMaster
 Region指派，DDL（创建，删除表）操作由HBase HMaster处理。
 
@@ -59,15 +59,15 @@ Region指派，DDL（创建，删除表）操作由HBase HMaster处理。
 - 管理功能
   + 创建，删除，更新表的接口
 
-![Hbase Metadata Table](images/HBaseArchitecture-HMaster.png)
+![Hbase HMaster](images/HBaseArchitecture-HMaster.png)
 ### 3.3 ZooKeeper: 协调器
 HBase使用ZooKeeper作为一个分布式协调服务来维护集群服务器状态。ZooKeeper维护哪些服务器活着且可用，并提供服务器失效通知。Zookeeper使用共识来确保公共共享状态。注意应该有3台或5台服务器以确保共识。
 
-![Hbase Metadata Table](images/HBaseArchitecture-ZooKeepers.png)
+![Hbase ZooKeeper](images/HBaseArchitecture-ZooKeepers.png)
 ## 4. 这些组件如何协同工作（How the Components Work Together）
 Zookeeper常被用于协调分布式系统各成员间的共享状态信息。RegionServers和活动HMaster都维持了与ZooKeeper的会话。ZooKeeper则通过心跳机制为活动会话维护了临时节点。
 
-![Hbase Metadata Table](images/HBaseArchitecture-Sessions.png)
+![Hbase ZooKeeper Session](images/HBaseArchitecture-Sessions.png)
 
 每个RegionServer创建了一个临时节点，HMaster监控这些节点以发现可用的RegionServer，它同时监控节点服务失效。HMasters争夺创建临时节点，Zookeeper决定谁是第一个并确保它是为一活动的HMaster。活动的HMaster向ZooKeeper发送心跳，不活动的HMaster则监听活动HMaster失效通知。
 
@@ -82,24 +82,102 @@ Zookeeper常被用于协调分布式系统各成员间的共享状态信息。Re
 ![Hbase Metadata Table](images/HBaseArchitecture-Meta_Tables.png)
 ### 4.2 Region Server Components
 RegionServer运行在HDFS DataNode上，它包含以下组件：
-+ WAL：预写日志是分不是文件系统的一个文件。WAL通常用于存储还没写入持久存储的新数据；它用于在失效时恢复
++ WAL：预写日志是分不是文件系统的一个文件。WAL通常用于存储还没写入持久存储的新数据；它用于在失效时恢复。
 + BlockCache：读缓存。它在内存中保存被频繁读取的数据。但缓存满时最少使用数据被移除。
 + MemStore：写缓存。它用于存储还没写到磁盘上的新数据。在写到磁盘之前排序。每个Region的每个列族有一个MemStore。
 + Hfiles：将行按有序键值对存储到磁盘上。
 
 
-![Hbase Metadata Table](images/HBaseArchitecture-RegionServer.png)
+![Hbase Region Server](images/HBaseArchitecture-RegionServer.png)
 ### 4.3 HBase Write Steps
+当一个客户发出一个Put请求时，第一步是把数据写进WAL：
+- Edits被添加到磁盘上的WAL尾部
+- WAL用于在服务崩溃时恢复还未持久化到存储的数据
+
+![Hbase WAL](images/HBaseArchitecture-WAL.png)
+
+数据一旦写进WAL，它被放进MemStore。然后，put请求的确认信息就返回给客户。
+
+![Hbase Put Flow](images/HBaseArchitecture-PutAck.png)
 ### 4.4 HBase MemStore
+MemStore把更新数据存储为有序键值对，当刷写到HFile时保持同样的格式。一个列族一个MemStore，更新数据在每个列族内排序。
+
+![Hbase MemStore](images/HBaseArchitecture-MemStore.png)
 ### 4.5 HBase Region Flush
+当MemStore堆积了足够的数据，整个有序数据集被写到HDFS中的一个新HFile。每个列族HBase都会使用多个HFile，里面包含实际的单元格，即键值对实例。当MemStores 中的有序键值对不断刷写到磁盘文件时，这些文件就被不断创建。
+
+注意这是HBase中限制列族数量的其中一个原因。每个列族一个MemStore；当一个MemStore 满时，它们都会被刷写。它同时也保存了最后一次写的序列号，这样系统就可以知道如今已经写到哪里。
+
+最高序列号在每个HFile中以meta字段的形式存储，用来反映持久化在哪里结束，从哪里开始。当一个region启动，这个序列号被读入，最高值被用作新的编辑值。
+
+![Hbase Region Flush](images/HBaseArchitecture-MemStoreFlush.png)
 ### 4.6 HBase HFile
+数据存储在HFile中，它包含有序键值对。当MemStore累积到足够数据时，整个有序键值对数据集剑被写入到HDFS的一个新HFile中。这是顺序写，速度极快，因为它避免了磁头的移动。
+
+![HFile Sequential Write](images/HBaseArchitecture-FlushingFile.png)
+
+HFile包含多层索引，它允许HBase寻址到特定数据而不需要读入整个文件。多层索引就像一个b+树：
++ 键值对按递增序存储
++ 行键索引点可索引到64KB “块（blocks）”的键值对数据
++ 每个块拥有自己的叶子索引
++ 每个块的最后一个键被放到中间索引中
++ 根索引指向中间索引
+
+尾部（trailer）指向meta块，它在结束文件写操作的时候被写入。尾部也拥有其它信息比如布隆过滤器，时间范围信息等。布隆过滤器帮助跳过不含特定行键的文件，时间范围信息用于帮助跳过不在查询时间范围的文件。
+
+![HFile Structure](images/HBaseArchitecture-HFileStructure.png)
+
+我们刚讨论过的索引在HFile打开时加载并保持在内存中，这允许查询因因需要一次磁盘寻址即可完成。
+
+![HFile Index Load](images/HBaseArchitecture-HFile_Index_Loading.png)
 ### 4.7 HBase Read Merge
+我们已经看到一个行键对应的键值对单元格可以存在多个地方，已经持久化的行单元格在HFile中，最近更新的单元格在MemStore中，最近读取过的单元格在BlockCache。那么当你读一行时，系统如何放回对应的单元格呢？一个针对block cache，MemStore和HFile中的键值对的读合并操作按下面的步骤进行：
+1. 首先，扫描器从Block cache中查询行单元格--读缓存。最近读取过的单元格缓存在这里，如果需要内存，LRU算法被用于清除老的内容
+2. 接下来，扫描器查看MemStore，写缓存在内存中保存了最新写的数据
+3. 如果扫描器未在MemStore和Block Cache找到所有的行单元格数据，HBase将使用Block Cache的索引和布隆过滤器来将HFile加载进内存，它里面可能包含目标数据。
+
+![HBase Read Merge](images/HBaseArchitecture-ReadMerge.png)
+
+正如前面讨论的，每个MemStore可能含有许多HFile，这意味着对于读操作，将需要检查多个文件，这将影响性能。这被称为读放大。
+
+![HBase Read Amplification](images/HBaseArchitecture-ReadAmplification.png)
 ### 4.8 HBase Minor Compaction
+HBase将自动选取一些小的HFiles并将它们重写为一些少的较大的文件，这个过程被称为minor compaction。Minor compaction通过合并排序来降低存储文件的数目。
+
+![HBase Minor Compaction](images/HBaseArchitecture-MinorCompaction.png)
 ### 4.9 HBase Major Compaction
+Major compaction合并并重写一个region的所有HFiles，形成每列族一个新的HFile，在此过程中，去掉删除或过期的单元格。这提升了读性能；但是，因为Major compaction重写了所有的文件，大量的磁盘I/O和网络流量可能将在这个过程中产生，这被称为写放大。
+
+Major compactions可被调度为自动运行。由于写放大，Major compactions通常被安排于周末或晚上运行。Major compaction也可以是以前由于服务失败或负载均衡而需远程访问的数据文件变得本地化。
+
+![HBase Major Compaction](images/HBaseArchitecture-MajorCompaction.png)
 ### 4.10 Region Split
-### 4.11 Read Load Balancing
+让我们来简单回顾一下regions：
++ 一个表可水平切分为一个或多个Regions，一个Region包含一系列连续的以开始键和结束键为界的数据行
++ 每个Region缺省为1G
++ 一个表的Region通过RegionServer服务于客户
++ 一个RegionServer可服务于1000个Regions（它们可能属于同一个表，也可属于不同的表）
+
+![HBase Regions](images/HBaseArchitecture-RegionReview.png)
+
+最初每个表有一个Region。当这个Region涨的过大，它就会切分成两个子Region。两个子Region，每个代表原Reion的一班，在同一个RegionServer上被并行打开，然后这个切分被汇报给HMaster。出于负载均衡的目的，HMaster可能将这个Region迁移到别的RegionServer上。
+
+![HBase Region Split](images/HBaseArchitecture-RegionSplit.png)
+
+前面提到，出于负载均衡的目的，HMaster可能将这个Region迁移到别的RegionServer上。这将导致新的RegionServer服务从一台远端HDFS节点来的数据，这种倩况不会改变，直到major compaction将数据文件移到该RegionServer的本地节点。但它被写完后，HBase数据将位于本地，但当一个Region被移动后（因为负载均衡或灾难恢复），它不再是本地的，直到major compaction完成。
+
+![HBase Read Load Balance](images/HBaseArchitecture-ReadLoadBalance.png)
 ## 5. HDFS Data Replication
+所有读写都是通过主节点（primary node），HDFS复制WAL和HFile数据块。HFile块复制是自动发生地。HBase依赖HDFS来提供数据安全性--因为是HDFS保存文件。当数据写到HDFS时，本地写了一份拷贝，然后他被复制到第二个节点，并继续复制到第三个节点。
+
+![HBase Data Replication](images/HBaseArchitecture-DataReplication.png)
+
+WAL和HFile都被持久化到硬盘并复制，
+
+![HBase WAL Replication](images/HBaseArchitecture-WALReplication.png)
 ## 6. HBase Crash Recovery
+
+
 
 ## References
 - [HBase Working Principle: A part Hadoop Architecture](https://towardsdatascience.com/hbase-working-principle-a-part-of-hadoop-architecture-fbe0453a031b)
