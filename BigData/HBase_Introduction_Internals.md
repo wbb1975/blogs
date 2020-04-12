@@ -167,12 +167,58 @@ http://<server_ip_of_region_server>:16010/table.jsp?name=<table_name>
 4. 在“Table Attributes”段中检索“Compaction”。它应该是None（没有Compaction运行），MINOR（Minor Compaction），MAJOR（Major Compaction）--基于那时那种Compaction在运行。
    ![HBase Table Details](images/TableAttributes.png)
 #### 4.3.2 Major Compaction
+Major compaction将每个Region的**所有小文件合并成一个大文件**。Major compaction后留下的HFiles总数取决于一个配置参数--它定义了Major compaction启动的最小HFiles数目。如果这个值设置为2，那么除非有超过2个HFiles存在，否则Major compaction不会发生，或最终Major compaction的输出为2个文件。
+
+Major compaction使用了大量的资源，并影响集群读写，因此它应在在集群负载最小时进行。它由一个HBase的内部进程运行。你可以通过检查下面的链接（将IP和表名按你的实际情况修改）来查看Major Compaction是否在运行：
+```
+http://<server_ip_of_region_server>:16010/table.jsp?name=<table_name>
+```
+另外，你可以按下面的步骤操作：
+1. 打开HBase Master dashboard
+2. 滚到到达Tables段
+3. 点击你感兴趣的表名
+   ![HBase Table Details](images/TableDetails.png)
+4. 在“Table Attributes”段中检索“Compaction”。它应该是None（没有Compaction运行），MINOR（Minor Compaction），MAJOR（Major Compaction）--基于那时那种Compaction在运行。
+   ![HBase Table Details](images/TableAttributes.png)
+
+Major Compaction也修正数据本地性。Compaction后，数据（HFile）被移动到各自的数据节点，这些数据节点与它们映射到的RegionServer在同一节点上。
+
+更多细节请参阅下面的[文章](http://blog.cloudera.com/blog/2013/12/what-are-hbase-compactions/)。 
 ### 4.4 Data Locality
+Hadoop DataNode存储RegionServer管理的所有数据，所有的HBase数据存储于HDFS文件中。RegionServer与HDFS DataNodes搭配（collocated）以开启RegionServer所服务的数据的本地性（将数据放置在它需要的地方）。HBase数据刚写时是具备本地性的，但当一个Region被移动（一个Region被切分，HBase进程停止--无论重启/停止进程或进程崩溃）后，它就不再具有本地性直至Compaction。
+
+NameNode维护者组成文件的所有无路数据块的元（metadata ）信息。
+
+当一个读查询发生时，RegionServer查询Hadoop DataNode，如果数据不在本地，它就会发起一个网络调用以获取所需数据。（所有这些对HBase都是抽象的--它并不参与底层HDFS的具体工作。）
 ## 5. 高可用性配置要点（HBase HA Configuration Essentials）
+为HBase读查询配置HBase高可用性，你需要做下面3个事情：
++ 开启HBase高可用性
++ 开启表高可用性
++ 开启客户端高可用性--在创建连接时传递高可用性配置
 ### 5.1 HBase HA read path
+当开启高可用后，每个Region有一个为读查询而指定的辅助Region，这意味着辅助RegionServer也为辅助Region的读入而保持了block cache。因此，这是一个很公平的假设，即我们需要之前两倍内存量来用作block cache。
+
+在HBase高可用性中，当从主Region读超时后，客户端对辅助RegionServer发起同样的调用。这确保了当主Region由于某些原因卡顿而不能回复时，我们可以有另一个RegionServer来处理我们的请求。
+
+HA读是最终一致性读，这意味着你从辅助RegionServer读到的数据可能有点老旧。这种情况发生是因为在HA中，在主block cache发生的变化将会被一个内部进程复制到辅助block cache。因此，你可能因为某些延迟而读到旧数据。
+
+可以进一步阅读[一致性读时间线](http://hbase.apache.org/book.html#arch.timelineconsistent.reads)。
 ### 5.2 HBase HA write path
+写操作没有高可用性。写操作发生在指定的Region本身上，如果超时，你将不得不自己处理它们。因为HBase是一个一致性(CAP)数据库，HA的引入（像读操作）将引入最终一致性的行为，但写HA却不在此范围内。
 ### 5.3 HBase add Region Server/Data Node
+我们可以通过Ambari添加一个新的RegionServer(Ambari → HBase → Region Servers → Actions → Add New Host)。当虚拟主机启动后，我们可以在Ambari中配置参数，Ambari将为我们设置该主机。
+
+当该RegionServer被加入后，Master将在所有主机间均分所有的Regions。也因为新加入的RegionServer将会拥有来自从其它RegionServers的Regions，数据本地性将为0，搭配的HDFS将不得不通过网络调用来持久化数据。因此，延迟会升高一点。
+
+通常，我们会在低流量时，major compaction之前做此操作，如此数据本地性可以在major compaction完成后得到更正。
 ### 5.4 HBase remove Region Server/Data Node
+和添加RegionServer一样，我们可以通过以下步骤退役一个RegionServer（Ambari → HBase → Region Servers → 点击想被移除的RegionServer）。
+
+你可以找到退役HDFS 和 HBase的选项。你可以在NameNode和HBase Master Dashboards监控进度。你也可检查RegionServer和DataNode Dashboards。
+
+移除后，该RegionServer的Regions被指派给其它RegionServers。再一次，数据本地性将会被破坏，随之而来延迟也会有所升高。
+
+本地性在Major Compaction完成后会回归正常。
 ### 5.5 HDFS NameNode HA
 
 ## References
@@ -182,3 +228,4 @@ http://<server_ip_of_region_server>:16010/table.jsp?name=<table_name>
 - https://hbase.apache.org/book.html
 - http://www.larsgeorge.com/search/label/hbase
 - http://blog.cloudera.com/blog/category/hbase
+- [HBase BlockCache简介](https://www.jianshu.com/p/64512e706548)
