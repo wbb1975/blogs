@@ -219,7 +219,19 @@ HA读是最终一致性读，这意味着你从辅助RegionServer读到的数据
 移除后，该RegionServer的Regions被指派给其它RegionServers。再一次，数据本地性将会被破坏，随之而来延迟也会有所升高。
 
 本地性在Major Compaction完成后会回归正常。
+#### 5.4.1 HBase Region Server Crash
+当一个RegionServer崩溃时，WAL可被用来救急。因为WAL包含到现在为止所有的写操作，它们还未被刷写到HDFS上（以HFile的形式），它被通过Memstore回放--就像正常写操作一样。
+
+在写的过程中遵从正常HBase写路径。值得注意的是，在WAL回放过程中，对应Regions是不能服务于读写请求的。恢复之后，Regions就可用了。请参阅下图以作参考：
+
+![HBase WAL Recover](images/HBaseArchitecture-WALReplay.png)
+
+更多信息请阅读[HBase Write Path](https://blog.cloudera.com/blog/2012/06/hbase-write-path/)，[Differences betweenWAL and MemStore](https://stackoverflow.com/q/40067933/820410)和[HBase Log Splitting](http://blog.cloudera.com/blog/2012/07/hbase-log-splitting/)。 
 ### 5.5 HDFS NameNode HA
+请参阅以下文档：
++ https://hortonworks.com/blog/namenode-high-availability-in-hdp-2-0/
++ https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html
++ https://www.cloudera.com/documentation/enterprise/5-8-x/topics/cdh_hag_hdfs_ha_config.html
 
 ## References
 虽然我对上面提到的每一个主题都提供了对应链接，我主要还是参考Hortonworks/Cloudera文档。
