@@ -234,7 +234,7 @@ HA读是最终一致性读，这意味着你从辅助RegionServer读到的数据
 + https://www.cloudera.com/documentation/enterprise/5-8-x/topics/cdh_hag_hdfs_ha_config.html
 
 ## References
-虽然我对上面提到的每一个主题都提供了对应链接，我主要还是参考Hortonworks/Cloudera文档。
+虽然我对上面提到的每一个主题都提供了对应链接，但我主要还是参考Hortonworks/Cloudera文档。
 - https://medium.com/@pankaj.singhal/a-beginners-guide-to-hbase-1310f832aff7
 - https://mapr.com/blog/in-depth-look-hbase-architecture/
 - https://hbase.apache.org/book.html
