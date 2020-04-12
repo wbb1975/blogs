@@ -153,7 +153,19 @@ HDFS Data Node Dashboard (端口50075) — `http://<server_ip_of_data_node>:5007
 
 ![HBase Memstore Flush](images/MemStore_Flush.png)
 #### 4.3.1 Minor Compaction
-一天内有好几次，一个HBase内部进程被启动用来将多个小文件合并为大文件。这个过程不想Major Compaction那么强烈（intensive ）。
+一天内有好几次，一个HBase内部进程被启动用来将多个小文件合并为大文件。这个过程不想Major Compaction那么强烈（intensive）。
+
+你可以通过检查下面的链接（将IP和表名按你的实际情况修改）来查看Minor Compaction是否在运行：
+```
+http://<server_ip_of_region_server>:16010/table.jsp?name=<table_name>
+```
+另外，你可以按下面的步骤操作：
+1. 打开HBase Master dashboard
+2. 滚到到达Tables段
+3. 点击你感兴趣的表名
+   ![HBase Table Details](images/TableDetails.png)
+4. 在“Table Attributes”段中检索“Compaction”。它应该是None（没有Compaction运行），MINOR（Minor Compaction），MAJOR（Major Compaction）--基于那时那种Compaction在运行。
+   ![HBase Table Details](images/TableAttributes.png)
 #### 4.3.2 Major Compaction
 ### 4.4 Data Locality
 ## 5. 高可用性配置要点（HBase HA Configuration Essentials）
