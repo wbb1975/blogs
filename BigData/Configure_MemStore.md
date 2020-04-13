@@ -101,6 +101,9 @@
 
 > **提示**：确保 hbase.regionserver.hlog.blocksize * hbase.regionserver.maxlogs 比 hbase.regionserver.global.memstore.lowerLimit * HBASE_HEAPSIZE 大一点。
 ## 压缩与Memstore刷写
+建议对存储到HDFS上的HBase数据做压缩，除了节省数据的磁盘空间占用，它还极大地降低了磁盘和网络IO。当数据被写进HDFS（例如MemStore刷写）时压缩。压缩并不会拖慢刷写过程很多，否则我们将遇到上面提到的许多问题，例如MemStore太大而引起的写堵塞等。
+
+> **提示**：在选择压缩类型时优选压缩速度而非压缩率，SNAPPY看上去是一个好的选择。
 
 ## References
 - [Configuring HBase Memstore: What You Should Know](https://sematext.com/blog/hbase-memstore-what-you-should-know/)
