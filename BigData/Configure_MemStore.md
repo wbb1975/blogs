@@ -43,12 +43,56 @@
     <property>
       <name>hbase.regionserver.global.memstore.lowerLimit</name>
       <value>0.35</value>
-      <description>在强制刷写前一个RegionServer所有MemStore的最大值，缺省是35%堆内存。如果这个值与hbase.regionserver.global.memstore.upperLimit相等，则当更新由于MemStore限制被阻塞时将会导致最小可能的刷写</description>
+      <description>
+        在强制刷写前一个RegionServer所有MemStore的最大值，缺省是35%堆内存。如果这个值与hbase.regionserver.global.memstore.upperLimit相等，则当更新由于MemStore限制被阻塞时将会导致最小可能的刷写
+      </description>
     </property>
     ```
 注意第一个设置是每Memstore的设置，例如，你定义它时需要考虑每个RegionServer服务的Region个数。当Region数增长时（你只是在你的Region数较小时设置此数），Memstore刷写可能首先被第二个阀值触发。
 
 第二组设置事关安全：有时候写负载太高，刷写速度不能跟上，而我们不想MemStore无限制增长，在这种情况下更新被堵塞，除非memstore 达到可控大小。这些阀值配置如下：
+  + hbase.regionserver.global.memstore.upperLimit
+    ```
+    <property>
+      <name>hbase.regionserver.global.memstore.upperLimit</name>
+      <value>0.4</value>
+      <description>
+        在新的更新被阻塞，MemStore被强制刷写前一个RegionServer里所有MemStores的最大大小。缺省是堆大小的40%。更新被阻塞，MemStore被强制刷写直到一个RegionServer里所有MemStores的大小降到hbase.regionserver.global.memstore.lowerLimit以下。
+      </description>
+    </property>
+    ```
+  + hbase.hregion.memstore.block.multiplier
+    ```
+    <property>
+      <name>hbase.hregion.memstore.block.multiplier</name>
+      <value>2</value>
+      <description>
+        如果MemStore已经达到hbase.hregion.memstore.block.multiplier * hbase.hregion.memstore.flush.size字节数，则阻塞更新。这对于防止在更新高峰期MemStore爆棚有用。没有一个上限，MemStore会堆积，刷写出的HFile文件可能会话很长时间来Compact或切分，更糟糕的，可能会导致OOME。
+      </description>
+    </property>
+    ```
+在特定RegionServer上堵塞更新可能会是一个很大的问题，值得担心的可能更多。因为从HBase设计来讲，一个Region仅被一个RegionServer管理，当写负载被平均分配到整个集群（通过Regions），拥有一个如此“慢”的RegionServer将会使得整个集群变慢（基本指速度影响）。
+
+> **提示**：监控Memstore Size 和 Memstore Flush Queue size。理想情况下Memstore Size不应该达到MemStore的上限，Memstore Flush Queue size不应该稳定增长。
+## Memstore频繁刷写
+因为我们期待避免写堵塞，看起来在到达“写堵塞”阀值前提早刷写是个不错的方式。但是，这将导致频繁刷写--它将影响读性能并给集群带来额外负载。
+
+每次MemStore刷写时每个列族都会创建一个HFile。频繁的刷写可能会创建许多HFiles。因为在读操作过程中HBase将不得不查看许多文件，读取速度将受到损害。
+
+为阻止打开太多文件，避免读性能恶化，我们拥有HFiles compaction过程。HBase将会定期（当某些配置的阀值达到时）合并多个小文件打一个大文件。显然，MemStore刷写创建的文件越多，系统承担的工作（额外付在）就会越多。更需注意的是：Compaction过程通常是与服务其它请求同时进行的，当HBase不能跟上合并HFiles的步伐时（是的，这也有配置的阀值），它将再次阻塞这个RegionServer的写操作。如同上面提到的，这是非常不期待的。
+
+> **提示**：监控RegionServer上的Compaction Queue size。当它持续增长时，你就需要在它引起问题之前采取行动。
+
+更多HFiles创建和Compaction的信息可在[这儿](http://outerthought.org/blog/465-ot.html)找到。
+
+因此，理想地MemStore使用尽可能多的内存（和配置相同，但不是RegionServer的所有内存：我们还拥有内存缓存），但不要超过上限。下图显示了一个比较好的状态：
+
+![HBase Memstore Size: Good Situation](images/memstore_size.png)
+
+之所以说"比较"好，是因为我们可以配置下限靠近上限，并且我们很少超过它（下限）。
+## 多个列族与Memstore刷写
+## HLog（WAL）大小与Memstore刷写
+## 压缩与Memstore刷写
 
 ## References
 - [Configuring HBase Memstore: What You Should Know](https://sematext.com/blog/hbase-memstore-what-you-should-know/)
