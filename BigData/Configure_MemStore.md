@@ -91,7 +91,15 @@
 
 之所以说"比较"好，是因为我们可以配置下限靠近上限，并且我们很少超过它（下限）。
 ## 多个列族与Memstore刷写
+所有的列族的MemStores是被一起刷写的（这可能[改变](https://issues.apache.org/jira/browse/HBASE-3149)，根据我的检查，这已经在HBase1.1.0和2.0.0中解决了），这意味着对每个列族，每次刷写将产生多个HFiles。因此，列族不均衡的数据量将导致过多HFiles被创建：当一个列族的MemStore达到阀值时，其它列族的MemStore也会被刷写。正如上文所说，频繁的刷写操作和过多的HFiles可能影响集群性能。
+
+> **提示**：在很多场景下仅有一个列族是最好的Schema设计。
 ## HLog（WAL）大小与Memstore刷写
+从上面的RegionServer读写路径图你可能注意到WAL--数据缺省写出去的地方。它包含所有已经写到MemStore而没有刷写到HFiles的RegionServer的所有更新。由于MemStore中的数据并没有刷写出去我们需要WAL来从RegionServer失败中恢复。当RegionServer崩溃，MemStore中的数据因为未曾刷写而丢失后，WAL被用来回放最近的修改。
+
+当WAL（HBase叫它HLog）增长到很大时，可能需要话费很长时间来回放它。基于这个原因对WAL大小有一定限制，当它达到时将引起MemStore刷写。MemStore刷写降低了WAL大小，因为我们并不需要已经写到HFiles（持久存储）中的WAL更改。这个通过两个属性配置：hbase.regionserver.hlog.blocksize 和 hbase.regionserver.maxlogs。你可能清楚，最大WAL大小有 hbase.regionserver.maxlogs * hbase.regionserver.hlog.blocksize (缺省2GB)决定，一旦达到这个大小就会触发Memstore刷写。因此，当你增加MemStore大小并调节MemStore设置时，你也需要调整HLog相关设置。否则，WAL大小限制可能会被首先触发，你也就永远不会充分利用分配给MemStore的资源。除此以外，达到WAL限制而触发MemStore刷写不是触发刷写的最佳方式，以为一旦写数据平均分配在所有Region上，刷写许多Region将带来刷写风暴。
+
+> **提示**：确保 hbase.regionserver.hlog.blocksize * hbase.regionserver.maxlogs 比 hbase.regionserver.global.memstore.lowerLimit * HBASE_HEAPSIZE 大一点。
 ## 压缩与Memstore刷写
 
 ## References
