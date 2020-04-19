@@ -204,12 +204,14 @@ Maven 管理项目生命周期过程都是基于插件完成的。
 ### 8.1 命令行使用Maven
 1. 创建一个你的项目驻留的目录；
 2. 在在目录下执行以下命令创建Maven项目
-  ```
-   mvn archetype:generate -DgroupId=com.refinitic.app -DartifactId=mvndemo -DarchetypeArtifactId=maven-archetype-quickstart -DarchetypeVersion=1.0 -DinteractiveMode=false
-  ```
-  你执行了Maven目标archetype:generate，并传递了一系列参数给这个目标。前缀archetype是提供这个目标的插件，如果你对Ant很熟悉，你就会觉得目标和task很像。archetype:generate目标依据maven-archetype-quickstart原型创建了一个项目。到目前为止你可以把插件理解为为了一个通用共同目的的目标集合。比如，jboss-maven-plugin的目的就是“处理各种jboss相关工作”。
+   ```
+      mvn archetype:generate -DgroupId=com.refinitic.app -DartifactId=mvndemo -DarchetypeArtifactId=maven-archetype-quickstart -DarchetypeVersion=1.0 -DinteractiveMode=false
+   ```
+
+   你执行了Maven目标archetype:generate，并传递了一系列参数给这个目标。前缀archetype是提供这个目标的插件，如果你对Ant很熟悉，你就会觉得目标和task很像。archetype:generate目标依据maven-archetype-quickstart原型创建了一个项目。到目前为止你可以把插件理解为为了一个通用共同目的的目标集合。比如，jboss-maven-plugin的目的就是“处理各种jboss相关工作”。
 3. cd mvndemo; mvn pacakge
-   不像你刚才执行的(archetype:generate命令，你可能注意到我们仅仅输入了一个单词pacakge。它不是一个目标（goal），而是一个阶段（phase）。一个阶段是构建生命周期的一个阶段，整个构建生命周期就是由一系列顺序的阶段组成。当给定一个阶段时，Maven 将执行到传入阶段在内的每一个阶段。例如，如果我们执行compile阶段，那么实际执行的阶段包括：
+
+    不像你刚才执行的(archetype:generate命令，你可能注意到我们仅仅输入了一个单词pacakge。它不是一个目标（goal），而是一个阶段（phase）。一个阶段是构建生命周期的一个阶段，整个构建生命周期就是由一系列顺序的阶段组成。当给定一个阶段时，Maven 将执行到传入阶段在内的每一个阶段。例如，如果我们执行compile阶段，那么实际执行的阶段包括：
 
      + validate
      + generate-sources
