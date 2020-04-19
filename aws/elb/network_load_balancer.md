@@ -361,9 +361,9 @@ EC2 实例必须在 30 秒内响应新请求，才能建立返回路径。
 使用 [delete-load-balancer](https://docs.amazonaws.cn/cli/latest/reference/elbv2/delete-load-balancer.html) 命令。
 ## 5. 侦听器
 ## 6. 目标组
-## 6. 监控负载均衡器
-## 6. 故障排除
-## 6. 配额
+## 7. 监控负载均衡器
+## 8. 故障排除
+## 9. 配额
 
 ## Referece
 - [什么是网络负载均衡器](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/introduction.html)
