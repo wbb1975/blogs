@@ -46,7 +46,7 @@ Maven项目管理所依赖的jar包不需要手动向工程添加jar包，只需
 3. Maven的跨平台，可在window、linux上使用。
 4. Maven遵循规范开发有利于提高大型团队的开发效率，降低项目的维护成本，大公司都会考虑使用Maven来构建项目。
 ## 3. Maven的下载及配置
-1. http://maven.apache.org/download.cgi 下载
+1. http://maven.apache.org/download.cgi下载
 2. 安装很简单，解压即可
 3. 配置Maven
    ![配置Maven环境](images/configure_mvn_path.png)
@@ -118,6 +118,57 @@ Maven对项目构建过程分为三套相互独立的生命周期，请注意这
   ![Maven项目结构](images/mvn_project_hierarchy.png)
 ## 7. pom.xml
 一个Maven工程都有一个pom.xml文件，通过pom.xml文件定义项目的坐标、项目依赖、项目信息、插件目标等。
+### 7.1 依赖管理系统(Dependency Management System)
+通过maven的依赖管理对项目所依赖的jar 包进行统一管理。
+
+比如：项目依赖junit4.9，通过在pom.xml中定义junit4.9的依赖即使用junit4.9，如下所示是junit4.9的依赖定义：
+```
+<!-- 依赖关系 -->
+<dependencies>
+    <!-- 此项目运行使用junit，所以此项目依赖junit -->
+    <dependency>
+       <!-- junit的项目名称 -->
+       <groupId>junit</groupId>
+       <!-- junit的模块名称 -->
+       <artifactId>junit</artifactId>
+       <!-- junit版本 -->
+       <version>4.9</version>
+       <!-- 依赖范围：单元测试时使用junit -->
+       <scope>test</scope>
+    </dependency>
+    ....
+</dependencies>
+```
+![Maven依赖范围](images/mvn_dependency_scope.png)
+
+![Maven依赖范围列表](images/mvn_dependency_scope_table.png)
+
+![Maven依赖范围示例](images/mvn_dependency_scope_example.png)
+### 7.2 一个项目生命周期(Project Lifecycle)
+使用Maven完成项目的构建，项目构建包括：清理、编译、测试、部署等过程，Maven将这些过程规范为一个生命周期，如下所示是生命周期的各各阶段：
+![Maven项目生命周期](images/project_life_cycle.png)
+Maven通过执行一些简单命令即可实现上边生命周期的各各过程，比如执行mvn compile执行编译、执行mvn clean执行清理。
+### 7.3 组标准集合
+Maven将整个项目管理过程定义一组标准，比如：通过Maven构建工程有标准的目录结构，有标准的生命周期阶段、依赖管理有标准的坐标定义等。
+### 7.4 插件(plugin)与目标(goal)
+Maven 管理项目生命周期过程都是基于插件完成的。
+### 7.5 定义maven坐标
+每个Maven工程都需要定义本工程的坐标，坐标是maven对jar包的身份定义，比如：入门程序的坐标定义如下：
+```
+<!--项目名称，定义为组织名+项目名，类似包名-->
+<groupId>org.westos</groupId>
+<!-- 模块名称 -->
+<artifactId>maven-first</artifactId>
+<!-- 当前项目版本号，snapshot为快照版本即非正式版本，release为正式发布版本 -->
+<version>0.0.1-SNAPSHOT</version>
+<!--打包类型: jar：执行package会打成jar包; 
+             war：执行package会打成war包; 
+             pom ：用于maven工程的继承，通常父工程设置为pom 
+-->
+<packaging>jar</packaging>
+```     
+
+
 
 ## Reference
 - [Maven安装及配置](https://blog.csdn.net/m0_37167369/article/details/81628305)
