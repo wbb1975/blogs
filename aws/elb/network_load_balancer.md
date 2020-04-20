@@ -360,6 +360,212 @@ EC2 实例必须在 30 秒内响应新请求，才能建立返回路径。
 #### 使用 AWS CLI 删除负载均衡器
 使用 [delete-load-balancer](https://docs.amazonaws.cn/cli/latest/reference/elbv2/delete-load-balancer.html) 命令。
 ## 5. 侦听器
+在开始使用 网络负载均衡器 之前，您必须添加一个或多个侦听器。侦听器是一个使用您配置的协议和端口检查连接请求的进程。为侦听器定义的规则可以确定负载均衡器将请求路由到一个或多个目标组中的目标的方式。
+
+有关更多信息，请参阅 Elastic Load Balancing 用户指南 中的[请求路由](https://docs.amazonaws.cn/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html#request-routing)。
+### 5,1 侦听器配置
+侦听器支持以下协议和端口：
+- 协议：TCP，TLS，UDP，TCP_UDP
+- 端口：1-65535
+
+可以使用 TLS 侦听器将加密和解密的工作交给负载均衡器完成，以便应用程序可以专注于其业务逻辑。如果侦听器协议为 TLS，您必须在侦听器上确切地部署一个 SSL 服务器证书。有关更多信息，请参阅 [网络负载均衡器的 TLS 侦听器](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-tls-listener.html)。
+
+要在同一端口上同时支持 TCP 和 UDP，请创建一个 TCP_UDP 侦听器。TCP_UDP 侦听器的目标组必须使用 TCP_UDP 协议。
+
+可以将 WebSockets 与您的侦听器结合使用。
+
+已配置侦听器的所有网络流量都归类为预期流量。与配置的侦听器不匹配的网络流量被归类为非预期流量。类型 3 之外的 ICMP 请求也被视为非预期流量。Network Load Balancer会删除非预期流量而不将其转发给任何目标。作为非预期流量的一部分的 TCP 数据包因 TCP 重置 (RST) 而被拒绝。
+### 5,2 侦听器规则
+在创建侦听器时，将会指定用于路由请求的规则。该规则将请求转发到指定的目标组。要更新此规则，请参阅[更新网络负载均衡器的侦听器](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/listener-update-rules.html)。
+### 5,3 为网络负载均衡器创建侦听器
+侦听器是用于检查连接请求的进程。您可在创建负载均衡器时定义侦听器，并可随时向负载均衡器添加侦听器。
+#### 5.3.1 先决条件
++ 必须为侦听器规则指定目标组。有关更多信息，请参阅[为网络负载均衡器创建目标组](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-target-group.html)。
++ 您必须指定 TLS 监听器的 SSL 证书。负载均衡器先使用证书终止连接，然后解密来自客户端的请求，最后再将请求路由到目标。有关更多信息，请参阅[服务器证书](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-tls-listener.html#tls-listener-certificates)。
+#### 5.3.2 添加侦听器
+您为侦听器配置用于从客户端连接到负载均衡器的协议和端口，并为默认侦听器规则配置目标组。有关更多信息，请参阅[侦听器配置](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/load-balancer-listeners.html#listener-configuration)。
+
+**使用控制台添加侦听器**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格中的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。
+4. 选择 Add listener (添加侦听器)。
+5. 对于 Protocol : port (协议: 端口)，选择 TCP、UDP、TCP_UDP 或 TLS。保留默认端口或键入其他端口。
+6. 对于 Default actions (默认操作)，选择 Add action (添加操作)、Forward to (转发至)，然后选择可用目标组。
+7. [TLS 侦听器] 对于 Security policy (安全策略)，建议您保留默认安全策略。
+8. [TLS 侦听器] 对于 Default SSL certificate (默认 SSL 证书)，请执行下列操作之一：
+   + 如果使用 AWS Certificate Manager 创建或导入了证书，请选择 From ACM (来自 ACM) 并选择证书。
+   + 如果使用 IAM 上传了证书，则选择 From IAM (来自 IAM) 并选择证书。
+9. 选择 Save。
+10.  [TLS 侦听器] 要添加用于 SNI 协议的可选证书列表，请参阅[将证书添加到证书列表](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/listener-update-certificates.html#add-certificates)。
+
+**使用 AWS CLI 添加侦听器**
+
+使用 [create-listener](https://docs.amazonaws.cn/cli/latest/reference/elbv2/create-listener.html) 命令来创建侦听器。
+### 5,4 网络负载均衡器的 TLS 侦听器
+要使用 TLS 侦听器，您必须在负载均衡器上部署至少一个服务器证书。负载均衡器先使用此服务器证书终止前端连接，再解密来自客户端的请求，然后将请求发送到目标。
+
+Elastic Load Balancing 使用 TLS 协商配置（称为安全策略）在客户端与负载均衡器之间协商 TLS 连接。安全策略是协议和密码的组合。协议在客户端与服务器之间建立安全连接，确保在客户端与负载均衡器之间传递的所有数据都是私密数据。密码是使用加密密钥创建编码消息的加密算法。协议使用多种密码对 Internet 上的数据进行加密。在 连接协商过程中，客户端和负载均衡器会按首选项顺序提供各自支持的密码和协议的列表。为安全连接选择服务器列表中与任一客户端的密码匹配的第一个密码。
+
+Network Load Balancer 不支持 TLS 重新协商。
+
+要创建 TLS 侦听器，请参阅[添加侦听器](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-listener.html#add-listener)。要查看相关演示，请参阅[网络负载均衡器 上的 TLS 支持](https://exampleloadbalancer.com/nlbtls_demo.html)以及[网络负载均衡器 上的 SNI 支持](https://exampleloadbalancer.com/nlbsni_demo.html)。
+#### 5.4.1 服务器证书
+负载均衡器需要 X.509 证书（服务器证书）。证书是由证书颁发机构 (CA) 颁发的数字化身份。证书包含标识信息、有效期限、公有密钥、序列号以及发布者的数字签名。
+
+在创建用于负载均衡器的证书时，您必须指定域名。
+
+我们建议您使用[AWS Certificate Manager (ACM)](http://www.amazonaws.cn/certificate-manager/)为负载均衡器创建证书。ACM 已与 Elastic Load Balancing 集成，以便您可以在负载均衡器上部署证书。有关更多信息，请参阅[AWS Certificate Manager 用户指南](https://docs.amazonaws.cn/acm/latest/userguide/)。
+
+此外，还可以使用 TLS 工具创建证书签名请求 (CSR)，然后获取由 CA 签署的 CSR 以生成证书，并将证书导入 ACM，或将证书上传至 AWS Identity and Access Management (IAM)。有关更多信息，请参阅 AWS Certificate Manager 用户指南 中的[导入证书](https://docs.amazonaws.cn/acm/latest/userguide/import-certificate.html)或 IAM 用户指南 中的[使用服务器证书](https://docs.amazonaws.cn/IAM/latest/UserGuide/id_credentials_server-certs.html)。
+> **重要**: 您无法在网络负载均衡器上安装具有大于 2048 位的 RSA 密钥或 EC 密钥的证书。https://docs.amazonaws.cn/elasticloadbalancing/latest/network/listener-update-certificates.html#replace-default-certificate
+##### 5.4.1.1 默认证书
+创建 TLS 侦听器时，必须仅指定一个证书。此证书称为默认证书。创建 TLS 侦听器后，您可以替换默认证书。有关更多信息，请参阅[替换默认证书]()。
+
+如果在[证书列表](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-tls-listener.html#sni-certificate-list)中指定其他证书，则仅当客户端在不使用服务器名称指示 (SNI) 协议的情况下连接以指定主机名或证书列表中没有匹配的证书时，才使用默认证书。
+
+如果您未指定其他证书但需要通过单一负载平衡器托管多个安全应用程序，则可以使用通配符证书或为证书的每个其他域添加使用者备用名称 (SAN)。
+##### 5.4.1.2 证书列表
+创建 TLS 侦听器后，它具有默认证书和空证书列表。您可以选择将证书添加到侦听器的证书列表中。使用证书列表可使负载均衡器在同一端口上支持多个域，并为每个域提供不同的证书。有关更多信息，请参阅[将证书添加到证书列表](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/listener-update-certificates.html#add-certificates)。
+
+负载均衡器使用支持 SNI 的智能证书选择算法。如果客户端提供的主机名与证书列表中的一个证书匹配，则负载均衡器将选择此证书。如果客户端提供的主机名与证书列表中的多个证书匹配，则负载均衡器将选择客户端可支持的最佳证书。根据以下标准，按下面的顺序选择证书：
++ 公有密钥算法 (ECDSA 优先于 RSA)
++ 哈希算法 (SHA 优先于 MD5)
++ 密钥长度 (首选最大值)
++ 有效期
+负载均衡器访问日志条目指示客户端指定的主机名和向客户端提供的证书。有关更多信息，请参阅[访问日志条目](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/load-balancer-access-logs.html#access-log-entry-format)。
+##### 5.4.1.3 证书续订
+每个证书都有有效期限。您必须确保在有效期结束之前续订或替换负载均衡器的每个证书。这包括默认证书和证书列表中的证书。续订或替换证书不影响负载均衡器节点已收到的进行中的请求，并暂停指向正常运行的目标的路由。续订证书之后，新的请求将使用续订后的证书。更换证书之后，新的请求将使用新证书。
+
+您可以按如下方式管理证书续订和替换：
++ 由 AWS Certificate Manager 提供、部署在负载均衡器上的证书可以自动续订。ACM 将尝试在到期之前续订证书。有关更多信息，请参阅 AWS Certificate Manager 用户指南 中的[托管续订](https://docs.amazonaws.cn/acm/latest/userguide/acm-renewal.html)。
++ 如果您将证书导入 ACM，则必须监视证书的到期日期并在到期前续订。有关更多信息，请参阅 AWS Certificate Manager 用户指南 中的[导入证书](https://docs.amazonaws.cn/acm/latest/userguide/import-certificate.html)。
++ 如果您已将证书导入 IAM 中，则必须创建一个新证书，将该新证书导入 ACM 或 IAM 中，将该新证书添加到负载均衡器，并从负载均衡器删除过期的证书。
+#### 5.4.2 安全策略
+创建 TLS 侦听器时，您必须选择一个安全策略。可以根据需要更新安全策略。有关更多信息，请参阅[更新安全策略](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/listener-update-certificates.html#update-security-policy)。
+
+您可以选择用于前端连接的安全策略。ELBSecurityPolicy-2016-08 安全策略始终用于后端连接。Network Load Balancer不支持自定义安全策略。
+
+Elastic Load Balancing 为Network Load Balancer提供以下安全策略：
+- ELBSecurityPolicy-2016-08 (默认值)
+- ELBSecurityPolicy-TLS-1-0-2015-04
+- ELBSecurityPolicy-TLS-1-1-2017-01
+- ELBSecurityPolicy-TLS-1-2-2017-01
+- ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+- ELBSecurityPolicy-FS-2018-06
+- ELBSecurityPolicy-FS-1-1-2019-08
+- ELBSecurityPolicy-FS-1-2-2019-08
+- ELBSecurityPolicy-FS-1-2-Res-2019-08
+- ELBSecurityPolicy-2015-05（与 ELBSecurityPolicy-2016-08 相同）
+
+我们建议使用 ELBSecurityPolicy-2016-08 策略以确保兼容性。如果您需要向前保密 (FS)，可使用 ELBSecurityPolicy-FS 策略之一。您可以使用 ELBSecurityPolicy-TLS 策略之一，以满足需要禁用特定 TLS 协议版本的合规性和安全标准，或者支持需要已弃用密码的旧客户端。只有一小部分 Internet 客户端需要 TLS 版本 1.0。要查看针对负载均衡器的请求的 TLS 协议版本，请为负载均衡器启用访问日志记录并查看访问日志。有关更多信息，请参阅[访问日志](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/load-balancer-access-logs.html)。
+
+下表描述了默认策略和 ELBSecurityPolicy-TLS 策略。
+
+下表描述了默认策略和 ELBSecurityPolicy-FS 策略。
+
+要使用 AWS CLI 查看负载均衡器的安全策略的配置，请使用 [describe-ssl-policies](https://docs.amazonaws.cn/cli/latest/reference/elbv2/describe-ssl-policies.html) 命令。
+### 5,5 更新网络负载均衡器的侦听器
+您可以更新侦听器端口、侦听器协议或默认侦听器规则。
+
+默认侦听器规则将请求转发到指定的目标组。
+
+如果您将协议从 TCP 更改为 UDP 或 TLS，则必须指定安全策略和服务器证书。如果您将协议从 TLS 更改为 TCP 或 UDP，则将删除安全策略和服务器证书。
+
+**使用控制台更新侦听器**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格中的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。
+4. 选中该侦听器的复选框，然后选择 Edit (编辑)。
+5. （可选）更改 Protocol: port (协议: 端口) 的指定值。
+6. （可选）单击铅笔图标来为 Default action (默认操作) 选择不同的目标组。
+7. 选择 Update。
+
+**使用 AWS CLI 更新侦听器**
+
+使用 [modify-listener](https://docs.amazonaws.cn/cli/latest/reference/elbv2/modify-listener.html) 命令。
+### 5,6 更新您的 网络负载均衡器 的 TLS 侦听器
+创建 TLS 侦听器后，您可以替换默认证书、更新证书列表或替换安全策略。
+> **限制** 您无法在网络负载均衡器上安装具有大于 2048 位的 RSA 密钥或 EC 密钥的证书。
+#### 5.6.1 替换默认证书
+您可以使用以下过程替换 TLS 侦听器的默认证书。有关更多信息，请参阅 默认证书。
+
+**使用控制台更改默认证书**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格上的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。
+4. 选中侦听器对应的复选框，然后选择 Edit (编辑)。
+5. 对于 Default SSL certificate (默认 SSL 证书)，请执行下列操作之一：
+   + 如果使用 AWS Certificate Manager 创建或导入了证书，请选择 From ACM (来自 ACM) 并选择证书。
+   + 如果使用 IAM 上传了证书，则选择 From IAM (来自 IAM) 并选择证书。
+6. 选择 Update。
+
+**使用 AWS CLI 更改默认证书**
+
+使用 [modify-listener](https://docs.amazonaws.cn/cli/latest/reference/elbv2/modify-listener.html) 命令。
+#### 5.6.2 将证书添加到证书列表
+您可使用以下过程将证书添加到侦听器的证书列表。首次创建 TLS 侦听器时，证书列表为空。可以添加一个或多个证书。您可以选择添加默认证书，以确保此证书与 SNI 协议一起使用，即使它被替换为默认证书也是如此。有关更多信息，请参阅[证书列表](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-tls-listener.html#sni-certificate-list)。
+
+**使用控制台将证书添加到证书列表**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格上的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。
+4. 对于要更新的 HTTPS 侦听器，请选择 View/edit certificates (查看/编辑证书)，这将显示默认证书，后跟已添加到侦听器的任何其他证书。
+5. 选择菜单栏中的 Add certificates (添加证书) 图标（加号），这将显示默认证书，后跟由 ACM 和 IAM 管理的任何其他证书。如果已将证书添加到侦听器，则其复选框处于选中和禁用状态。
+6. 要添加已由 ACM 或 IAM 管理的证书，请选中证书对应的复选框并选择 Add (添加)。
+7. 如果您有一个未由 ACM 或 IAM 管理的证书，则按如下方式将其导入 ACM 中，并将其添加到侦听器：
+   + 选择 Import certificate。
+   + 对于 Certificate private key，粘贴证书的 PEM 编码的未加密私有密钥。
+   + 对于 Certificate body，粘贴 PEM 编码的证书。
+   + (可选) 对于 Certificate chain，粘贴 PEM 编码的证书链。
+   + 选择 Import。新导入的证书将显示在可用证书列表中并处于选中状态。
+   + 选择 Add。
+8. 要离开此屏幕，请选择菜单栏中的 Back to the load balancer (返回到负载均衡器) 图标（后退按钮）。
+
+**使用 AWS CLI 将证书添加到证书列表**
+
+使用 [add-listener-certificates 命令](https://docs.amazonaws.cn/cli/latest/reference/elbv2/add-listener-certificates.html)
+#### 5.6.3 从证书列表中删除证书
+您可以使用以下过程从 TLS 侦听器的证书列表中删除证书。要删除 TLS 侦听器的默认证书，请参阅[替换默认证书](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/listener-update-certificates.html#replace-default-certificate)。
+
+**使用控制台从证书列表中删除证书**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格上的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。
+4. 对于要更新的侦听器，请选择 View/edit certificates (查看/编辑证书)，这将显示默认证书，后跟已添加到侦听器的任何其他证书。
+5. 在菜单栏中选择 Remove certificates 图标 (减号)。
+6. 选中证书对应的复选框，然后选择 Remove (删除)。
+7. 要离开此屏幕，请选择菜单栏中的 Back to the load balancer (返回到负载均衡器) 图标（后退按钮）。
+
+**使用 AWS CLI 从证书列表中删除证书**
+
+使用 [remove-listener-certificates](https://docs.amazonaws.cn/cli/latest/reference/elbv2/remove-listener-certificates.html) 命令。
+#### 5.6.4 更新安全策略
+在创建 TLS 侦听器时，您可以选择满足您的需求的安全策略。添加新的安全策略后，您可以将 TLS 侦听器更新为使用此新安全策略。Network Load Balancer不支持自定义安全策略。有关更多信息，请参阅[安全策略](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/create-tls-listener.html#describe-ssl-policies)。
+
+**使用控制台更新安全策略**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格上的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。
+4. 选中 TLS 侦听器对应的复选框，然后选择 Edit (编辑)。
+5. 对于 Security policy (安全策略)，选择安全策略。
+6. 选择 Update。
+
+**使用 AWS CLI 更新安全策略**
+
+使用 [modify-listener](https://docs.amazonaws.cn/cli/latest/reference/elbv2/modify-listener.html) 命令。
+### 5.7 删除网络负载均衡器的侦听器
+可以随时删除侦听器。
+
+**使用控制台删除侦听器**
+1. 打开 Amazon EC2 控制台 https://console.amazonaws.cn/ec2/。
+2. 在导航窗格中的 LOAD BALANCING 下，选择 Load Balancers。
+3. 选择负载均衡器，然后选择 Listeners。选中侦听器对应的复选框，然后选择 Delete (删除)。
+4. 当系统提示进行确认时，选择 Yes, Delete。
+
+**使用 AWS CLI 删除侦听器**
+
+使用 [delete-listener](https://docs.amazonaws.cn/cli/latest/reference/elbv2/delete-listener.html) 命令。
 ## 6. 目标组
 ## 7. 监控负载均衡器
 ## 8. 故障排除
