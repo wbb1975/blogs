@@ -12,6 +12,7 @@ Maven翻译为“专家”，“内行”。Maven是Apache下的一个纯java开
 + 将工程打成war包部署至tomcat运行
 ### 1.4 Maven项目构建过程
 Maven将项目构建的过程进行标准化，每个阶段使用一个命令完成，下图展示了构建过程的一些阶段，后面章节详细介绍每个阶段，这里先大概了解下：
+
 ![Maven项目构建过程](images/maven_build_process.png)
 
 上图中部分阶段对应命令如下：
@@ -49,20 +50,28 @@ Maven项目管理所依赖的jar包不需要手动向工程添加jar包，只需
 1. http://maven.apache.org/download.cgi下载
 2. 安装很简单，解压即可
 3. 配置Maven
-   ![配置Maven环境](images/configure_mvn_path.png)
+
+![配置Maven环境](images/configure_mvn_path.png)
+
 4. 查看是否配置成功可在窗口中输入 mvn –v 出现顺利输出版本号则说明配置成功。
 ### 3.1 Maven仓库
 Maven的工作需要从仓库下载一些jar包，如下图所示，本地的项目A、项目B等都会通过maven软件从远程仓库（可以理解为互联网上的仓库）下载jar包并存在本地仓库，本地仓库 就是本地文件夹，当第二次需要此jar包时则不再从远程仓库下载，因为本地仓库已经存在了，可以将本地仓库理解为缓存，有了本地仓库就不用每次从远程仓库下载了。
-  ![Maven仓库类型](images/mvn_repository_type.png)
+
+![Maven仓库类型](images/mvn_repository_type.png)
+
 1. 本地仓库：用来存储从远程仓库或中央仓库下载的插件和jar包，项目使用一些插件或jar包，优先从本地仓库查找
 默认本地仓库位置在 ${user.dir}/.m2/repository，${user.dir}表示windows用户目录。
-  ![Maven本地仓库](images/mvn_local_repository.png)
+
+   ![Maven本地仓库](images/mvn_local_repository.png)
+
 2. 远程仓库：如果本地需要插件或者jar包，本地仓库没有，默认去远程仓库下载。远程仓库可以在互联网内也可以在局域网内。
 3. 中央仓库 ：在maven软件中内置一个远程仓库地址http://repo1.maven.org/maven2 ，它是中央仓库，服务于整个互联网，它是由Maven团队自己维护，里面存储了非常全的jar包，它包含了世界上大部分流行的开源项目构件。
 ### 3.2 配置本地仓库
 1. 拷贝Maven安装目录的conf下的settings.xml到${user.dir}/.m2
 2. 更改${user.dir}/.m2/settings.xml中的localRepository如下
+   
    ![Maven本地仓库目录](images/mvn_local_repository_setting.png)
+
 ### 3.3 Maven常用命令介绍
 Maven命令|解释
 --------|--------
@@ -86,9 +95,11 @@ mvn jetty:run|调用 Jetty 插件的 Run 目标在 Jetty Servlet 容器中启动
 compile是Maven工程的编译命令，作用是将src/main/java下的文件编译为class文件输出到target目录下。
 
   cmd进入命令状态，执行mvn compile，如下图提示成功：
+
   ![Maven编译成功](images/mvn_compile_success.png)
   
   查看 target目录，class文件已生成，编译完成。
+
   ![Maven编译class已生成](images/mvn_class_generated.png)
 ### 4.2 test
 test是Maven工程的测试命令，会执行src/test/java下的单元测试类。
@@ -148,7 +159,9 @@ README.txt|项目readme
 pom.xml|Maven项目核心配置文件
 
 如图所示 IDEA 创建出来的Maven项目结构如下:
-  ![Maven项目结构](images/mvn_project_hierarchy.png)
+
+![Maven项目结构](images/mvn_project_hierarchy.png)
+
 ## 7. pom.xml
 一个Maven工程都有一个pom.xml文件，通过pom.xml文件定义项目的坐标、项目依赖、项目信息、插件目标等。
 ### 7.1 依赖管理系统(Dependency Management System)
@@ -179,7 +192,9 @@ pom.xml|Maven项目核心配置文件
 ![Maven依赖范围示例](images/mvn_dependency_scope_example.png)
 ### 7.2 一个项目生命周期(Project Lifecycle)
 使用Maven完成项目的构建，项目构建包括：清理、编译、测试、部署等过程，Maven将这些过程规范为一个生命周期，如下所示是生命周期的各各阶段：
+
 ![Maven项目生命周期](images/project_life_cycle.png)
+
 Maven通过执行一些简单命令即可实现上边生命周期的各各过程，比如执行mvn compile执行编译、执行mvn clean执行清理。
 ### 7.3 组标准集合
 Maven将整个项目管理过程定义一组标准，比如：通过Maven构建工程有标准的目录结构，有标准的生命周期阶段、依赖管理有标准的坐标定义等。
