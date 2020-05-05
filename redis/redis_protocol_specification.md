@@ -47,7 +47,19 @@ RESP在Redis中以下面的方式被用作请求-回复协议：
 为了发送二进制安全字符串，RESP块字符串可以代替。
 当Redis回复一个简单字符串，客户端库应该向调用者返回一个字符串包含从 '+' 后的第一个字符直到简单字符串结尾（排除最后的CRLF）。
 ## RESP错误
+RESP对错误有一个特殊的数据类型。实际上错误几乎和RESP简单字符串一样，除了第一个字符是减号'-' 而不是加号。RESP中简单字符串和错误的真正差别在于错误在客户端被当做异常处理，并且组成错误类型的字符串是错误消息本身。
 
+基本的格式为：
+```
+"-Error message\r\n"
+```
+只有当某种异常发生时错误回复才会被发送，比如你在错误数据类型上执行操作，或者命令不存在，等等。当一个错误回复收到时客户端库应该抛出一个异常。
+
+下面是错误回复示例：
+```
+-ERR unknown command 'foobar'
+-WRONGTYPE Operation against a key holding the wrong kind of value
+```
 
 ## Reference
 - [Redis Protocol Specification](https://redis.io/topics/protocol)
