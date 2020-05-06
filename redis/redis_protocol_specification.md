@@ -60,6 +60,14 @@ RESP对错误有一个特殊的数据类型。实际上错误几乎和RESP简单
 -ERR unknown command 'foobar'
 -WRONGTYPE Operation against a key holding the wrong kind of value
 ```
+"-"后的首个单词，直到第一个空格或换行符，代表了返回的错误类型。这只是Redis的一个使用惯例，并非RESP错误格式的一部分。
+
+例如，ERR是一个通用的错误，而WRONGTYPE则为一个更特殊的错误--它暗示客户在一个错误的数据类型上执行操作。这被称为错误前缀（Error Prefix），是一种让客户理解服务器返回的错误类型的方式，不需要依赖确切的错误消息，毕竟消息可以随时间而改变。
+
+一个客户端实现对不同的错误可能返回不同的异常，也可能提供一种通用的方式捕获错误，即将错误名以字符串的形式直接提供给调用者。
+
+但是，这种特性不应该被认为是重要的，因为它很少使用，很少量的客户实现可能简单地返回一个通用错误条件，例如false。
+
 
 ## Reference
 - [Redis Protocol Specification](https://redis.io/topics/protocol)
