@@ -67,6 +67,41 @@ RESP对错误有一个特殊的数据类型。实际上错误几乎和RESP简单
 一个客户端实现对不同的错误可能返回不同的异常，也可能提供一种通用的方式捕获错误，即将错误名以字符串的形式直接提供给调用者。
 
 但是，这种特性不应该被认为是重要的，因为它很少使用，很少量的客户实现可能简单地返回一个通用错误条件，例如false。
+## RESP整型（Integers）
+这个类型使用一个由回车换行符（CRLF）终结的字符串来代表整型数，以字节":"开头。例如，":0\r\n"或":1000\r\n" 都是整形回复。
+
+许多Redis命令返回RESP整型数，像[INCR](https://redis.io/commands/incr)， [LLEN](https://redis.io/commands/llen)和[LASTSAVE](https://redis.io/commands/lastsave)等。
+
+对于返回的整型数没有什么特殊的意义，对于[INCR](https://redis.io/commands/incr)它仅仅是一个增加后的值，对[LASTSAVE](https://redis.io/commands/lastsave)它是一个UNIX时间。但是，返回的整数确保位于一个64位有符号整数的范围之内。
+
+整形返回值可被扩展用于表示true或alse，比如对于命令[EXISTS](https://redis.io/commands/exists)或[SISMEMBER](https://redis.io/commands/sismember)将返回1代表true，返回0代表false。
+
+其它命令像[SADD](https://redis.io/commands/sadd)，[SREM](https://redis.io/commands/srem)和[SETNX](https://redis.io/commands/setnx)都在操作成功时返回1，失败时返回0.
+
+下面的命令将返回一个整形回复值：[SETNX](https://redis.io/commands/setnx)，[DEL](https://redis.io/commands/del)，[EXISTS](https://redis.io/commands/exists)，[INCR](https://redis.io/commands/incr)，[INCRBY](https://redis.io/commands/incrby)，[DECR](https://redis.io/commands/decr)，[DECRBY](https://redis.io/commands/decrby)，[DBSIZE](https://redis.io/commands/dbsize)，[LASTSAVE](https://redis.io/commands/lastsave)，[RENAMENX](https://redis.io/commands/renamenx)，[MOVE](https://redis.io/commands/move)，[LLEN](https://redis.io/commands/llen)，[SADD](https://redis.io/commands/sadd)，[SREM](https://redis.io/commands/srem)，[SISMEMBER](https://redis.io/commands/sismember)，[SCARD](https://redis.io/commands/scard)。
+## RESP块字符串（Bulk Strings）
+块字符串用于代表一个简单的二进制安全的字符串，最多512M字节长度。
+
+块字符串用下面的方法编码：
+- 一个"$" 符后跟代表字符串长度的字节数（前缀长度）加回车换行符
+- 实际字符串数据
+- 一个结束用换车换行符
+一次一个字符串"foobar" i将会被编码为：
+```
+"$6\r\nfoobar\r\n"
+```
+一个空字符串将会被编码为：
+```
+"$0\r\n\r\n"
+```
+RESP块字符串也可用一种特殊格式来代表一个不存在的值--用于代表Null值。在这种特殊格式中，长度为-1，并且没有实际数据，因此一个Null被编码为：
+```
+"$-1\r\n"
+```
+这被称为Null块字符串。
+
+当服务器回复一个Null块字符串时，客户端库API不应该返回一个空字符串，而应返回一个nil对象。例如，Ruby库应该返回 'nil'，C库应该返回NULL（或者在返回的对象上设立特殊标记）等。
+## RESP数组
 
 
 ## Reference
