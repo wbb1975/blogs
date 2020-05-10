@@ -74,10 +74,99 @@ Docker拥有几种可用的日志驱动可被用于应用程序日志的管理�
 
 驱动|优点|缺点
 --------|--------|--------
-
-
+none|极其安全，因为什么都不记录|没有日志，定位问题相当困难
+[local](https://docs.docker.com/config/containers/logging/local/)|为性能和磁盘使用而优化，缺省日志大小有优化|由于文件格式（它是压缩的）的问题它不能用于集中式日志
+[json-file](https://docs.docker.com/engine/admin/logging/json-file/)|缺省驱动，支持标签|日志驻于本地，并不聚集，如果不设限制日志可能填满磁盘。查阅文档以获取更多信息。额外的磁盘I/O，如果你需要传送这些日志你需要额外的工具
+[syslog](https://docs.docker.com/engine/admin/logging/syslog/)|大多数机器提供了syslog，支持加密TLS传输，支持标签。集中式日志视图|需要被设置为高可用性，否则如果起不可用容器启动就会有问题。额外的网络I/O，易受网络问题影响
+[journald](https://docs.docker.com/engine/admin/logging/journald/)|日志聚集，不受本地假脱机影响，它也可收集Docker服务日志|因为journal日志是二进制格式，需要采取额外步骤把它们转送到日志收集器。额外的磁盘I/O
+[gelf](https://docs.docker.com/engine/admin/logging/gelf/)|缺省提供可索引的字段（容器id，主机名，容器名等）以及标记，集中式日志视图，弹性|额外的网络I/O，易受网络问题影响，有更多组件需维护
+[fluentd](https://docs.docker.com/config/containers/logging/fluentd/)|缺省提供容器id，容器名，fluentd支持多个输出。集中式日志视图，弹性|没有TLS支持，额外的网络I/O，易受网络问题影响，有更多组件需维护
+[awslogs](https://docs.docker.com/engine/admin/logging/awslogs/)|使用AWS时易于集成，需要维护的基础设施更少，支持标记。集中式日志视图|对混合云配置和本地（机房）安装并非最理想的选择。额外的网络I/O，易受网络问题影响
+[splunk](https://docs.docker.com/engine/admin/logging/splunk/)|易于与Splunk集成，TLS支持，高可配置性，标记支持，额外度量。集中式日志视图|Splunk需要是高可用的，否则容器启动可能会有问题--通过`set splunk-verify-connection = false`可防止该问题。额外的网络I/O，易受网络问题影响
+[etwlogs](https://docs.docker.com/engine/admin/logging/etwlogs/)|Windows上的通用日志框架，缺省为可索引的值|只工作于Windows，这些日志将不得不从Windows机器通过不同的工具传送到汇聚器
+[gcplogs](https://docs.docker.com/engine/admin/logging/gcplogs/)|易于与Google计算集成，需要维护的基础设施更少，支持标记。集中式日志视图|对混合云配置和本地（机房）安装并非最理想的选择。额外的网络I/O，易受网络问题影响
+[logentries](https://docs.docker.com/config/containers/logging/logentries/)|需管理的东西更少，基于SaaS的日志汇集与分析，支持TLS|需要[logentries](https://logentries.com/)订阅
 ## 收集日志
+利用Docker企业版，有一些不同的方式执行集群级别的日志（记录）。
++ 在节点级别使用日志驱动
++ 当利用Swarm部署为[global](https://docs.docker.com/engine/reference/commandline/service_create/#set-service-mode---mode)服务，或利用Kubernetes部署为[DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)时使用日志代理
++ 让应用自己向你的日志基础设施发送日志
+### 节点级别日志
+为了实现节点级别日志，简单在Linux机器上在`/etc/docker/daemon.json`中添加一个条目来指定日志驱动。在Windows机器上缺省的Docker引擎配置文件位于`%programdata%\docker\config\daemon.json`。
+
+> 使用缺省的`json-file`或`journald`也可以实现节点级别的日志，缺省地没有提供自动回转设置。为确保磁盘不被日志填满，推荐在安装Docker企业版前修改配置为自动回转选项，如下所示：
+```
+{
+ "log-driver": "json-file",
+ "log-opts": {
+   "max-size": "10m",
+   "max-file": "3" 
+ }
+}
+```
+
+Docker企业版用户可以使用“双日志”，这可使你利用`docker logs`来指定任何日志驱动。请参阅[Docker文档](https://docs.docker.com/config/containers/logging/dual-logging/)来了解Docker企业版特性的更多细节。
+### Windows日志
+ETW日志驱动是Windows支持的。ETW代表Event Tracing in Windows，它是在Windows上追踪应用的常用框架。每条ETW事件含有一条消息，其带有一个日志及其上下文信息。一个客户可以创建一个ETW监听器来监听这些事件。
+
+可选地，如果Splunk在你的组织中可用，Splunk可被用于收集Windows容器日志。为了让此功能正常工作，一个[HTTP连接器](https://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector)需要在Splunk服务器端设置好。下面是一个发送容器日志到Splunk的Windows机器的`daemon.json`实例：
+```
+{
+  "data-root": "d:\\docker",
+  "labels": ["os=windows"],
+  "log-driver": "splunk",
+  "log-opts": {
+    "splunk-token": "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
+    "splunk-url": "https://splunk.example.com",
+    "splunk-format": "json",
+    "splunk-index": "main",
+    "splunk-insecureskipverify": "true",
+    "splunk-verify-connection": "false",
+    "tag":"{{.ImageName}} | {{.Name}} | {{.ID}}"
+   }
+}
+```
+### 节点级别Swarm日志范例
+为了实现系统级别日志，请在`/etc/docker/daemon.json`中添加一个条目。例如，使用下面的配置来开启`gelf`输出差件：
+```
+{
+    "log-driver": "gelf",
+    "log-opts": {
+     "gelf-address": "udp://1.2.3.4:12201",
+     "tag":"{{.ImageName}}/{{.Name}}/{{.ID}}"
+    }
+}
+```
+然后重启Docker服务，所有的日志驱动可以通过`/etc/docker/daemon.json`以同样的方式配置。在上面使用`gelf`的例子中，`tag`指定了当日志被收集后可被查询和索引的数据。请查阅每一种日志驱动的文档以获取设置日志驱动的额外字段。
+
+通过`/etc/docker/daemon.json`文件设置日子将在节点级别设置缺省日志的行为。这可以通过服务级别或容器级别设置改写。改写缺省日志行为对问题定位是有好处的--我们可以看到实时日志。
+
+如果一个服务在一个`daemon.json`配置为使用`gelf`日志驱动的系统上创建，然后该主机上运行的所有容器日志都会被发送到`gelf-address`指定的机器上去。
+
+如果喜欢一个不同的日志驱动，比如从容器的`stdout`上查看日志流，那么可以覆盖缺省的的日志驱动行为：
+```
+docker service create \
+      -–log-driver json-file --log-opt max-size=10m \
+      nginx:alpine
+```
+这可以与Docker服务日志耦合以更方便地定位服务问题。
+### Docker Swarm服务日志
+当一个服务拥有多路重复的任务时，`docker service logs`提供了日志流的多路复用。通过输入`docker service logs <service_id>`，日志在第一栏显示了其来源任务名称，接下来是右边每个复制任务的实时日志。例如：
+```
+$ docker service create -d --name ping --replicas=3 alpine:latest ping 8.8.8.8
+5x3enwyyr1re3hg1u2nogs40z
+
+$ docker service logs ping
+ping.2.n0bg40kksu8e@m00    | 64 bytes from 8.8.8.8: seq=43 ttl=43 time=24.791 ms
+ping.3.pofxdol20p51@w01    | 64 bytes from 8.8.8.8: seq=44 ttl=43 time=34.161 ms
+ping.1.o07dvxfx2ou2@w00    | 64 bytes from 8.8.8.8: seq=44 ttl=43 time=30.111 ms
+ping.2.n0bg40kksu8e@m00    | 64 bytes from 8.8.8.8: seq=44 ttl=43 time=25.276 ms
+ping.3.pofxdol20p51@w01    | 64 bytes from 8.8.8.8: seq=45 ttl=43 time=24.239 ms
+ping.1.o07dvxfx2ou2@w00    | 64 bytes from 8.8.8.8: seq=45 ttl=43 time=26.403 ms
+```
+这个命令在在查看一个拥有多个任务副本的服务输出时很有用。跨越多个副本实时地，流式查看日志允许整个集群范围的服务issue的快速理解和定位。
 ## 部署日志代理
+
 ## Brownfield应用日志
 ## 日志基础设施
 ## 结论
