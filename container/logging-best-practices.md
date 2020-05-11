@@ -166,10 +166,15 @@ ping.1.o07dvxfx2ou2@w00    | 64 bytes from 8.8.8.8: seq=45 ttl=43 time=26.403 ms
 ```
 这个命令在在查看一个拥有多个任务副本的服务输出时很有用。跨越多个副本实时地，流式查看日志允许整个集群范围的服务issue的快速理解和定位。
 ## 部署日志代理
+许多日志供应商拥有他们自己的日志代理，请参阅其各自的文档来获取使用其工具套件的详细指令。
 
+一般来讲，这些代理或被部署为[全局性](https://docs.docker.com/engine/reference/commandline/service_create/#set-service-mode---modeglobal)Swarm服务，或者为一个Kubernetes [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) 。
 ## Brownfield应用日志
+有时候，尤其在处理brownfield（已存在）的应用是，并非所有的日志都会被输出到标准输出。在这种情况下，部署一个边车容器来确保写到磁盘的日志都会被收集是有用的。请参阅[Kubernetes文档](https://kubernetes.io/docs/concepts/cluster-administration/logging/#using-a-sidecar-container-with-the-logging-agent)以获取一个使用`fluentd`以及一个边车容器来收集额外日志的例子。
 ## 日志基础设施
+推荐日志基础设施布置于与你的应用部署独立的环境中。如果你的日志基础设施不可用，则定位集群和应用问题将变得复杂。使用Docker企业版时创建一个工具集群来收集度量和日志是一个最佳实践。
 ## 结论
+Docker提供了许多选项来控制日志， 当采用Docker平台时制定一个日志战略是有帮助的。对大多数系统，将日志数据留在宿主机上是不够的。能够索引，搜索，有一个自服务平台可以对运维和开发人员提供平滑的体验。
 
 ## Reference
 - [Docker Reference Architecture: Docker Logging Design and Best Practices](https://success.docker.com/article/logging-best-practices)
