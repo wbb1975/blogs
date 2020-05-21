@@ -39,6 +39,11 @@ typedef struct aeEventLoop
 } aeEventLoop;
 ```
  ### aeCreateEventLoop
+ aeCreateEventLoop首先为aeEventLoop结构体分配内存，然后调用ae_epoll.c:aeApiCreate。
+
+ aeApiCreate为aeApiState分配内存，aeApiState拥有两个字段：epfd持有从[epoll_create](http://man.cx/epoll_create%282%29)调用返回的epoll文件描述符，以及由Linux epoll库定义的epoll_event 结构体类型的字段events。events字段的使用将稍后描述。
+
+ 
 ### aeCreateTimeEvent
 ### aeCreateFileEvent
 ### 时间循环处理（Event Loop Processing）
@@ -47,3 +52,4 @@ typedef struct aeEventLoop
 
 ## Reference
 - [Redis Internals documentation](https://redis.io/topics/internals)
+- [Redis Event Library](https://redis.io/topics/internals-rediseventlib)
