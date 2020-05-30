@@ -139,9 +139,99 @@ $ hello
 Hello, Go!
 ```
 ## 从远程模块中导入包
+一个导入路径可以描述如何使用版本控制系统如Git 或 Mercurial来获取包源代码。go工具使用这个属性来从远程存储库中获取包。例如，为了在你的程序中使用github.com/google/go-cmp/cmp：
+```
+package main
+
+import (
+	"fmt"
+
+	"example.com/user/hello/morestrings"
+	"github.com/google/go-cmp/cmp"
+)
+
+func main() {
+	fmt.Println(morestrings.ReverseRunes("!oG ,olleH"))
+	fmt.Println(cmp.Diff("Hello World", "Hello Go"))
+}
+```
+
+当你运行命令如go install, go build, 或 go run，go命令将会自动下载远程模块并将其记录在你的go.mod中：
+```
+$ go install example.com/user/hello
+go: finding module for package github.com/google/go-cmp/cmp
+go: downloading github.com/google/go-cmp v0.4.0
+go: found github.com/google/go-cmp/cmp in github.com/google/go-cmp v0.4.0
+$ hello
+Hello, Go!
+  string(
+- 	"Hello World",
++ 	"Hello Go",
+  )
+$ cat go.mod
+module example.com/user/hello
+
+go 1.14
+
+require github.com/google/go-cmp v0.4.0
+$
+```
+
+模块依赖被自动下载到由GOPATH环境变量指定的目录的pkg/mod子目录中。下载的特定版本的模块的内容在需要这个版本的所有模块中共享，因此go命令将这些文件和目录标记为只读的。为了移除这些下载的模块，你可以传递-modcache标记给go clean：
+```
+$ go clean -modcache
+$
+```
 ## 测试
+Go拥有一个轻量级测试框架，包含一个go test命令工具和testing包。
+
+你可以这样写测试：创建一个文件以_test.go结尾，包含函数名TestXXX，其签名为func (t *testing.T)。测试框架将运行每一个此类函数；如果函数调用了 失败指示函数如t.Error 或 t.Fail等，测试就被认为失败。
+
+给morestrings包创建一个测试：创建一个文件$HOME/hello/morestrings/reverse_test.go，并添加如下Go代码：
+```
+package morestrings
+
+import "testing"
+
+func TestReverseRunes(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"Hello, world", "dlrow ,olleH"},
+		{"Hello, 世界", "界世 ,olleH"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		got := ReverseRunes(c.in)
+		if got != c.want {
+			t.Errorf("ReverseRunes(%q) == %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+```
+
+接下来用go test运行测试：
+```
+$ go test
+PASS
+ok  	example.com/user/morestrings 0.165s
+$
+```
+运行[go help test](https://golang.google.cn/cmd/go/#hdr-Test_packages)，参阅[testing包文档](https://golang.google.cn/pkg/testing/)来获取更多细节。 
 ## 下一步
+订阅[golang-announce](https://groups.google.com/group/golang-announce)邮件列表，从而当最新稳定版本Go发布时可以得到及时通知。
+
+参阅[Effective Go](https://golang.google.cn/doc/effective_go.html)获取撰写清晰常用的Go代码的技巧。
+
+参与一个Go之旅来正确地学习这门语言。
+
+访问[文档页](https://golang.google.cn/doc/#articles)来获取有关Go语言，库及工具的一系列深入的文章。
 ## 获得帮助
+为了实时帮助，在社区运营的[gophers Slack server ](https://gophers.slack.com/messages/general/)上向gophers寻求帮助（从[这里](https://invite.slack.golangbridge.org)获取一个邀请/）。
+
+关于Go语言讨论的正式邮件列表是[Go Nuts](https://groups.google.com/group/golang-nuts)。 
+
+使用[Go issue tracker](https://golang.org/issue)汇报缺陷。
 
 ## Reference
 - [How to Write Go Code](https://golang.google.cn/doc/code.html)
