@@ -251,6 +251,165 @@ security:
 更多信息，请参见[认证](https://swagger.io/docs/specification/authentication/)。 
 ### 4.9 完整规范（Full Specification）
 OpenAPI 3.0的完整规范在[GitHub](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md)上可见。
+## 5. 认证
+### 5.1 基础认证
+### 5.2 API Key
+有些API使用API keys进行认证。一个API key是调用API时客户端提供的一个令牌。它可以以查询字符串的形式提供：
+```
+GET /something?api_key=abcdef12345
+```
+或者在一个请求头里：
+```
+GET /something HTTP/1.1
+X-API-Key: abcdef12345
+```
+或者是一个Cookie：
+```
+GET /something HTTP/1.1
+Cookie: X-API-KEY=abcdef12345
+```
+API keys假设是机密的，只有客户端和服务器端知晓它。像基础认证，基于API keys的认证只有当与其它安全设施如HTTPS/SSL一起使用时才被人为是安全的。
+#### 5.2.1 描述API Keys
+在OpenAPI 3.0中，API keys被描述如下：
+```
+openapi: 3.0.0
+...
+
+# 1) Define the key name and location
+components:
+  securitySchemes:
+    ApiKeyAuth:        # arbitrary name for the security scheme
+      type: apiKey
+      in: header       # can be "header", "query" or "cookie"
+      name: X-API-KEY  # name of the header, query parameter or cookie
+
+# 2) Apply the API key globally to all operations
+security:
+  - ApiKeyAuth: []     # use the same name as under securitySchemes
+```
+这个实例定义了一个名为X-API-Key的API key，在请求头中发送 X-API-Key: <key>。对于security scheme，键ApiKeyAuth只是一个随机字符串（不要与name键指定的API key名字混淆）。名字ApiKeyAuth在security段中再次使用，用于将该security scheme 应用于API。注意：仅仅securitySchemes是不够的；你必须同时使用security以使API key生效。security也可在操作级别设置而非全局设置。这在仅仅一部分操作需要API key是有用的。
+```
+paths:
+  /something:
+    get:
+      # Operation-specific security:
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK (successfully authenticated)
+```
+注意在一个API中支持多种认证类型是可能的，参见[支持多种认证](https://swagger.io/docs/specification/authentication/#multiple)。
+#### 5.2.2 多个API Keys
+某些API使用一堆API keys，比如， API Key 和 App ID。为了指定一起使用的keys（成为逻辑与）将位于同一数组中的元素放进security数组中：
+```
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    appId:
+      type: apiKey
+      in: header
+      name: X-APP-ID
+
+security:
+  - apiKey: []
+    appId:  []   # <-- no leading dash (-)
+```
+注意下面的不同形式：
+```
+security:
+  - apiKey: []
+  - appId:  []
+```
+这意味着每一个key都可使用（逻辑或），更多信息，参见[支持多种认证](https://swagger.io/docs/specification/authentication/#multiple)。
+#### 5.2.3 401 回复
+当收到缺少API key或无效API key的请求时你可以定义401 “Unauthorized”回复。这个回复包含WWW-Authenticate头--你应该想提到它。和其它公共回复一样，你可以在全局components/responses段中定义401回复，并在其它地方利用$ref来引用它。
+```
+paths:
+  /something:
+    get:
+      ...
+      responses:
+        ...
+        '401':
+           $ref: "#/components/responses/UnauthorizedError"
+    post:
+      ...
+      responses:
+        ...
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+
+components:
+  responses:
+    UnauthorizedError:
+      description: API key is missing or invalid
+      headers:
+        WWW_Authenticate:
+          schema:
+            type: string
+```
+了解更多描述回复的细节，请参阅[描述回复](https://swagger.io/docs/specification/describing-responses/)。 
+### 5.3 Bearer认证
+### 5.4 OAuth 2.0
+[OAuth 2.0](https://oauth.net/2/)是一个授权协议，它给予一个API客户对一个Web服务器上的用户数据的有限访问。GitHub, Google, 和 Facebook APIs都使用了它。OAuth依赖于一个叫做流的认证场景，它允许资源所有者（用户）分享资源服务器上的受保护内容，而不用分享其证书。基于那个目的，一个OAuth 2.0服务器会发放访问令牌，借助它一个客户端应用可以代表资源所有者访问受保护资源。关于OAuth 2.0的更多信息，参见[oauth.net](https://oauth.net/2) 和 [RFC 6749](https://tools.ietf.org/html/rfc6749)。
+#### 5.4.1 流（Flows）
+流（也叫作授权类型）是客户端执行的一系列场景用于从授权服务器上拿到访问令牌。OAuth 2.0提供了几种流适用于不同的API客户端类型。
+- 授权码（Authorization code ）：应用最广的流，主要用于服务端及移动Web应用。这个流和用户如何利用他们的Facebook，Google账号登录到一个Web应用很相似。
+- 隐含（Implicit）：该流要求客户直接直接查询访问令牌。这在下面这些情况下有用，如用户的证书不能被存放在客户端代码中，因为这很容易被第三方访问到。它适用于没有服务端组件的web，桌面及移动应用。
+- 资源所有者密码证书（Resource owner password credentials）：要求以用户名和密码登录。因为在那种情况下证书将会是请求的一部分。这个流仅仅对信任的客户适用（例如，由API提供商发布的正式应用）。
+- 客户端证书（Client Credentials）：用于服务端-服务端认证。这个流描述了这样一种方式：客户端应用代表它自己而非一个个单独的用户。在大多数场景下，这个流提供了一种方式让用户在客户端应用中指定他们的证书，因此他能访问客户端的控制下的资源。
+#### 5.4.2 用OpenAPI描述OAuth 2.0
+为了描述一个由OAuth 2.0保护的API，首先，在全局components/securitySchemes 段用type: oauth2添加一个security scheme。然后添加security键来应用于全局security或单个操作。
+```
+# Step 1 - define the security scheme
+components:
+  securitySchemes:
+    oAuthSample:    # <---- arbitrary name
+      type: oauth2
+      description: This API uses OAuth 2 with the implicit grant flow. [More info](https://api.example.com/docs/auth)
+      flows:
+        implicit:   # <---- OAuth flow(authorizationCode, implicit, password or clientCredentials)
+          authorizationUrl: https://api.example.com/oauth2/authorize
+          scopes:
+            read_pets: read your pets
+            write_pets: modify pets in your account
+
+# Step 2 - apply security globally...
+security: 
+  - oAuthSample: 
+    - write_pets
+    - read_pets
+
+# ... or to individual operations
+paths:
+  /pets:
+    patch:
+      summary: Add a new pet
+      security: 
+        - oAuthSample: 
+          - write_pets
+          - read_pets
+      ...
+```
+flows关键字指定了一个或多个这个OAuth 2.0 scheme支持的命名流。流名字可以为：
++ 授权码 – 认证码流(在OpenAPI 2.0成为访问码)
++ 隐含 – 隐含流
++ 密码 – 资源所有者密码流
++ 客户端证书 – 客户端证书流 (OpenAPI 2.0中称之为应用)
+
+flows关键字可以指定多个流，但每个类型只能一个。每个流包涵下面的信息：
+字段名|描述|授权码|隐含|密码|客户端证书
+--------|--------|--------|--------|--------|--------
+authorizationUrl|该流使用的授权URL，可以是基于[API服务器URL](https://swagger.io/docs/specification/api-host-and-base-path/)的相对路径|+|+|-|-
+tokenUrl|该流使用的令牌URL，可以是基于API服务器URL的相对路径|+|-|+|+
+refreshUrl|可选。用于获取更新令牌的URL。可以是基于API服务器URL的相对路径|+|+|+|+
+[范围](https://swagger.io/docs/specification/authentication/oauth2/#scopes-extra)|该OAuth2 security scheme的适用范围。一个范围名及其对应描述的映射|+|+|+|+
+### 5.5 OpenID连接发现（OpenID Connect Discovery）
+### 5.6 Cookie认证
 
 ## Reference
 - [OpenAPI Homepage](https://swagger.io/)
