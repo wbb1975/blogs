@@ -409,6 +409,87 @@ tokenUrl|该流使用的令牌URL，可以是基于API服务器URL的相对路�
 refreshUrl|可选。用于获取更新令牌的URL。可以是基于API服务器URL的相对路径|+|+|+|+
 [范围](https://swagger.io/docs/specification/authentication/oauth2/#scopes-extra)|该OAuth2 security scheme的适用范围。一个范围名及其对应描述的映射|+|+|+|+
 ### 5.5 OpenID连接发现（OpenID Connect Discovery）
+[OpenID Connect (OIDC)](http://openid.net/connect/)是建立于[OAuth 2.0](https://swagger.io/docs/specification/authentication/oauth2/)之上的实体层，被一些OAuth 2.0提供商支持，例如Google and Azure活动目录。它定义了一个登录流，允许一个客户应用认证一个用户，得到（或宣称）这个用户的信息，例如用户名，密码等。用户实体信息用JWT（JSON Web Toekn）编码，被称为ID Token。OpenID连接定义了一套发现机制，称为[OpenID连接发现](https://openid.net/specs/openid-connect-discovery-1_0.html)，这里一个OpenID服务器以一个众所周知的URL的形式发布它的元信息，典型地：
+```
+https://server.com/.well-known/openid-configuration
+```
+这个URL返回JSON列表包括OpenID/OAuth端点，支持范围及申明，公共键用于签名令牌，以及其它细节。客户端使用这些信息来向OpenID服务器构造一个请求，字段名及其值在[OpenID连接发现规范](https://openid.net/specs/openid-connect-discovery-1_0.html)中定义，下面是返回的示例数据：
+```
+{
+  "issuer": "https://example.com/",
+  "authorization_endpoint": "https://example.com/authorize",
+  "token_endpoint": "https://example.com/token",
+  "userinfo_endpoint": "https://example.com/userinfo",
+  "jwks_uri": "https://example.com/.well-known/jwks.json",
+  "scopes_supported": [
+    "pets_read",
+    "pets_write",
+    "admin"
+  ],
+  "response_types_supported": [
+    "code",
+    "id_token",
+    "token id_token"
+  ],
+  "token_endpoint_auth_methods_supported": [
+    "client_secret_basic"
+  ],
+  ...
+}
+```
+#### 5.5.1 描述OpenID连接发现
+OpenAPI 3.0让你以下面的方式描述OpenID连接发现：
+```
+openapi: 3.0.0
+...
+
+# 1) Define the security scheme type and attributes
+components:
+  securitySchemes:
+    openId:   # <--- Arbitrary name for the security scheme. Used to refer to it from elsewhere.
+      type: openIdConnect
+      openIdConnectUrl: https://example.com/.well-known/openid-configuration
+
+# 2) Apply security globally to all operations
+security:
+  - openId:   # <--- Use the same name as specified in securitySchemes
+      - pets_read
+      - pets_write
+      - admin
+```
+第一段components/securitySchemes，定义了security scheme类型(openIdConnect)及发现端点URL(openIdConnectUrl)。不像OAuth 2.0，你不需要在securitySchemes中列出可用的范围--客户期待从发现端点中得到它们。security段接下来选中security scheme应用于你的API。API调用实际所需范围需要在此被列出。这可能是发现端点返回的范围的一个子集。如果不同的API操作需要不同的范围，你可以在操作级别而非全局级别应用security。对每个操作你可以列出相关范围如下：
+```
+paths:
+  /pets/{petId}:
+    get:
+      summary: Get a pet by ID
+      security:
+        - openId:
+          - pets_read
+      ...
+
+    delete:
+      summary: Delete a pet by ID
+      security:
+        - openId:
+          - pets_write
+      ...
+```
+#### 5.5.2 相对发现URL
+openIdConnectUrl可被基于[服务器URL](https://swagger.io/docs/specification/api-host-and-base-path/)的相对路径指定，如下所示：
+```
+servers:
+  - url: https://api.example.com/v2
+
+components:
+  securitySchemes:
+    openId:
+      type: openIdConnect
+      openIdConnectUrl: /.well-known/openid-configuration
+```
+相对路径根据[RFC 3986](https://tools.ietf.org/html/rfc3986#section-4.2)解析。在上例中，它将被解析为https://api.example.com/.well-known/openid-configuration。
+#### 5.5.3 Swagger UI
+OIDC当前不被Swagger Editor和Swagger UI支持，请遵循[这个问题](https://github.com/swagger-api/swagger-ui/issues/3517)来获取更新。 
 ### 5.6 Cookie认证
 
 ## Reference
