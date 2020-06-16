@@ -1,4 +1,9 @@
 # Terraform入门
+## 0. Terraform 核心功能
+- 基础架构即代码(Infrastructure as Code)：使用高级配置语法来描述基础架构，这样就可以对数据中心的蓝图进行版本控制，就像对待其他代码一样对待它。
+- 执行计划(Execution Plans)：Terraform 有一个 plan 步骤，它生成一个执行计划。执行计划显示了当执行 apply 命令时 Terraform 将做什么。通过 plan 进行提前检查，可以使 Terraform 操作真正的基础结构时避免意外。
+- 资源图(Resource Graph)：Terraform 构建的所有资源的图表，它能够并行地创建和修改任何没有相互依赖的资源。因此，Terraform 可以高效地构建基础设施，操作人员也可以通过图表深入地解其基础设施中的依赖关系。
+- 自动化变更(Change Automation)：把复杂的变更集应用到基础设施中，而无需人工交互。通过前面提到的执行计划和资源图，我们可以确切地知道 Terraform 将会改变什么，以什么顺序改变，从而避免许多可能的人为错误。
 ## 1. 安装Terraform
 安装Terraform，找到与你系统[匹配的软件包](https://www.terraform.io/downloads.html)然后下载。Terraform被打包为一个zip归档文件。
 
@@ -71,6 +76,16 @@ commands will detect it and remind you to do so if necessary.
 aws provider插件与其他薄记文件一起被下载安装到当前目录子目录。
 
 输出信息会显示所安装插件的版本，以及建议在配置文件中指定版本以确保terraform init在未来安装一个兼容的版本。对于后面步骤来说这一步不是必须的，因为该配置文件后面将会被废弃。
+
+该操作会把文件中指定的驱动程序安装到当前目录下的 .terraform 目录中：
+```
+wangbb@wangbb-ThinkPad-T420:~/practices/aws/terraform$ ls -la .terraform/plugins/linux_amd64/
+总用量 151436
+drwxr-xr-x 2 wangbb wangbb        64 6月  15 07:36 .
+drwxr-xr-x 3 wangbb wangbb        25 6月  15 07:36 ..
+-rwxr-xr-x 1 wangbb wangbb        79 6月  15 07:36 lock.json
+-rwxr-xr-x 1 wangbb wangbb 155066368 6月  15 07:36 terraform-provider-aws_v2.66.0_x4
+```
 ## 4. 应用变更
 > 注意：本指南中列出的命令适用于terraform0.11及以上版本。更早版本需要在应用前使用terraform plan命令查看执行计划。使用terraform version命令确认你当前terraform版本。
 
@@ -139,10 +154,259 @@ aws_instance.example:
   vpc_security_group_ids.3348721628 = sg-67652003
 ```
 你可以看到，通过创建资源，我们收集了很多信息。这些值可以被引用以配置其他资源和输出，这些将会在入门指南后面的部分讲到。
+## 5. 输入变量
+### 5.0 使用 Provisioners 进行环境配置
+Provisioners 可以在资源创建/销毁时在本地/远程执行脚本。
+Provisioners 通常用来引导一个资源，在销毁资源前完成清理工作，进行配置管理等。
 
+Provisioners拥有多种类型可以满足多种需求，如：文件传输（file），本地执行（local-exec），远程执行（remote-exec）等 Provisioners可以添加在任何的resource当中：
+```
+# Create a Linux virtual machine
+resource "azurerm_virtual_machine" "vm" {
+
+<...snip...>
+
+    provisioner "file" {
+        connection {
+            type        = "ssh"
+            user        = "royzeng"
+            private_key = "${file("~/.ssh/id_rsa")}"
+        }
+
+        source      = "newfile.txt"
+        destination = "newfile.txt"
+    }
+
+    provisioner "remote-exec" {
+        connection {
+            type        = "ssh"
+            user        = "royzeng"
+            private_key = "${file("~/.ssh/id_rsa")}"
+        }
+
+        inline = [
+        "ls -a",
+        "cat newfile.txt"
+        ]
+    }
+```
+#### 5.0.1 使用 null resource 和 trigger 来解耦
+为了让ansible 脚本单独运行，而不需要创建或销毁资源，可以用 null_resource 调用 provisioner 来实现。
+```
+resource "null_resource" "datanode" {
+  count = "${var.count.datanode}"
+
+  triggers {
+    instance_ids = "${element(aws_instance.datanode.*.id, count.index)}"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      ...
+    ]
+
+    connection {
+      type = "ssh"
+      user = "centos"
+      host = "${element(aws_instance.datanode.*.private_ip, count.index)}"
+    }
+  }
+}
+```
+### 5.1 新建一个文件定义变量
+```
+# file variables.tf
+---
+variable "prefix" {
+  default = "royTF"
+}
+
+variable "location" { }
+
+variable "tags" {
+  type    = "map"
+  default = {
+     Environment = "royDemo"
+     Dept = "Engineering"
+  }
+}
+```
+文件中 location 部分没有定义，运行terraform的时候，会提示输入：
+```
+$ terraform plan -out royplan
+var.location
+  Enter a value: eastasia
+  
+  <...snip...>
+  
+  This plan was saved to: royplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "royplan"
+```
+### 5.2 其它输入变量的方式
+命令行输入：
+```
+$ terraform apply \
+>> -var 'prefix=tf' \
+>> -var 'location=eastasia'
+```
+
+文件输入：
+```
+$ terraform apply \
+  -var-file='secret.tfvars'
+```
+默认读取文件 terraform.tfvars，这个文件不需要单独指定。
+
+环境变量输入：TF_VAR_name ，比如 TF_VAR_location。
+### 5.3 变量类型
+- list
+- map
+
+对于 list 变量：
+```
+# 定义 list 变量
+variable "image-RHEL" {
+  type = "list"
+  default = ["RedHat", "RHEL", "7.5", "latest"]
+}
+
+# 调用 list 变量
+
+    storage_image_reference {
+        publisher = "${var.image-RHEL[0]}"
+        offer     = "${var.image-RHEL[1]}"
+        sku       = "${var.image-RHEL[2]}"
+        version   = "${var.image-RHEL[3]}"
+    }
+```
+
+map 是一个可以被查询的表。
+```
+variable "sku" {
+    type = "map"
+    default = {
+        westus = "16.04-LTS"
+        eastus = "18.04-LTS"
+    }
+}
+
+storage_image_reference {
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "${lookup(var.sku, var.location)}"
+    version   = "latest"
+}
+```
+### 5.4 输出变量
+定义输出：
+```
+output "ip" {
+    value = "${azurerm_public_ip.publicip.ip_address}"
+}
+```
+测试：
+```
+$ terraform apply
+...
+
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+  ip = 52.184.97.1
+$ terraform output ip
+52.184.97.1
+```
+### 5.5 Data Source
+DataSource 的作用可以通过输入一个资源的变量名，然后获得这个变量的其他属性字段。
+```
+data "azurerm_virtual_network" "test" {
+  name                = "production"
+  resource_group_name = "networking"
+}
+
+output "virtual_network_id" {
+  value = "${data.azurerm_virtual_network.test.id}"
+}
+
+output "virtual_network_subnet" {
+  value = "${data.azurerm_virtual_network.test.subnets[0]}"
+}
+```
+## 6. 使用module进行代码的组织管理
+Module 是 Terraform 为了管理单元化资源而设计的，是子节点，子资源，子架构模板的整合和抽象。将多种可以复用的资源定义为一个module，通过对 module 的管理简化模板的架构，降低模板管理的复杂度，这就是module的作用。
+
+Terraform中的模块是以组的形式管理不同的Terraform配置。模块用于在Terraform中创建可重用组件，以及用于基本代码组织。每一个module都可以定义自己的input与output，方便代码进行模块化组织。
+
+用模块，可以写更少的代码。比如用下面的代码，调用已有的module 创建vm。
+### 6.1 调用官方module
+```
+# declare variables and defaults
+variable "location" {}
+variable "environment" {
+    default = "dev"
+}
+variable "vm_size" {
+    default = {
+        "dev"   = "Standard_B2s"
+        "prod"  = "Standard_D2s_v3"
+    }
+}
+
+# Use the network module to create a resource group, vnet and subnet
+module "network" {
+    source              = "Azure/network/azurerm"
+    version             = "2.0.0"
+    location            = "${var.location}"
+    resource_group_name = "roytest-rg"
+    address_space       = "10.0.0.0/16"
+    subnet_names        = ["mySubnet"]
+    subnet_prefixes     = ["10.0.1.0/24"]
+}
+
+# Use the compute module to create the VM
+module "compute" {
+    source            = "Azure/compute/azurerm"
+    version           = "1.2.0"
+    location          = "${var.location}"
+    resource_group_name = "roytest-rg"
+    vnet_subnet_id    = "${element(module.network.vnet_subnets, 0)}"
+    admin_username    = "royzeng"
+    admin_password    = "Password1234!"
+    remote_port       = "22"
+    vm_os_simple      = "UbuntuServer"
+    vm_size           = "${lookup(var.vm_size, var.environment)}"
+    public_ip_dns     = ["roydns"]
+}
+```
+### 6.2 调用自己写的module
+```
+## file main.cf
+
+module "roy-azure" {
+  source = "./test"
+}
+
+## file test/resource.tf
+
+variable "cluster_prefix" {
+  type        = "string"
+}
+variable "cluster_location" {
+    type        = "string"
+}
+
+resource "azurerm_resource_group" "core" {
+    name     = "${var.cluster_prefix}-rg"
+    location = "${var.cluster_location}"
+}
+```
 
 ## Reference
 - [安装Terraform](https://segmentfault.com/a/1190000018145614)
 - [构建基础设施](https://segmentfault.com/a/1190000018145618)
 - [Terraform Homepage](https://www.terraform.io/)
 - [Terraform Recommended Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices/index.html)
+- [Terraform 学习笔记](https://www.jianshu.com/p/e0dd50f7ee98)
