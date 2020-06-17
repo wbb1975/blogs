@@ -410,3 +410,5 @@ resource "azurerm_resource_group" "core" {
 - [Terraform Homepage](https://www.terraform.io/)
 - [Terraform Recommended Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices/index.html)
 - [Terraform 学习笔记](https://www.jianshu.com/p/e0dd50f7ee98)
+- [使用 Terraform 在 AWS 中国区域实现自动化部署指南系列（一） TERRAFORM 入门](https://amazonaws-china.com/cn/blogs/china/aws-china-region-guide-series-terraform1/)
+- [使用 Terraform 在 AWS 中国区域实现自动化部署指南系列（二） TERRAFORM 进阶](https://amazonaws-china.com/cn/blogs/china/aws-china-region-guide-series-terraform2/)
