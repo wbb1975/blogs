@@ -62,8 +62,102 @@ Terraform配置的语法是HashiCorp 独创的 HCL(HashiCorp configuration langu
 ### 2.3 AWS Provider配置
 AWS Provider被用来与AWS支持的许多资源进行交互。在使用该提供程序之前, 需要使用适当的Credentials进行配置。https://www.terraform.io/docs/providers/aws/index.html。AWS Provider提供了一种提供身份验证凭据的灵活方法,主要支持如下四种方式:
 + 静态凭据
-   ![]()
+   ![静态凭据](images/terraform_static_credential.jpg)
 + 环境变量
+   ![环境变量](images/terraform_environment_variables.jpg)
++ 共享凭据文件
+   ![共享凭据文件](images/terraform_share_credential_file.jpg)
++ EC2角色
+   ![EC2角色](images/terraform_ec2_role.jpg)
+
+可以借助Terraform的多Provider实例配置，实现对多个Region的管理，例如：
+```
+# The default provider
+provider "aws" {
+  # ...
+}
+
+# West coast region
+provider "aws" {
+  alias  = "west"
+  region = "us-west-2"
+}
+```
+命名Provider后，可以在资源中引用该provider 字段：
+```
+resource "aws_instance" "foo" {
+  provider = "aws.west"
+  # ...
+}
+```
+### 2.4 HelloWorld
+本章节将演示如何利用Terraform进行S3桶的自动化构建、修改、删除。
+#### 2.4.1 创建配置文件
+新建helloworld目录，并编辑一个名为s3demo.tf的文件，具体内容如下：
+```
+provider "aws" {
+    region                  = "cn-north-1"
+    shared_credentials_file = "~/.aws/credentials"
+    profile                 = "bjs"
+    }
+
+resource "aws_s3_bucket" "s3_bucket" {
+bucket = "my-tf-test-bucket001"
+acl    = "private"
+    tags {
+      Name        = "My bucket"
+      Environment = "Dev"
+    }
+}
+```
+运行terraform fmt  对当前目录下的所有配置文件进行格式化。有关S3更详细的配置可以参考https://www.terraform.io/docs/providers/aws/r/s3_bucket.html
+![terraform fmt格式化](images/terraform_fmt.jpg)
+
+注：resource “aws_s3_bucket” “s3_bucket” 中，resource 后第一个是TYPE, 即资源名，第二个参是NAME，类型和名称的组合必须是唯一的。其实 “s3_bucket” 在这里没什么用，只是一个描述或助记符而已，在作为变量引用的时候就要用到它，”${aws_s3_bucket.s3_bucket.arn}”, 引用时不需要知道实际的名称。
+
+我们使用 shared_credentials_file 中的 profile, 请确定您以预先生成好的 credentials 文件及有效的 profile。
+#### 2.4.2 初始化工作目录
+![terraform init初始化](images/terraform_init.jpg)
+
+执行完了terraform init之后会在当前目录中生成 .terraform目录，并依照 *.tf文件中的配置下载相应的插件，下载可能需要等待一段时间。
+![terraform init初始化结果](images/terraform_init_download_files.jpg)
+#### 2.4.3.2 terraform apply
+![terraform apply](images/terraform_apply.jpg)
+
+这样便在AWS上创建了一个名为”my-tf-test-bucket003“的S3桶, 同时会在当前目录中生成一个状态文件 terraform.tfstate, 它是一个标准的 JSON 文件。这个文件对 Terraform 来说很重要，它会影响 terraform plan的决策，虽然不会影响到实际的执行效果。
+
+![terraform apply result](images/terraform_apply_result.jpg)
+
+terraform state [list|mv|pull|push|rm|show]用来操作状态文件。此时什么也不改，再次执行 terraform plan, 会显示没什么要做的。
+![terraform plan](images/terraform_plan.jpg)
+
+我们将s3demo.tf文件中的tags.Environment: “Dev” 改成”Dev001″，运行plan：
+![terraform plan adjustment](images/terraform_plan_adjustment.jpg)
+
+为什么说 terraform plan 是基于状态文件 terraform.tfstate 作出的呢？我们可以删除这个状态文件，然后执行 terraform plan 看看：
+![terraform plan no state file](images/terraform_plan_no_state_file.jpg)
+
+Terraform 由于缺乏 terraform.tfstate 对比，所以认为是要添加一个 bucket, 但是实际执行 terraform apply时，连接到远端 AWS, 发现该 bucket 已存在就报告错误。terraform apply总能给出正确的操作结果。同理如果状态文件中说有那个 bucket, terraform plan会说是更新，但AWS没有那个bucket，实际执行terraform apply也会进行添加的。
+#### 2.4.3.3 资源更名
+如果把 s3demo.tf中的bucket = “my-tf-test-bucket001″改成bucket = ” my-tf-test-bucket003“，则将重命名桶，用terraform plan看下计划
+![terraform plan S3 rename](images/terraform_plan_resource_rename.jpg)
+
+实际上 terraform apply也是先删除旧的，再创建新的。Terraform 像 git 一样用不同颜色和 +/- 号来显示变动操作。
+![terraform apply S3 rename](images/terraform_apply_resource_rename.jpg)
+#### 2.4.3.4 terraform destroy
+terraform destroy命令，把 *.tf文件中配置的所有资源从AWS上清理掉。
+![terraform destroy](images/terraform_destroy.jpg)
+### 2.5 工作目录布局
+Terraform 运行时会读取工作目录中所有的 *.tf, *.tfvars文件，所以我们不必把所有的东西都写在单个文件中去，应按职责分列在不同的文件中，例如
+```
+provider.tf                   ### provider 配置
+terraform.tfvars        ### 配置 provider 要用到的变量
+varable.tf                     ### 通用变量
+resource.tf                  ### 资源定义
+data.tf                          ### 包文件定义
+output.tf                     ### 输出
+```
+在执行像 terraform plan或 terraform apply等命令的时候，可以按下 ctrl + c让控制台输出详细的日志信息。
 
 ## Reference
 - [使用 Terraform 在 AWS 中国区域实现自动化部署指南系列（一） TERRAFORM 入门](https://amazonaws-china.com/cn/blogs/china/aws-china-region-guide-series-terraform1/)
