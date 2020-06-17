@@ -77,7 +77,7 @@ CIDR是英文Classless Inter-Domain Routing的缩写，中文是无类别域间�
 ### 2.3 Route Tables
 1. 路由表，用于确定子网中路由的去向
 2. 一个子网只能且必须对应一个route table，一个route table可对应多个子网
-### 2.4 Internat gateways
+### 2.4 Internat Gateways
 1. 一个VPC只能有一个IGW，用于连接internet
 2. 让instance连接到internet的步骤：新建subnet并关联一个新的route table，为route table添加一个指向IGW的rule，为instance分配public IP
 ### 2.5 Dynamic Host Configuration Protocol Option Sets
@@ -105,7 +105,7 @@ CIDR是英文Classless Inter-Domain Routing的缩写，中文是无类别域间�
 4. 只需创建一次peering申请，如VPC1申请与VPC2建立peering连接，连接创建后，不用VPC2再向VPC1申请peering，因为连接已经建好，是双向的
 5. 现在peering的VPC可以跨region
 6. 如果VPC1与VPC2的CIDR有包含或部分匹配关系，则不能创建peering
-### 2.10 Security Group
+### 2.10 Security Group (EC2实例级别)
 1. 安全组，通过创建rule来设置firewall，在instance层面控制网络访问
 2. 一个VPC支持500个SG，一个SG有50个inbound和50个outbound
 3. SG可以设置allow rule，但不能设置deny rule，这个与ACL不同
@@ -113,7 +113,7 @@ CIDR是英文Classless Inter-Domain Routing的缩写，中文是无类别域间�
 5. SG是有状态的，言外之意，对于某个allow inbound，不用指定对应的outbound，会保留inbound的状态，再将响应返回
 6. 对于有多个rule的SG，在判断是否allow或deny时，AWS会评估所有的rule再做决定，没有优先级rule的说法
 7. 可以随时修改SG，即便关联到了某个instance，修改后立即生效，不用reboot instance
-### 2.11 Network Access Contorl List（ACLs）
+### 2.11 Network Access Contorl List（ACLs）(子网级别)
 1. 在子网层面控制网络访问，默认都allow
 2. 支持allow，也支持deny
 3. 没有状态，需要同时指定inbound和outbound
