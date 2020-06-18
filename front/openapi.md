@@ -494,3 +494,4 @@ OIDC当前不被Swagger Editor和Swagger UI支持，请遵循[这个问题](http
 
 ## Reference
 - [OpenAPI Homepage](https://swagger.io/)
+- [OpenAPI Specification](https://swagger.io/docs/specification/about/)
