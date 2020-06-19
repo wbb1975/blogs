@@ -1,5 +1,5 @@
 # Elastic Load Balancing (ELB)
-Elastic Load Balancing 把应用程序的输入流量自动分配间到多个目标， 如Amazon EC2 实例。它监控已注册目标的健康状况并将流量路由到健康的节点上。Elastic Load Balancing 支持三种负载均衡器：应用程序负载均衡器（Application Load Balancers）、网络负载均衡器（Network Load Balancers）和 Classic 负载均衡器（Classic Load Balancers）。
+Elastic Load Balancing 把应用程序的输入流量自动分配间到多个目标，如Amazon EC2 实例。它监控已注册目标的健康状况并将流量路由到健康的节点上。Elastic Load Balancing 支持三种负载均衡器：应用程序负载均衡器（Application Load Balancers）、网络负载均衡器（Network Load Balancers）和 Classic 负载均衡器（Classic Load Balancers）。
 ## 第一章 什么是 Elastic Load Balancing？
 Elastic Load Balancing 跨多个可用区中的多个目标（如 Amazon EC2 实例、容器和 IP 地址）分发传入应用程序或网络流量。Elastic Load Balancing 会在应用程序的传入流量随时间的流逝发生更改时扩展负载均衡器。它可以自动扩展来处理绝大部分工作负载。
 ### 1.1 负载均衡器优势
@@ -11,7 +11,7 @@ Elastic Load Balancing 跨多个可用区中的多个目标（如 Amazon EC2 实
 ### 1.2 Elastic Load Balancing 的功能
 Elastic Load Balancing 支持三种类型的负载均衡器：Application Load Balancer、Network Load Balancer 和 Classic Load Balancer。可以根据应用程序需求选择负载均衡器。有关更多信息，请参阅 [Elastic Load Balancing 产品比较](http://www.amazonaws.cn/elasticloadbalancing/details/#compare)。
 
-有关使用每种负载均衡器的更多信息，请参阅 [Application Load Balancer 用户指南](https://docs.amazonaws.cn/elasticloadbalancing/latest/application/)、[Network Load Balancer 用户指南](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/) 和 [Classic Load Balancer 用户指南](https://docs.amazonaws.cn/elasticloadbalancing/latest/classic/)。
+有关使用每种负载均衡器的更多信息，请参阅[Application Load Balancer 用户指南](https://docs.amazonaws.cn/elasticloadbalancing/latest/application/)、[Network Load Balancer 用户指南](https://docs.amazonaws.cn/elasticloadbalancing/latest/network/) 和 [Classic Load Balancer 用户指南](https://docs.amazonaws.cn/elasticloadbalancing/latest/classic/)。
 ### 1.3 访问 Elastic Load Balancing
 可以使用以下任意接口创建、访问和管理负载均衡器：
 - **AWS 管理控制台**— 提供您可用来访问 Elastic Load Balancing 的 Web 界面。
