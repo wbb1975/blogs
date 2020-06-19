@@ -89,3 +89,4 @@ resource "aws_subnet" "az" {
 
 ## Reference
 - [Configuration Language](https://www.terraform.io/docs/configuration/index.html)
+- [Terraform Recommended Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices/index.html)
