@@ -144,6 +144,21 @@ resource "aws_instance" "web" {
 
 本地资源的行为模式与其它资源无异，但它们的结果数据仅仅存在于Terraform状态文件本身，销毁一个这样的资源仅仅意味着从状态文件中移除它并丢弃其数据。
 ### 1.8 操作超时（Operation Timeouts）
+某些资源类型提供了一个特殊的timeouts嵌入块参数允许你定制在操作被认为失败前可进行多长时间。例如，aws_db_instancehttps://www.terraform.io/docs/providers/aws/r/db_instance.html允许配置创建，更新，删除操作的超时时间。
+
+超时完全由插件的资源类型实现处理，但提供这些特性的资源类型通常会遵循管理提供一个叫timeouts的子块：对每个操作都有一个嵌入的参数配置其超时设置。每个这样的参数都使用时长的字符串表示，例如"60m"表示60分钟，"10s" 代表10秒，"2h"代表2小时等。
+```
+resource "aws_db_instance" "example" {
+  # ...
+
+  timeouts {
+    create = "60m"
+    delete = "2h"
+  }
+}
+```
+可配置的操作类型由每个资源类型选定，大多数资源类型根本不支持timeouts块。查询每种资源类型的文档来检查它支持配置的操作类型。
+
 
 ## Reference
 - [Configuration Language](https://www.terraform.io/docs/configuration/index.html)
