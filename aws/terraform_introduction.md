@@ -1,9 +1,9 @@
 # Terraform入门
 ## 0. Terraform 核心功能
-- 基础架构即代码(Infrastructure as Code)：使用高级配置语法来描述基础架构，这样就可以对数据中心的蓝图进行版本控制，就像对待其他代码一样对待它。
-- 执行计划(Execution Plans)：Terraform 有一个 plan 步骤，它生成一个执行计划。执行计划显示了当执行 apply 命令时 Terraform 将做什么。通过 plan 进行提前检查，可以使 Terraform 操作真正的基础结构时避免意外。
-- 资源图(Resource Graph)：Terraform 构建的所有资源的图表，它能够并行地创建和修改任何没有相互依赖的资源。因此，Terraform 可以高效地构建基础设施，操作人员也可以通过图表深入地解其基础设施中的依赖关系。
-- 自动化变更(Change Automation)：把复杂的变更集应用到基础设施中，而无需人工交互。通过前面提到的执行计划和资源图，我们可以确切地知道 Terraform 将会改变什么，以什么顺序改变，从而避免许多可能的人为错误。
+- 基础架构即代码（Infrastructure as Code）：使用高级配置语法来描述基础架构，这样就可以对数据中心的蓝图进行版本控制，就像对待其它代码一样对待它。
+- 执行计划（Execution Plans）：Terraform 有一个 plan 步骤，它生成一个执行计划。执行计划显示了当执行 apply 命令时 Terraform 将做什么。通过 plan 进行提前检查，可以使 Terraform 操作真正的基础结构时避免意外。
+- 资源图（Resource Graph）：Terraform 构建的所有资源的图表，它能够并行地创建和修改任何没有相互依赖的资源。因此，Terraform 可以高效地构建基础设施，操作人员也可以通过图表深入地解其基础设施中的依赖关系。
+- 自动化变更（Change Automation）：把复杂的变更集应用到基础设施中，而无需人工交互。通过前面提到的执行计划和资源图，我们可以确切地知道 Terraform 将会改变什么，以什么顺序改变，从而避免许多可能的人为错误。
 ## 1. 安装Terraform
 安装Terraform，找到与你系统[匹配的软件包](https://www.terraform.io/downloads.html)然后下载。Terraform被打包为一个zip归档文件。
 
@@ -15,7 +15,7 @@
 
 Terraform中用来描述基础设施的的文件被叫做Terraform配置文件。现在我们将写下我们第一个配置文件来启动一个AWS的EC2实例。
 
-配置文件的文档在[这里](https://www.terraform.io/docs/configuration/index.html)。配置文件也可以是[一给json文件](https://www.terraform.io/docs/configuration/syntax.html)，但是我们建议只在机器生成配置文件时使用json格式。
+配置文件的文档在[这里](https://www.terraform.io/docs/configuration/index.html)。配置文件也可以是一个[json文件](https://www.terraform.io/docs/configuration/syntax.html)，但是我们建议只在机器生成配置文件时使用json格式。
 
 整个配置文件内容如下所示。我们将在随后的每一步逐步讲解。将下面内容保存到一个名为example.tf的文件中。确认在你的目录中没有其他*.tf文件，因为Terraform将加载所有的*.tf文件。
 ```
@@ -38,7 +38,7 @@ resource "aws_instance" "example" {
 
 provider块用于指定provider名称，在我们的实例中叫"aws"。provider负责创建和管理资源。如果一个Terraform配置文件由多个provider组成，可以有多个provider块，这是常见的情况。
 
-resource块定一个基础设施中存在的资源。一个资源可能是物理组件，如：EC2实例，或也可以是一个逻辑资源比如Heroku应用。
+resource块指定一个基础设施中存在的资源。一个资源可能是物理组件，如：EC2实例，或也可以是一个逻辑资源比如Heroku应用。
 
 resource块开始前有两个字符串：资源类型和资源名称。在我们的实例中资源类型是"aws_instance"，资源名为"example"。资源类型的前缀映射到provider。在我们的实例中，"aws_instance"自动告知你Terraform被"aws"provider管理。
 
