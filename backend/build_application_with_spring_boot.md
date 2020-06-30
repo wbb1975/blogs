@@ -181,9 +181,157 @@ public class Application {
 
 注意到`CommandLineRunner`被标记为`@Bean`，这将在启动时运行。它将检索你的应用创建的或Spring Boot自动添加的所有Beans，它将它们排序并打印。
 ## 运行应用
+为了运行一个应用，在终端窗口（在complete）目录中运行下面的命令：
+```
+./gradlew bootRun
+```
+如果你使用Maven，在终端窗口（在complete）目录中运行下面的命令：
+```
+./mvnw spring-boot:run
+```
+你应该看到与下面类似的输出：
+```
+Let's inspect the beans provided by Spring Boot:
+application
+beanNameHandlerMapping
+defaultServletHandlerMapping
+dispatcherServlet
+embeddedServletContainerCustomizerBeanPostProcessor
+handlerExceptionResolver
+helloController
+httpRequestHandlerAdapter
+messageSource
+mvcContentNegotiationManager
+mvcConversionService
+mvcValidator
+org.springframework.boot.autoconfigure.MessageSourceAutoConfiguration
+org.springframework.boot.autoconfigure.PropertyPlaceholderAutoConfiguration
+org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration
+org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration$DispatcherServletConfiguration
+org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration$EmbeddedTomcat
+org.springframework.boot.autoconfigure.web.ServerPropertiesAutoConfiguration
+org.springframework.boot.context.embedded.properties.ServerProperties
+org.springframework.context.annotation.ConfigurationClassPostProcessor.enhancedConfigurationProcessor
+org.springframework.context.annotation.ConfigurationClassPostProcessor.importAwareProcessor
+org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+org.springframework.context.annotation.internalCommonAnnotationProcessor
+org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+org.springframework.context.annotation.internalRequiredAnnotationProcessor
+org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration
+propertySourcesBinder
+propertySourcesPlaceholderConfigurer
+requestMappingHandlerAdapter
+requestMappingHandlerMapping
+resourceHandlerMapping
+simpleControllerHandlerAdapter
+tomcatEmbeddedServletContainerFactory
+viewControllerHandlerMapping
+```
+你可以很清晰地看到`org.springframework.boot.autoconfigure` Beans。还有一个`tomcatEmbeddedServletContainerFactory`。现在用curl运行这个服务（在一个独立的终端窗口），运行下面的命令：
+```
+$ curl localhost:8080
+Greetings from Spring Boot!
+```
+## 添加单元测试
+你可能想给你新加的端点添加单元测试，Spring Test为此提供了一些机制：
 
+如果你在使用Gradle，请把下面内容添加到你的`build.gradle`文件：
+```
+testImplementation('org.springframework.boot:spring-boot-starter-test') {
+	exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+}
+```
+如果你使用Maven，请把下面内容添加到你的`pom.xml`文件：
+```
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-test</artifactId>
+	<scope>test</scope>
+	<exclusions>
+		<exclusion>
+			<groupId>org.junit.vintage</groupId>
+			<artifactId>junit-vintage-engine</artifactId>
+		</exclusion>
+	</exclusions>
+</dependency>
+```
+现在血一个简单的单元测试来模拟通过你的端点的servlet请求和回复，如下列表所示（来自`src/test/java/com/example/springboot/HelloControllerTest.java`）：
+```
+package com.example.springboot;
 
+import static org.hamcrest.Matchers.equalTo;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.Test;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+public class HelloControllerTest {
+
+	@Autowired
+	private MockMvc mvc;
+
+	@Test
+	public void getHello() throws Exception {
+		mvc.perform(MockMvcRequestBuilders.get("/").accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().string(equalTo("Greetings from Spring Boot!")));
+	}
+}
+```
+`MockMvc`来自于Spring Test，通过一系列方便的构建类，它让你发送HTTP请求到`DispatcherServlet`，并对结果做出断言。注意使用`@AutoConfigureMockMvc` 和 `@SpringBootTest`来注入`MockMvc`一个实例。使用`@SpringBootTest`，我们要求创建完整的应用上下文。另一个选项是请求Spring Boot仅仅通过`@WebMvcTest`创建上下文的Web层。在每一种示例中，Spring Boot主动尝试为你的应用定位主应用类，但你可覆盖这个行为或降低选择面。
+
+像模拟HTTP 循环一样，你也可以使用Spring Boot来写一个简单的全栈集成测试。例如，替代模拟很早出现的测试，我们可以创建下面的测试（来自于`src/test/java/com/example/springboot/HelloControllerIT.java`）：
+```
+package com.example.springboot;
+
+import static org.assertj.core.api.Assertions.*;
+
+import java.net.URL;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.http.ResponseEntity;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+public class HelloControllerIT {
+
+	@LocalServerPort
+	private int port;
+
+	private URL base;
+
+	@Autowired
+	private TestRestTemplate template;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        this.base = new URL("http://localhost:" + port + "/");
+    }
+
+    @Test
+    public void getHello() throws Exception {
+        ResponseEntity<String> response = template.getForEntity(base.toString(),
+                String.class);
+        assertThat(response.getBody()).isEqualTo("Greetings from Spring Boot!");
+    }
+}
+```
+由于`webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT`，嵌入式服务器在一个随机端口上启动，实际端口可用`@LocalServerPort`在运行时发现。
+## 增加产品级服务
 
 ## Refrence
 - [Building an Application with Spring Boot](https://spring.io/guides/gs/spring-boot/)
