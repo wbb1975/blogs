@@ -37,7 +37,7 @@ public class DemoApplication {
 
 **MacOS/Linux**:
 ```
-./mvnw spring-boot:run
+./mvnw spring-boot:run  or gradle build && java -jar build/libs/****.jar
 ```
 
 **Windows**:
