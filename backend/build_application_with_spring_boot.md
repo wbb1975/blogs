@@ -136,6 +136,52 @@ public class HelloController {
 ```
 这个类被标记为`@RestController`，意味着它已经准备好被Spring MVC用来处理Web请求。`@RequestMapping` 把 `/` 映射到 `index()`。当被从浏览器或命令行curl中调用时，方法返回纯文本。这是因为`@RestController`绑定了`@Controller`和`@ResponseBody`，两个注解导致Web请求返回数据而不是视图。
 ## 创建一个应用类
+Spring Initializr为你创建了一个简单的应用类。但是，在本例中这个类太简单了。你需要修改代码以使得它看起来像下面这样（来源于`src/main/java/com/example/springboot/Application.java`）：
+```
+package com.example.springboot;
+
+import java.util.Arrays;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class Application {
+
+	public static void main(String[] args) {
+		SpringApplication.run(Application.class, args);
+	}
+
+	@Bean
+	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
+		return args -> {
+
+			System.out.println("Let's inspect the beans provided by Spring Boot:");
+
+			String[] beanNames = ctx.getBeanDefinitionNames();
+			Arrays.sort(beanNames);
+			for (String beanName : beanNames) {
+				System.out.println(beanName);
+			}
+
+		};
+	}
+
+}
+```
+`@SpringBootApplication`是一个方便的注解，它添加了下面所有的内容：
+- `@Configuration`：标记类作为应用上下文Beans定义的源
+- `@EnableAutoConfiguration`：告诉Spring Boot基于classpath 开始添加Beans，其它beans，以及各种属性设置。例如，如果 `spring-webmvc`在classpath上，这个注解标记该应用为一个Web应用并激活关键行为，比如设置一个`DispatcherServlet`。
+- `@ComponentScan`：告诉Spring去`com/example`下查询其它组件，配置和服务，让他找到控制器。
+
+`main()`方法使用Spring Boot’的`SpringApplication.run()`方法来启动一个应用。你注意到没有一行XML吗？也没有`web.xml`。这个Web应用是100%纯Java，你不必应付配置的重担。
+
+注意到`CommandLineRunner`被标记为`@Bean`，这将在启动时运行。它将检索你的应用创建的或Spring Boot自动添加的所有Beans，它将它们排序并打印。
+## 运行应用
+
 
 
 
