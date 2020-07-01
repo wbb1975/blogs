@@ -20,7 +20,7 @@
 + cd 到 gs-spring-boot/initial
 + 进入到[创建一个简单Web应用](https://spring.io/guides/gs/spring-boot/#initial)
 
-当你完成后，你可以检查你的结果并与gs-spring-boot/complete中的代码比对。
+当你完成后，你可以检查你的结果并与`gs-spring-boot/complete`中的代码比对。
 ## 从Spring Boot操作中学习
 Spring Boot提供创建应用的快速通道。它看顾你的classpath和你配置的beans，合理假设你遗漏了某些东西，并添加进去。利用Spring Boot，你可以更加关注业务特性而非基础设施。
 
@@ -177,7 +177,7 @@ public class Application {
 - `@EnableAutoConfiguration`：告诉Spring Boot基于classpath 开始添加Beans，其它beans，以及各种属性设置。例如，如果 `spring-webmvc`在classpath上，这个注解标记该应用为一个Web应用并激活关键行为，比如设置一个`DispatcherServlet`。
 - `@ComponentScan`：告诉Spring去`com/example`下查询其它组件，配置和服务，让他找到控制器。
 
-`main()`方法使用Spring Boot’的`SpringApplication.run()`方法来启动一个应用。你注意到没有一行XML吗？也没有`web.xml`。这个Web应用是100%纯Java，你不必应付配置的重担。
+`main()`方法使用Spring Boot的`SpringApplication.run()`方法来启动一个应用。你注意到没有一行XML吗？也没有`web.xml`。这个Web应用是100%纯Java，你不必应付配置的重担。
 
 注意到`CommandLineRunner`被标记为`@Bean`，这将在启动时运行。它将检索你的应用创建的或Spring Boot自动添加的所有Beans，它将它们排序并打印。
 ## 运行应用
