@@ -332,6 +332,105 @@ public class HelloControllerIT {
 ```
 由于`webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT`，嵌入式服务器在一个随机端口上启动，实际端口可用`@LocalServerPort`在运行时发现。
 ## 增加产品级服务
+如果你在为你的生意添加Web Service，你可能需要添加一些管理服务。Spring Boot随[actuator模块](https://docs.spring.io/spring-boot/docs/2.2.2.RELEASE/reference/htmlsingle/#production-ready)提供了几种此类服务（比如健康，审计，beans等）：
+- 如果你在使用Gradle，请将以下依赖添加到你的`build.gradle`文件中
+  ```
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
+  ```
+- 如果你在使用Maven，请将以下依赖添加到你的`pom.xml`文件中
+  ```
+  <dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+  ```
+然后重新启动应用：
+- 如果你在使用Gradle，请在终端窗口上输入以下命令（在`complete` 目录中）：
+  ```
+  ./gradlew bootRun
+  ```
+- 如果你在使用Maven，请在终端窗口上输入以下命令（在`complete` 目录中）：
+  ```
+  ./mvnw spring-boot:run
+  ```
+
+你应该看到一些新的RESTful 端点被加到你的应用中。这些是Spring Boot提供的管理服务。下面列出了典型输出：
+```
+management.endpoint.configprops-org.springframework.boot.actuate.autoconfigure.context.properties.ConfigurationPropertiesReportEndpointProperties
+management.endpoint.env-org.springframework.boot.actuate.autoconfigure.env.EnvironmentEndpointProperties
+management.endpoint.health-org.springframework.boot.actuate.autoconfigure.health.HealthEndpointProperties
+management.endpoint.logfile-org.springframework.boot.actuate.autoconfigure.logging.LogFileWebEndpointProperties
+management.endpoints.jmx-org.springframework.boot.actuate.autoconfigure.endpoint.jmx.JmxEndpointProperties
+management.endpoints.web-org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties
+management.endpoints.web.cors-org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties
+management.health.status-org.springframework.boot.actuate.autoconfigure.health.HealthIndicatorProperties
+management.info-org.springframework.boot.actuate.autoconfigure.info.InfoContributorProperties
+management.metrics-org.springframework.boot.actuate.autoconfigure.metrics.MetricsProperties
+management.metrics.export.simple-org.springframework.boot.actuate.autoconfigure.metrics.export.simple.SimpleProperties
+management.server-org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties
+management.trace.http-org.springframework.boot.actuate.autoconfigure.trace.http.HttpTraceProperties
+```
+actuator暴露了以下功能：
+- 错误
+- [actuator/health](http://localhost:8080/actuator/health)
+- [actuator/info](http://localhost:8080/actuator/info)
+- [actuator](http://localhost:8080/actuator)
+
+> 实际上还有一个`/actuator/shutdown`端点，但是缺省地它只通过JMX可见。为了把它作为一个[HTTP端点开放](https://docs.spring.io/spring-boot/docs/2.2.2.RELEASE/reference/htmlsingle/#production-ready-endpoints-enabling-endpoints)，把 `management.endpoints.web.exposure.include=health,info,shutdown` 添加到你的 `application.properties`文件。但是，你不应该在一个公开可用的应用上开启`shutdown`端点。
+
+你可以利用下面的命令行来检测应用健康状态：
+```
+$ curl localhost:8080/actuator/health
+{"status":"UP"}
+```
+
+你也可以利用curl来调用shutdown，先看看如果你没添加必要的行（如上例）到`application.properties`文件会发生什么：
+```
+$ curl -X POST localhost:8080/actuator/shutdown
+{"timestamp":1401820343710,"error":"Method Not Allowed","status":405,"message":"Request method 'POST' not supported"}
+```
+
+关于这些REST端点的更详细信息，以及你如何在`application.properties`文件(在 src/main/resources)中调整这些设置，请参阅[关于端点的文档](https://docs.spring.io/spring-boot/docs/2.2.2.RELEASE/reference/htmlsingle/#production-ready-endpoints)。
+## 查看Spring Boot的Starters
+你已经看到了一些[Spring Boot的Starters](https://docs.spring.io/spring-boot/docs/2.2.2.RELEASE/reference/htmlsingle/#using-boot-starter), 你可以看到它们全部[代码形式](https://github.com/spring-projects/spring-boot/tree/master/spring-boot-project/spring-boot-starters)
+## JAR支持和Groovy支持
+最后一个例子展示Spring Boot 如何让你撰写你没有意识到必须的Beans。它也展示了如何开启便利的管理服务。
+
+但是，Spring Boot做得更多。它不仅支持传统的WAR文件部署，也可以让你打包成可执行JARs，感谢Spring Boot的加载模块。各种各样的指南演示了如何通过`spring-boot-gradle-plugin`和 `spring-boot-maven-plugin`来提供双重支持。
+
+在此之上，Spring Boot还提供了Groovy 支持，让你可以以少至仅仅一个文件即可构建Spring MVC web应用。
+
+创建一个文件`app.groovy`，并添加以下代码：
+```
+@RestController
+class ThisWillActuallyRun {
+
+    @RequestMapping("/")
+    String home() {
+        return "Hello, World!"
+    }
+
+}
+```
+
+接下来，安装[Spring Boot’s CLI](https://docs.spring.io/spring-boot/docs/2.2.2.RELEASE/reference/htmlsingle/#getting-started-installing-the-cli)。
+
+运行下面的命令行以启动Groovy应用：
+```
+$ spring run app.groovy
+```
+> 停止前面的应用以防止端口冲突。
+
+从一个不同的终端窗口，运行下面的命令行（其输出也被打印）：
+```
+$ curl localhost:8080
+Hello, World!
+```
+Spring Boot通过往你的代码中动态添加关键注解来实现此功能，它会利用[Groovy Grape](http://groovy.codehaus.org/Grape下载相关库來使得应用运行起来)。
+## 总结
+祝贺你！你利用Spring Boot创建了一个简单的Web应用，以及如何加快你的开发节奏。你也开启了一些称手的产品级服务。这只是Spring Boot 功能的一个极小部份展示。参看[Spring Boot在线文档](https://docs.spring.io/spring-boot/docs/2.2.2.RELEASE/reference/htmlsingle)以获取更多信息。
 
 ## Refrence
 - [Building an Application with Spring Boot](https://spring.io/guides/gs/spring-boot/)
+- [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
+- [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
