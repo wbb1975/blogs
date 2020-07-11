@@ -53,3 +53,5 @@ curl提供了--http2-prior-knowledge命令行选项以启用HTTP/2而无需借�
 
 ## Reference
 - [HTTP/2 with curl](https://curl.haxx.se/docs/http2.html)
+- [HTTP/2 Frequently Asked Questions](https://http2.github.io/faq/)
+- [http2讲解](https://github.com/bagder/http2-explained/tree/master/zh)
