@@ -36,7 +36,52 @@
 选择一个具体压缩算法可通过添加一个（`GRPC_COMPRESS_REQUEST_ALGORITHM_KEY`, <algorithm-name>）键值对到初始化元数据中，这里`GRPC_COMPRESS_REQUEST_ALGORITHM_KEY`被定义在grpc/impl/codegen/compression_types.h中，<algorithm-name>是人可读的用于消息编码（如gzip, identity等）的算法（在[HTTP2规范](https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md)）。参考[`grpc_compression_algorithm_name`](https://github.com/grpc/grpc/blob/master/src/core/lib/compression/compression.c)来获取`grpc_compression_algorithm`枚举值和它们的文本表示的映射。
 ## 每消息设置（Per Message Settings）
 为了禁用一个特定消息的压缩，`grpc_op`实例`GRPC_OP_SEND_MESSAGE`的`flags` 标志位必须设置`GRPC_WRITE_NO_COMPRESS`对应位，具体参见grpc/impl/codegen/compression_types.h。
+## 写一个客户端与服务器端
+### 产生客户端与服务端接口
+```
+$ protoc -I ../../protos/ --grpc_out=. --plugin=protoc-gen-grpc=grpc_cpp_plugin ../../protos/helloworld.proto
+$ protoc -I ../../protos/ --cpp_out=. ../../protos/helloworld.proto
+```
+### 添加压缩功能
+在客户端，通过通道参数可以为通道设置缺省压缩算法：
+```
+ChannelArguments args;
+// Set the default compression algorithm for the channel.
+args.SetCompressionAlgorithm(GRPC_COMPRESS_GZIP);
+GreeterClient greeter(grpc::CreateCustomChannel(
+    "localhost:50051", grpc::InsecureChannelCredentials(), args));
+```
+每次调用的压缩配置可以用客户端context覆盖：
+```
+// Overwrite the call's compression algorithm to DEFLATE.
+context.set_compression_algorithm(GRPC_COMPRESS_DEFLATE);
+```
+
+在服务器端，通过服务器构建器（server builder）设置缺省压缩算法。
+```
+ServerBuilder builder;
+// Set the default compression algorithm for the server.
+builder.SetDefaultCompressionAlgorithm(GRPC_COMPRESS_GZIP);
+```
+每次调用的压缩配置可以用服务端context覆盖：
+```
+// Overwrite the call's compression algorithm to DEFLATE.
+context->set_compression_algorithm(GRPC_COMPRESS_DEFLATE);
+```
+
+关于可工作的例子，请参见[greeter_client.cc](https://github.com/grpc/grpc/blob/master/examples/cpp/compression/greeter_client.cc) 和 [greeter_server.cc](https://github.com/grpc/grpc/blob/master/examples/cpp/compression/greeter_server.cc)。
+### 编译运行
+运行下面的命令来构建并运行（压缩）客户端与服务器端：
+```
+make
+./greeter_server
+```
+
+```
+./greeter_client
+```
 
 ## Reference
 - [gRPC (Core) Compression Cookbook](https://github.com/grpc/grpc/blob/master/doc/compression_cookbook.md)
 - [gRPC Compression](https://github.com/grpc/grpc/blob/master/doc/compression.md)
+- [gRPC C++ Message Compression Tutorial](https://github.com/grpc/grpc/tree/master/examples/cpp/compression)
