@@ -56,7 +56,6 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 mvn package
 java -jar target/<FILENAME.JAR HERE> --server.port=8081
 ```
-```
 ### 持有命令行参数值
 ```
 @SpringBootApplication
