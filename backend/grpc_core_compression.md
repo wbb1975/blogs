@@ -80,8 +80,34 @@ make
 ```
 ./greeter_client
 ```
+## gRPC C++负载均衡教程
+客户端和服务器端都可以基于hello world示例。
+
+另外，我们可能配置负载均衡策略。（检查可用负载均衡策略列表，请参见[这个目录](https://github.com/grpc/grpc/tree/master/src/core/ext/filters/client_channel/lb_policy)）。
+
+在客户端，通过通道参数可以设置通道负载均衡策略（比如，循环复用）：
+```
+ChannelArguments args;
+// Set the load balancing policy for the channel.
+args.SetLoadBalancingPolicyName("round_robin");
+GreeterClient greeter(grpc::CreateCustomChannel(
+    "localhost:50051", grpc::InsecureChannelCredentials(), args));
+```
+关于可工作的例子，请参见[greeter_client.cc](https://github.com/grpc/grpc/blob/master/examples/cpp/load_balancing/greeter_client.cc) 和 [greeter_server.cc](https://github.com/grpc/grpc/blob/master/examples/cpp/load_balancing/greeter_server.cc)。
+
+运行下面的命令来构建并运行（压缩）客户端与服务器端：
+```
+make
+./greeter_server
+```
+
+```
+./greeter_client
+```
+> 注意这个例子中用例比较微小，因为从名字仅仅可以解析出一个服务器。
 
 ## Reference
 - [gRPC (Core) Compression Cookbook](https://github.com/grpc/grpc/blob/master/doc/compression_cookbook.md)
 - [gRPC Compression](https://github.com/grpc/grpc/blob/master/doc/compression.md)
 - [gRPC C++ Message Compression Tutorial](https://github.com/grpc/grpc/tree/master/examples/cpp/compression)
+- [gRPC C++ Load Balancing Tutorial](https://github.com/grpc/grpc/tree/master/examples/cpp/load_balancing)
