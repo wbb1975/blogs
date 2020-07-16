@@ -315,6 +315,56 @@ java -jar target/gs-async-method-0.1.0.jar
 本质上，任务花费时间越长，同时触发的任务越多，你从任务异步上获得收益越多。代价是需要处理`CompletableFuture`接口。它增加了一层抽象，因为你不再直接处理结果。
 ## 总结
 恭喜你！你已经开发了一个完整的异步服务，它让你可以一次处理多个调用。
+## 注意
+### CommandLineRunner
+```
+import org.springframework.core.annotation.Order;
+public interface CommandLineRunner {
+    /**
+     * Callback used to run the bean.
+     * @param args incoming main method arguments
+     * @throws Exception on error
+     */
+    void run(String... args) throws Exception;
+}
+```
+平常开发中有可能需要实现在项目启动后执行的功能，SpringBoot提供的一种简单的实现方案就是添加一个model并实现CommandLineRunner接口，实现功能的代码放在实现的run方法中。如下例：
+```
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+@Component
+@Order(value=1)
+public class StartupRunnerOne implements CommandLineRunner{
+    @Override
+    public void run(String... args) throws Exception {
+        System.out.println(">>>>>>>>>>>>>>>服务启动第一个开始执行的任务，执行加载数据等操作<<<<<<<<<<<<<");
+    }
+}
+```
+
+```
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+@Component
+@Order(value=2)
+public class StartupRunnerTwo implements CommandLineRunner{
+    @Override
+    public void run(String... args) throws Exception {
+        System.out.println(">>>>>>>>>>>>>>>服务第二顺序启动执行，执行加载数据等操作<<<<<<<<<<<<<");
+    }
+}
+```
+
+Spring Boot如何解决项目启动时初始化资源，在我们实际工作中，总会遇到这样需求，在项目启动的时候需要做一些初始化的操作，比如初始化线程池，提前加载好加密证书等。
+
+为了达到这个目的，我们需要使用CommandLineRunner或ApplicationRunner接口创建bean，spring boot会自动监测到它们。这两个接口都有一个run()方法，在实现接口时需要覆盖该方法，并使用@Component注解使其成为bean。
+
+CommandLineRunner和ApplicationRunner的作用是相同的。不同之处在于CommandLineRunner接口的run()方法接收String数组作为参数，即是最原始的参数，没有做任何处理；而ApplicationRunner接口的run()方法接收ApplicationArguments对象作为参数，是对原始参数做了进一步的封装。
+
 
 ## Reference
 - [Creating Asynchronous Methods](https://spring.io/guides/gs/async-method/)
