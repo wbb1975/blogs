@@ -1,7 +1,7 @@
 # 创建异步方法
 本指南带你创建一个对GitHub的异步查询。关注点在于异步部分，这是缩放服务时经常是用的一个特性。
 ## 你将构建什么
-你将构建一个查询服务，它将查询GitHub用户信息，并通过GitHub API检索数据。缩放服务的一种方式是在后台运行一个昂贵的工作并使用Java的`[CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)`接口来等待结果；Java的`[CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)`是常规`Future`的进化。它使得利用流水线处理多个异步请求并将它们合并成一个单一的异步计算。
+你将构建一个查询服务，它将查询GitHub用户信息，并通过GitHub API检索数据。缩放服务的一种方式是在后台运行一个昂贵的工作并使用Java的[CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)接口来等待结果；Java的[CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)是常规`Future`的进化。它使得利用流水线处理多个异步请求并将它们合并成一个单一的异步计算。
 ## 你需要些什么
 - 大约15分钟
 - 一个你钟爱的文本编辑器或IDE
@@ -16,7 +16,7 @@
 为了从头开始，请移步[Spring Initializr入门](https://spring.io/guides/gs/spring-boot/#scratch)。
 
 为了跳过基础步骤，按下面的步骤操作：
-+ [下载](https://github.com/spring-guides/gs-async-method/archive/master.zip))并解压本指南的代码库，货值使用git克隆：`git clone git clone https://github.com/spring-guides/gs-async-method.git`
++ [下载](https://github.com/spring-guides/gs-async-method/archive/master.zip)并解压本指南的代码库，货值使用git克隆：`git clone git clone https://github.com/spring-guides/gs-async-method.git`
 + cd 到 gs-async-method/initial
 + 进入到[创建一个GitHub账号](https://spring.io/guides/gs/async-method/#initial)
 
@@ -24,7 +24,7 @@
 ## Spring Initializr入门
 对所有的Spring应用，你应该从[Spring Initializr](https://start.spring.io/)开始。Initializr提供了一个快速向你的应用中添加依赖的方式，并为你做了许多设置。这个例子仅仅需要Spring Web依赖，下面的图形显示了样本项目Initializr 设置。
 
-![Initializr ](images/Initializr.png)
+![Spring Initializr](images/initializr.png)
 
 下面的列表显示了当你选择Maven时产生的`pom.xml`
 ```
@@ -146,7 +146,7 @@ public class User {
 ```
 Spring利用[Jackson JSON](https://wiki.fasterxml.com/JacksonHome)库来把GitHub的JSON表示转化为一个`User`对象。`@JsonIgnoreProperties`注解告诉Spring忽略这个类没包含的属性。这使得发起REST调用和产生领域对象更容易。
 
-在这个指南中，出于演示目的我们紧紧捕获`name`和`blog`URL。
+在本教程中，出于演示目的我们将仅仅捕获`name`和`blog`URL。
 ## 创建一个GitHub查询服务
 接下来，你需要创建一个服务来查询GitHub获取用户信息。下面的代码（来自`src/main/java/com/example/asyncmethod/GitHubLookupService.java`）现实了如何做：
 ```
@@ -188,7 +188,7 @@ public class GitHubLookupService {
 
 这个类用`@Service`注解标记，使得它可以作为Spring组件扫描发现的候选对象，并可被加入到应用上下文中。
 
-`findUser`方法被用Spring的`@Async`注解标记，指示它应该运行在一个单独的线程中。方法的返回类型是`[CompletableFuture<User>](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)`而非`User`，这是任何异步服务的必须要求。代码使用`completedFuture`方法返回一个`CompletableFuture`实例，它代表GitHub查询已完成的结果。
+`findUser`方法被用Spring的`@Async`注解标记，指示它应该运行在一个单独的线程中。方法的返回类型是[CompletableFuture<User>](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html)而非`User`，这是任何异步服务的必须要求。代码使用`completedFuture`方法返回一个`CompletableFuture`实例，它代表GitHub查询已完成的结果。
 > 创建`GitHubLookupService`类的本地实例并不会允许`findUser`方法异步运行。它必须在@Configuration类中被创建或者被@ComponentScan标记。
 
 GitHub API所费时间变化很大。为了在本教程中演示（异步）收益，在该服务中额外加了一秒的延迟。
@@ -236,7 +236,7 @@ public class AsyncMethodApplication {
 
 `main()`方法使用Spring Boot的`SpringApplication.run()`方法来启动一个应用。你注意到没有一行XML吗？也没有`web.xml`。这个Web应用是100%纯Java，你不必应付配置的重担。
 
-`[@EnableAsync](https://docs.spring.io/spring/docs/current/spring-framework-reference/html/scheduling.html#scheduling-annotation-support)`注解切换Spring的能力范围，从而在一个后台线程池中运行`@Async`方法。该类可以通过定义一个新的Bean来定制化`Executor`。这里，该方法被命名为`taskExecutor`，因为这是[Spring搜索的一个特殊方法](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/annotation/EnableAsync.html)。在我们的例子中，我们想限制并行线程数为2，队列大小为500。有[很多你可以调优的东西](https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/integration.html#scheduling-task-executor)。如果你没有定义一个`Executor`Bean，Spring创建一个`SimpleAsyncTaskExecutor`并使用它。
+[@EnableAsync](https://docs.spring.io/spring/docs/current/spring-framework-reference/html/scheduling.html#scheduling-annotation-support)注解切换Spring的能力范围，从而在一个后台线程池中运行`@Async`方法。该类可以通过定义一个新的Bean来定制化`Executor`。这里，该方法被命名为`taskExecutor`，因为这是[Spring搜索的一个特殊方法](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/annotation/EnableAsync.html)。在我们的例子中，我们想限制并行线程数为2，队列大小为500。有[很多你可以调优的东西](https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/integration.html#scheduling-task-executor)。如果你没有定义一个`Executor`Bean，Spring将创建一个`SimpleAsyncTaskExecutor`并使用它。
 
 还有一个`CommandLineRunner`也注入到`GitHubLookupService`，并调用服务三次来演示方法的异步执行。
 

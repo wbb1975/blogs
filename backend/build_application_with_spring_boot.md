@@ -34,7 +34,7 @@ Spring Boot提供创建应用的快速通道。它看顾你的classpath和你配
 ## Spring Initializr入门
 对所有的Spring应用，你应该从[Spring Initializr](https://start.spring.io/)开始。Initializr提供了一个快速向你的应用中添加依赖的方式，并为你做了许多设置。这个例子仅仅需要Spring Web依赖，下面的图形显示了样本项目Initializr 设置。
 
-![Initializr ](images/Initializr.png)
+![Spring Initializr](images/initializr.png)
 
 下面的列表显示了当你选择Maven时产生的`pom.xml`
 ```
