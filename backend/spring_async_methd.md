@@ -238,6 +238,83 @@ public class AsyncMethodApplication {
 
 `[@EnableAsync](https://docs.spring.io/spring/docs/current/spring-framework-reference/html/scheduling.html#scheduling-annotation-support)`注解切换Spring的能力范围，从而在一个后台线程池中运行`@Async`方法。该类可以通过定义一个新的Bean来定制化`Executor`。这里，该方法被命名为`taskExecutor`，因为这是[Spring搜索的一个特殊方法](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/annotation/EnableAsync.html)。在我们的例子中，我们想限制并行线程数为2，队列大小为500。有[很多你可以调优的东西](https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/integration.html#scheduling-task-executor)。如果你没有定义一个`Executor`Bean，Spring创建一个`SimpleAsyncTaskExecutor`并使用它。
 
+还有一个`CommandLineRunner`也注入到`GitHubLookupService`，并调用服务三次来演示方法的异步执行。
+
+你也需要一个类来运行应用，你可在`src/main/java/com/example/asyncmethod/AppRunner.java`中找到。下面的列表展示了这个类：
+```
+package com.example.asyncmethod;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.CompletableFuture;
+
+@Component
+public class AppRunner implements CommandLineRunner {
+
+  private static final Logger logger = LoggerFactory.getLogger(AppRunner.class);
+
+  private final GitHubLookupService gitHubLookupService;
+
+  public AppRunner(GitHubLookupService gitHubLookupService) {
+    this.gitHubLookupService = gitHubLookupService;
+  }
+
+  @Override
+  public void run(String... args) throws Exception {
+    // Start the clock
+    long start = System.currentTimeMillis();
+
+    // Kick of multiple, asynchronous lookups
+    CompletableFuture<User> page1 = gitHubLookupService.findUser("PivotalSoftware");
+    CompletableFuture<User> page2 = gitHubLookupService.findUser("CloudFoundry");
+    CompletableFuture<User> page3 = gitHubLookupService.findUser("Spring-Projects");
+
+    // Wait until they are all done
+    CompletableFuture.allOf(page1,page2,page3).join();
+
+    // Print results, including elapsed time
+    logger.info("Elapsed time: " + (System.currentTimeMillis() - start));
+    logger.info("--> " + page1.get());
+    logger.info("--> " + page2.get());
+    logger.info("--> " + page3.get());
+
+  }
+}
+```
+## 构建一个可执行JAR
+你可以利用Gradle 或 Maven从命令行来运行应用。你也可以构建一个单独可执行JAR文件，其包含所有必须的依赖，类以及资源来运行它。构建一个可执行JAR使其容易交付，控制版本，并在整个生命周期中将服务作为一个应用部署从而跨越不同的环境，等等。
+
+**如果你运行Gradle**， 你可以使用`./gradlew bootRun`运行应用。可选地，你可使用`./gradlew build`来构建JAR文件，并像下面那样运行应用：
+```
+java -jar build/libs/gs-async-method-0.1.0.jar
+```
+
+**如果你运行Maven**， 你可以使用`./mvnw spring-boot:run`运行应用。可选地，你可使用`./mvnw clean package`来构建JAR文件，并像下面那样运行应用：
+```
+java -jar target/gs-async-method-0.1.0.jar
+```
+> 这里描述的步骤创建了一个可运行JAR，你也可以[构建一个典型WAR文件](https://spring.io/guides/gs/convert-jar-to-war/)。
+
+应用显示了日志输出，展示了每次的GitHub查询。利用`allOf`工厂方法，我们创建了一个`CompletableFuture`对象数组。通过调用`join`方法，有可能等到所有`CompletableFuture`对象的完成。
+
+下面的列表展示了样例应用的典型输出：
+```
+2016-09-01 10:25:21.295  INFO 17893 --- [ GithubLookup-2] hello.GitHubLookupService                : Looking up CloudFoundry
+2016-09-01 10:25:21.295  INFO 17893 --- [ GithubLookup-1] hello.GitHubLookupService                : Looking up PivotalSoftware
+2016-09-01 10:25:23.142  INFO 17893 --- [ GithubLookup-1] hello.GitHubLookupService                : Looking up Spring-Projects
+2016-09-01 10:25:24.281  INFO 17893 --- [           main] hello.AppRunner                          : Elapsed time: 2994
+2016-09-01 10:25:24.282  INFO 17893 --- [           main] hello.AppRunner                          : --> User [name=Pivotal Software, Inc., blog=https://pivotal.io]
+2016-09-01 10:25:24.282  INFO 17893 --- [           main] hello.AppRunner                          : --> User [name=Cloud Foundry, blog=https://www.cloudfoundry.org/]
+2016-09-01 10:25:24.282  INFO 17893 --- [           main] hello.AppRunner                          : --> User [name=Spring, blog=https://spring.io/projects]
+```
+注意前两个调用在两个单独的线程里（GithubLookup-2, GithubLookup-1）发生，第三个一直等待直到两个线程中一个可用。为了比较如果没有异步特性这个任务花费的时间，注释掉`@Async`注解并再次运行服务。总的任务时间增长可观，因为每个查询任务至少话费1秒。你可以调优`Executor`，比如增加`corePoolSize`的大小。
+
+本质上，任务花费时间越长，同时触发的任务越多，你从任务异步上获得收益越多。代价是需要处理`CompletableFuture`接口。它增加了一层抽象，因为你不再直接处理结果。
+## 总结
+恭喜你！你已经开发了一个完整的异步服务，它让你可以一次处理多个调用。
 
 ## Reference
 - [Creating Asynchronous Methods](https://spring.io/guides/gs/async-method/)
