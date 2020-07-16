@@ -11,7 +11,7 @@
   + [Spring Tool Suite (STS)](https://spring.io/guides/gs/sts)
   + [IntelliJ IDEA](https://spring.io/guides/gs/intellij-idea/)
 ## 如何完成这个指南
-像大多数Spring [入门指南](https://spring.io/guides)，你可以从头开始完成每一步，或跳过对你来讲很熟悉的基础设置步骤，每种方式你都可得到科工作的代码。
+像大多数Spring [入门指南](https://spring.io/guides)，你可以从头开始完成每一步，或跳过对你来讲很熟悉的基础设置步骤，每种方式你都可得到可工作的代码。
 
 为了从头开始，请移步[Spring Initializr入门](https://spring.io/guides/gs/spring-boot/#scratch)。
 
@@ -175,7 +175,7 @@ public class Application {
 `@SpringBootApplication`是一个方便的注解，它添加了下面所有的内容：
 - `@Configuration`：标记类作为应用上下文Beans定义的源
 - `@EnableAutoConfiguration`：告诉Spring Boot基于classpath 开始添加Beans，其它beans，以及各种属性设置。例如，如果 `spring-webmvc`在classpath上，这个注解标记该应用为一个Web应用并激活关键行为，比如设置一个`DispatcherServlet`。
-- `@ComponentScan`：告诉Spring去`com/example`下查询其它组件，配置和服务，让他找到控制器。
+- `@ComponentScan`：告诉Spring去`com/example`下查询其它组件，配置和服务，让它找到控制器。
 
 `main()`方法使用Spring Boot的`SpringApplication.run()`方法来启动一个应用。你注意到没有一行XML吗？也没有`web.xml`。这个Web应用是100%纯Java，你不必应付配置的重担。
 
