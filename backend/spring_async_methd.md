@@ -369,3 +369,5 @@ CommandLineRunner和ApplicationRunner的作用是相同的。不同之处在于C
 ## Reference
 - [Creating Asynchronous Methods](https://spring.io/guides/gs/async-method/)
 - [org.springframework.scheduling.annotation: Annotation Type EnableAsync](https://docs.spring.io/spring/docs/3.1.x/javadoc-api/org/springframework/scheduling/annotation/EnableAsync.html)
+- [springboot 中CommandLineRunner接口的作用](https://www.jianshu.com/p/13980d3ee7fd)
+- [CommandLineRunner和ApplicationRunner](https://blog.csdn.net/m0_37739193/article/details/85255317)
