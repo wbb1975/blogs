@@ -126,12 +126,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
 public class HelloController {
-
 	@RequestMapping("/")
 	public String index() {
 		return "Greetings from Spring Boot!";
 	}
-
 }
 ```
 这个类被标记为`@RestController`，意味着它已经准备好被Spring MVC用来处理Web请求。`@RequestMapping` 把 `/` 映射到 `index()`。当被从浏览器或命令行curl中调用时，方法返回纯文本。这是因为`@RestController`绑定了`@Controller`和`@ResponseBody`，两个注解导致Web请求返回数据而不是视图。
@@ -158,7 +156,6 @@ public class Application {
 	@Bean
 	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
 		return args -> {
-
 			System.out.println("Let's inspect the beans provided by Spring Boot:");
 
 			String[] beanNames = ctx.getBeanDefinitionNames();
@@ -166,10 +163,8 @@ public class Application {
 			for (String beanName : beanNames) {
 				System.out.println(beanName);
 			}
-
 		};
 	}
-
 }
 ```
 `@SpringBootApplication`是一个方便的注解，它添加了下面所有的内容：
@@ -342,9 +337,11 @@ public class HelloControllerIT {
   <dependency>
 	<groupId>org.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-actuator</artifactId>
-</dependency>
+  </dependency>
   ```
-然后重新启动应用：
+
+  然后重新启动应用。
+
 - 如果你在使用Gradle，请在终端窗口上输入以下命令（在`complete` 目录中）：
   ```
   ./gradlew bootRun
