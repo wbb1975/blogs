@@ -30,3 +30,6 @@ ExecStart=/usr/bin/dockerd-current \
           $BLOCK_REGISTRY \
           $INSECURE_REGISTRY \
           $REGISTRIES
+
+https://zhuanlan.zhihu.com/p/138554103
+https://www.cnblogs.com/architectforest/p/13153053.html
