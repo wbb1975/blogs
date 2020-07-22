@@ -33,3 +33,4 @@ ExecStart=/usr/bin/dockerd-current \
 
 https://zhuanlan.zhihu.com/p/138554103
 https://www.cnblogs.com/architectforest/p/13153053.html
+kubeadm join 192.168.0.114:6443 --token x1jvjy.hryo0sf4eoa7hwo5 --discovery-token-ca-cert-hash sha256:93f8642a6fb52891e780e83fac9e077bdef577b9c583854a3bd985ea653733f5
