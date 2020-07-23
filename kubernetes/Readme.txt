@@ -11,25 +11,13 @@
 
 }
 
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+https://www.linuxtechi.com/install-kubernetes-1-7-centos7-rhel7/
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/getting_started_with_kubernetes/get_started_orchestrating_containers_with_kubernetes
+
 sudo systemctl daemon-reload
 sudo systemctl restart docker
-
-
-ExecStart=/usr/bin/dockerd-current \
-          --add-runtime docker-runc=/usr/libexec/docker/docker-runc-current \
-          --default-runtime=docker-runc \
-          --authorization-plugin=rhel-push-plugin \
-          --exec-opt native.cgroupdriver=systemd \
-          --userland-proxy-path=/usr/libexec/docker/docker-proxy-current \
-          --init-path=/usr/libexec/docker/docker-init-current \
-          --seccomp-profile=/etc/docker/seccomp.json \
-          $OPTIONS \
-          $DOCKER_STORAGE_OPTIONS \
-          $DOCKER_NETWORK_OPTIONS \
-          $ADD_REGISTRY \
-          $BLOCK_REGISTRY \
-          $INSECURE_REGISTRY \
-          $REGISTRIES
 
 https://zhuanlan.zhihu.com/p/138554103
 https://www.cnblogs.com/architectforest/p/13153053.html
