@@ -16,4 +16,6 @@ kubeadm join 192.168.0.114:6443 --token x1jvjy.hryo0sf4eoa7hwo5 --discovery-toke
 https://linuxconfig.org/how-to-move-docker-s-default-var-lib-docker-to-another-directory-on-ubuntu-debian-linux
 
 https://edu.aliyun.com/lesson_1651_16894#_16894
-minikube start --vm-driver docker --image-mirror-country cn --registry-mirror=https://9cpn8tt6.mirror.aliyuncs.com
+minikube start --vm-driver docker  --cpus=4 --memory=4096mb --image-mirror-country cn --registry-mirror=https://9cpn8tt6.mirror.aliyuncs.com
+
+http://docs.kubernetes.org.cn/227.html
