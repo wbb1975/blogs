@@ -19,3 +19,4 @@ https://edu.aliyun.com/lesson_1651_16894#_16894
 minikube start --vm-driver docker  --cpus=4 --memory=4096mb --image-mirror-country cn --registry-mirror=https://9cpn8tt6.mirror.aliyuncs.com
 
 http://docs.kubernetes.org.cn/227.html
+https://anoyi.com/cncf
