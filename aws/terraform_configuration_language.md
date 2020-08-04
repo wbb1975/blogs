@@ -3,7 +3,7 @@ Terraform使用自己的配置语言，设计用于基础架构的简洁描述�
 ## 资源和模块（Resources and Modules）
 Terraform语言的主要目的是声明[资源](https://www.terraform.io/docs/configuration/resources.html)。其它语言特性仅仅是为了使资源的定义更弹性更方便。
 
-一组资源可被聚集成[模块](https://www.terraform.io/docs/configuration/modules.html)，模块创建了一个更大的配置单元。一个资源描述一个简单的基础架构目标，而模块为了创建更高层级的系统可以描述一套对象以及对象间的关系。
+一组资源可被聚集成[模块](https://www.terraform.io/docs/configuration/modules.html)，模块创建了一个更大的配置单元。一个资源描述一个简单的基础架构目标，而模块为了创建更高层级的系统，可以描述一套对象以及对象间的关系。
 
 一个Terraform配置包括一个根模块，在那里求值开始，当一个模块调用其它模块时，对应子模块将被创建并形成一个模块树。
 ## 参数，块及表达式（Arguments, Blocks, and Expressions）
@@ -22,7 +22,7 @@ resource "aws_vpc" "main" {
 - 参数给一个名字指定一个值，它们在块内出现
 - 表达式代表一个值，无论是字面地，还是引用或绑定其它值。它们常以参数的值的形式出现，或在其它表达式里。
 
-关于Terraform语法A的全部语法，请参见：
+关于Terraform语法的全部细节，请参见：
 - [Configuration Syntax](https://www.terraform.io/docs/configuration/syntax.html)
 - [Expressions](https://www.terraform.io/docs/configuration/expressions.html)
 ## 代码组织
@@ -44,7 +44,7 @@ Terraform命令行接口是评估和应用Terraform配置的通用引擎，它�
 
 Terraform并不拥有平台中立的资源类型的概念--资源通常与提供者绑定，因为相似资源的特性在不同提供者间差别巨大。但Terraform命令行接口共享配置引擎确保相同的语言结构和语法可跨服务可用，不同服务的资源类型可按需绑定。
 ## 示例
-下面的简单示例描述了AWS上的一个简单网络拓扑，仅仅给与了Terraform语言的一个总体结构和语法概貌。使用其它提供者定义的资源类型，同样的配置可用于创建虚拟网络服务，一个实际的网络配置通常含有其它一些元素，但这里并未给出：
+下面的简单示例描述了AWS上的一个简单网络拓扑，仅仅给出了Terraform语言的一个总体结构和语法概貌。使用其它提供者定义的资源类型，同样的配置可用于创建虚拟网络服务，一个实际的网络配置通常含有其它一些元素，但这里并未给出：
 ```
 variable "aws_region" {}
 
@@ -86,7 +86,7 @@ resource "aws_subnet" "az" {
   cidr_block = cidrsubnet(aws_vpc.main.cidr_block, 4, count.index+1)
 }
 ```
-对这里的配置元素的更多信息，使用站点导航去查阅Terraform语言文档的哥哥子章节。可以从[资源配置](https://www.terraform.io/docs/configuration/resources.html)开始。
+对这里的配置元素的更多信息，使用站点导航去查阅Terraform语言文档的各个子章节。可以从[资源配置](https://www.terraform.io/docs/configuration/resources.html)开始。
 ## 1. 资源（Resources）
 资源是Terraform语言中最重要的元素，每个资源块描述了一个或多个基础设施对象如虚拟网络，计算实例，更高级别的组件如DNS记录等。
 ### 1.1 资源语法
@@ -132,8 +132,7 @@ resource "aws_instance" "web" {
 
 但是，某些资源必须在其它特定资源之后处理，有时候是由于资源运行的方式，有时候仅仅因为某些资源的配置需要其它资源产生的信息。
 
-大多数资源依赖被自动处理，Terraform分析资源块内的[表达式](https://www.terraform.io/docs/configuration/expressions.html)以找到对其它对象的引用，当创建，更新或销毁资源时将这些引用作为隐式顺序需求。因为大部分资源如果表现出对其它资源的行为依赖，那么它们也将访问其它资源的数据
-，因此通常没有必要手动指定资源间的依赖。
+大多数资源依赖被自动处理，Terraform分析资源块内的[表达式](https://www.terraform.io/docs/configuration/expressions.html)以找到对其它对象的引用，当创建，更新或销毁资源时将这些引用作为隐式顺序需求。因为大部分资源如果表现出对其它资源的行为依赖，那么它们也将访问其它资源的数据，因此通常没有必要手动指定资源间的依赖。
 
 但是，某些依赖在配置中不能隐式识别，例如，如果Terraform必须管理某些访问控制策略，并采取行动，则要求这些策略必须存在。这就在访问策略以及依赖它以创建的资源之间引入了一个隐藏依赖。在这些罕见的例子中，[元参数依赖](https://www.terraform.io/docs/configuration/resources.html#depends_on-explicit-resource-dependencies)可以显式指定一个依赖。
 ### 1.6 元参数
@@ -144,7 +143,7 @@ resource "aws_instance" "web" {
 
 本地资源的行为模式与其它资源无异，但它们的结果数据仅仅存在于Terraform状态文件本身，销毁一个这样的资源仅仅意味着从状态文件中移除它并丢弃其数据。
 ### 1.8 操作超时（Operation Timeouts）
-某些资源类型提供了一个特殊的timeouts嵌入块参数允许你定制在操作被认为失败前可进行多长时间。例如，aws_db_instancehttps://www.terraform.io/docs/providers/aws/r/db_instance.html允许配置创建，更新，删除操作的超时时间。
+某些资源类型提供了一个特殊的timeouts嵌入块参数允许你定制在操作被认为失败前可进行多长时间。例如，[aws_db_instance](https://www.terraform.io/docs/providers/aws/r/db_instance.html)允许配置创建，更新，删除操作的超时时间。
 
 超时完全由插件的资源类型实现处理，但提供这些特性的资源类型通常会遵循管理提供一个叫timeouts的子块：对每个操作都有一个嵌入的参数配置其超时设置。每个这样的参数都使用时长的字符串表示，例如"60m"表示60分钟，"10s" 代表10秒，"2h"代表2小时等。
 ```

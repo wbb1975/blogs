@@ -1,7 +1,7 @@
 # Terraform入门
 ## 0. Terraform 核心功能
 - 基础架构即代码（Infrastructure as Code）：使用高级配置语法来描述基础架构，这样就可以对数据中心的蓝图进行版本控制，就像对待其它代码一样对待它。
-- 执行计划（Execution Plans）：Terraform 有一个 plan 步骤，它生成一个执行计划。执行计划显示了当执行 apply 命令时 Terraform 将做什么。通过 plan 进行提前检查，可以使 Terraform 操作真正的基础结构时避免意外。
+- 执行计划（Execution Plans）：Terraform 有一个 plan 步骤，它生成一个执行计划。执行计划显示了当执行 apply 命令时 Terraform 将做什么。通过 plan 进行提前检查，可以使 Terraform 操作真正的基础架构时避免意外。
 - 资源图（Resource Graph）：Terraform 构建的所有资源的图表，它能够并行地创建和修改任何没有相互依赖的资源。因此，Terraform 可以高效地构建基础设施，操作人员也可以通过图表深入地解其基础设施中的依赖关系。
 - 自动化变更（Change Automation）：把复杂的变更集应用到基础设施中，而无需人工交互。通过前面提到的执行计划和资源图，我们可以确切地知道 Terraform 将会改变什么，以什么顺序改变，从而避免许多可能的人为错误。
 ## 1. 安装Terraform
@@ -30,11 +30,11 @@ resource "aws_instance" "example" {
   instance_type = "t2.micro"
 }
 ```
-> 注意：上面的配置工作于大部分AWS账户，将访问默认VPC。EC2经典网络用户请为instance_type指定t1.micro，并为ami指定ami-408c7f28。如果你使用一个非us-east-1的region你将需要指定该region的ami因为每个region的ami都是特定的。
+> 注意：上面的配置工作于大部分AWS账户，将访问默认VPC。EC2经典网络用户请为instance_type指定t1.micro，并为ami指定ami-408c7f28。如果你使用一个非us-east-1的region你将需要指定该region的ami，因为每个region的ami都是特定的。
 
-用你的access key和secret key替换ACCESS_KEY_HERE和SECRET_KEY_HERE，可从[此页面](https://console.aws.amazon.com/iam/home?#security_credential)获取。我们现在将他们硬编码，但是在入门指南后面的将会将他们提取到变量里。
+用你的access key和secret key替换ACCESS_KEY_HERE和SECRET_KEY_HERE，可从[此页面](https://console.aws.amazon.com/iam/home?#security_credential)获取。我们现在将他们硬编码，但是在入门指南后面的将会将它们提取到变量里。
 
-> 注意：如果你仅仅遗漏了AWS凭证，Terraform将自动从已保存的API凭证中搜索（如：在~/.aws/credentials中）。或者IAM实例配置文件凭据。对于将文件签入源代码管理或者有多个管理员的情况，该选择要干净很多。到[这里](https://aws.amazon.com/blogs/apn/terraform-beyond-the-basics-with-aws/)查看细节。将凭据信息遗留到配置文件以外，使你可以将凭据信息放在源代码管理之外，并且也可以为不同的用户使用不同的IAM凭据而不需要修改配置文件。
+> 注意：如果你仅仅遗漏了AWS凭证，Terraform将自动从已保存的API凭证中搜索（如：在~/.aws/credentials中），或者IAM实例配置文件凭据。对于将文件签入源代码管理或者有多个管理员的情况，该选择要干净很多。到[这里](https://aws.amazon.com/blogs/apn/terraform-beyond-the-basics-with-aws/)查看细节。将凭据信息遗留到配置文件以外，使你可以将凭据信息放在源代码管理之外，并且也可以为不同的用户使用不同的IAM凭据而不需要修改配置文件。
 
 provider块用于指定provider名称，在我们的实例中叫"aws"。provider负责创建和管理资源。如果一个Terraform配置文件由多个provider组成，可以有多个provider块，这是常见的情况。
 
@@ -42,7 +42,7 @@ resource块指定一个基础设施中存在的资源。一个资源可能是物
 
 resource块开始前有两个字符串：资源类型和资源名称。在我们的实例中资源类型是"aws_instance"，资源名为"example"。资源类型的前缀映射到provider。在我们的实例中，"aws_instance"自动告知你Terraform被"aws"provider管理。
 
-resource块内部是该资源的配置。它独立于每个资源provider并且在[provider参考](https://www.terraform.io/docs/providers/index.html)完全列出来。对于我们的EC2实例，我们为ubuntu指定一个AMI，然后请求一个"t2.micro"的实例因为我们有免费资格。
+resource块内部是该资源的配置。它独立于每个资源provider并且在[provider参考](https://www.terraform.io/docs/providers/index.html)完全列出来。对于我们的EC2实例，我们为ubuntu指定一个AMI，然后请求一个"t2.micro"的实例，因为我们有免费资格。
 ## 3. 安装
 为一个新配置文件或从版本控制工具中检出的已存在的配置执行的第一个命令是terraform init，它将初始化各种本地配置和数据为后面的命令使用。
 
@@ -159,7 +159,7 @@ aws_instance.example:
 Provisioners 可以在资源创建/销毁时在本地/远程执行脚本。
 Provisioners 通常用来引导一个资源，在销毁资源前完成清理工作，进行配置管理等。
 
-Provisioners拥有多种类型可以满足多种需求，如：文件传输（file），本地执行（local-exec），远程执行（remote-exec）等 Provisioners可以添加在任何的resource当中：
+Provisioners拥有多种类型可以满足多种需求，如：文件传输（file），本地执行（local-exec），远程执行（remote-exec）等。Provisioners可以添加在任何的resource当中：
 ```
 # Create a Linux virtual machine
 resource "azurerm_virtual_machine" "vm" {
