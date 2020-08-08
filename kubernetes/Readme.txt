@@ -20,3 +20,5 @@ minikube start --vm-driver docker  --cpus=4 --memory=4096mb --image-mirror-count
 
 http://docs.kubernetes.org.cn/227.html
 https://anoyi.com/cncf
+http://docs.kubernetes.org.cn/   ==》作为索引
+https://kubernetes.io/zh/docs/concepts/overview/  ==》查看详细内容
