@@ -57,7 +57,68 @@ mvn package
   + [(9.0.0+) SpringIntegrationControllerExample](https://github.com/kubernetes-client/java/blob/master/examples/src/main/java/io/kubernetes/client/examples/SpringControllerExample.java): Building a kubernetes controller based on spring framework's bean injection.
   + [(9.0.0+) GenericKubernetesClientExample](https://github.com/kubernetes-client/java/blob/master/extended/src/main/java/io/kubernetes/client/extended/generic/GenericKubernetesApi.java): Construct a generic client interface for any kubernetes types, including CRDs.
 ### 列出所有pods：
+```
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.Configuration;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.util.Config;
 
+import java.io.IOException;
+
+public class Example {
+    public static void main(String[] args) throws IOException, ApiException{
+        ApiClient client = Config.defaultClient();
+        Configuration.setDefaultApiClient(client);
+
+        CoreV1Api api = new CoreV1Api();
+        V1PodList list = api.listPodForAllNamespaces(null, null, null, null, null, null, null, null, null);
+        for (V1Pod item : list.getItems()) {
+            System.out.println(item.getMetadata().getName());
+        }
+    }
+}
+```
+### 监听名字空间对象:
+```
+import com.google.gson.reflect.TypeToken;
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.Configuration;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.util.Config;
+import io.kubernetes.client.util.Watch;
+
+import java.io.IOException;
+
+public class WatchExample {
+    public static void main(String[] args) throws IOException, ApiException{
+        ApiClient client = Config.defaultClient();
+        Configuration.setDefaultApiClient(client);
+
+        CoreV1Api api = new CoreV1Api();
+
+        Watch<V1Namespace> watch = Watch.createWatch(
+                client,
+                api.listNamespaceCall(null, null, null, null, null, 5, null, null, Boolean.TRUE, null, null),
+                new TypeToken<Watch.Response<V1Namespace>>(){}.getType());
+
+        for (Watch.Response<V1Namespace> item : watch) {
+            System.out.printf("%s : %s%n", item.type, item.object.getMetadata().getName());
+        }
+    }
+}
+```
+更多例子可以在[examples](https://github.com/kubernetes-client/java/blob/master/examples)目录下找到。为了运行这些例子，执行下买你的方法：
+`mvn exec:java -Dexec.mainClass="io.kubernetes.client.examples.Example"`
+## 文档
+所有API和模块的文档可在[产生的客户端文档](https://github.com/kubernetes-client/java/tree/master/kubernetes/docs)找到。
+## 兼容性
+## 贡献
+## 开发
 
 ## Reference
 - [Kubernetes Java Client](https://github.com/kubernetes-client/java)
