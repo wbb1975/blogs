@@ -117,8 +117,52 @@ public class WatchExample {
 ## 文档
 所有API和模块的文档可在[产生的客户端文档](https://github.com/kubernetes-client/java/tree/master/kubernetes/docs)找到。
 ## 兼容性
+客户端版本|1.12|1.13|1.14|1.15|1.16|1.17
+--------|--------|--------|--------|--------|--------|--------
+4.0.0|✓|-|-|-|-|-
+5.0.0|+|✓|-|-|-|-
+6.0.1|+|+|✓|-|-|-
+7.0.0|+|+|+|✓|-|-
+8.0.2v|+|+|+|+|✓|-
+9.0.0|+|+|+|+|+|✓
+
+关键点：
++ `✓` Java客户端与Kubernetes版本之间精确匹配特性与API对象。
++ `+` Java客户端中的一些特性与API对象不在Kubernetes集群中，但它们的共有部分可以很好工作。
++ `-` Kubernetes集群拥有一些Java客户端不能使用的特性（额外的API对象等）。
+参见[变化日志](https://github.com/kubernetes-client/java/blob/master/CHANGELOG.md)来了解不同Java客户端版本变化的详细描述。
 ## 贡献
+参见[CONTRIBUTING.md](https://github.com/kubernetes-client/java/blob/master/CONTRIBUTING.md)来获取给项目做贡献的指令。
+## 行为准则
+参与Kubernetes社区活动必须遵循[云原生社区行为准则](https://github.com/cncf/foundation/blob/master/code-of-conduct.md)。
 ## 开发
+**更新产生的代码**。
+
+代码由[openapi-generator project](https://github.com/OpenAPITools/openapi-generator)生成。
+
+我们已经构建了通用跨语言代码生成工具，它驻留在[kubernetes-client/gen](https://github.com/kubernetes-client/gen)项目中。
+
+为了开始，在一个根目录而非你的java客户端目录中，例如，你的目录布局可能如下：
+```
+${HOME}/
+        src/
+             gen/
+             java/
+...
+```
+接下来clone gen创酷，你可以运行：
+```
+cd ${HOME}/src
+git clone https://github.com/kubernetes-client/gen
+export GEN_ROOT=${PWD}
+```
+然后为了更新客户端并运行格式化器：
+```
+cd ${HOME}/src/java
+${GEN_ROOT}/gen/openapi/java.sh kubernetes ./settings
+./mvnw spotless:apply
+```
+这将运行一个较长的构建过程，涉及`docker`，最终导致一套位于kubernetes下的新产生的代码.
 
 ## Reference
 - [Kubernetes Java Client](https://github.com/kubernetes-client/java)
