@@ -810,5 +810,5 @@ metadata:
 使用 MySQL StatefulSet 和 Service，您会注意到有关 MySQL 和 Wordpress 的信息，包括更广泛的应用程序。
 
 ## Reference
--- [使用Kubernetes对象](https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/)
--- [Working with Kubernetes Objects](Working with Kubernetes Objects)
+- [使用Kubernetes对象](https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/)
+- [Working with Kubernetes Objects](Working with Kubernetes Objects)
