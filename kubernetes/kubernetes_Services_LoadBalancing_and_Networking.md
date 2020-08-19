@@ -347,7 +347,7 @@ metadata:
         service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 [...]
 ```
-#### 2.9.3 AWS TLS 支持
+##### 2.9.2.2 AWS TLS 支持
 为了对在AWS上运行的集群提供部分TLS / SSL支持，您可以向 LoadBalancer 服务添加三个注释：
 ```
 metadata:
@@ -388,7 +388,7 @@ metadata:
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: "ELBSecurityPolicy-TLS-1-2-2017-01"
 ```
-##### 2.9.3.1 AWS 上的 PROXY 协议支持
+##### 2.9.2.3 AWS 上的 PROXY 协议支持
 为了支持在 AWS 上运行的集群，启用[PROXY 协议](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)。 您可以使用以下服务注释：
 ```
 metadata:
@@ -397,17 +397,276 @@ metadata:
         service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
 ```
 从 1.3.0 版开始，此注释的使用适用于 ELB 代理的所有端口，并且不能进行其他配置。
-#### 2.9.4 外部 IP
+##### 2.9.2.4 外部 IP
 如果有一些外部 IP 地址能够路由到一个或多个集群节点，Kubernetes 服务可以在这些 externalIPs 上暴露出来。 通过外部 IP 进入集群的入站请求，如果指向的是服务的端口，会被路由到服务的末端之一。 externalIPs 不受 Kubernets 管理；它们由集群管理员管理。 在服务规约中，externalIPs 可以和 ServiceTypes 一起指定。 在上面的例子中，客户端可以通过 "80.11.12.10:80" (externalIP:port) 访问 "my-service" 服务。
-#### 2.9.5 ExternalName 类型
-#### 2.9.6 外部 IP
+```
+kind: Service
+apiVersion: v1
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: MyApp
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 9376
+  externalIPs:
+  - 80.11.12.10
+```
+##### 2.9.2.5 AWS 上的 ELB 访问日志
+有几个注释可用于管理 AWS 上 ELB 服务的访问日志。
+- 注释 service.beta.kubernetes.io/aws-load-balancer-access-log-enabled 控制是否启用访问日志。
+- 注解 service.beta.kubernetes.io/aws-load-balancer-access-log-emit-interval 控制发布访问日志的时间间隔（以分钟为单位）。您可以指定 5 分钟或 60 分钟的间隔。
+- 注释 service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-name 控制存储负载均衡器访问日志的 Amazon S3 存储桶的名称。
+- 注释 service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-prefix 指定为 Amazon S3 存储桶创建的逻辑层次结构。
+
+```
+metadata:
+  name: my-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-access-log-enabled: "true"
+    # Specifies whether access logs are enabled for the load balancer
+    service.beta.kubernetes.io/aws-load-balancer-access-log-emit-interval: "60"
+    # The interval for publishing the access logs. You can specify an interval of either 5 or 60 (minutes).
+    service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-name: "my-bucket"
+    # The name of the Amazon S3 bucket where the access logs are stored
+    service.beta.kubernetes.io/aws-load-balancer-access-log-s3-bucket-prefix: "my-bucket-prefix/prod"
+    # The logical hierarchy you created for your Amazon S3 bucket, for example `my-bucket-prefix/prod`
+```
+##### 2.9.2.6 AWS 上的连接排空
+可以将注解 service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled 设置为 "true" 来管理 ELB 的连接排空。 注释 service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout 也可以用于设置最大时间（以秒为单位），以保持现有连接在注销实例之前保持打开状态。
+```
+metadata:
+  name: my-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "60"
+```
+##### 2.9.2.7 其他 ELB 注解
+还有其他一些注释，用于管理经典弹性负载均衡器，如下所述。
+```
+metadata:
+  name: my-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+    # 按秒计的时间，表示负载均衡器关闭连接之前连接可以保持空闲
+    # （连接上无数据传输）的时间长度
+
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    # 指定该负载均衡器上是否启用跨区的负载均衡能力
+
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "environment=prod,owner=devops"
+    # 逗号分隔列表值，每一项都是一个键-值耦对，会作为额外的标签记录于 ELB 中
+
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: ""
+    # 将某后端视为健康、可接收请求之前需要达到的连续成功健康检查次数。
+    # 默认为 2，必须介于 2 和 10 之间
+
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    # 将某后端视为不健康、不可接收请求之前需要达到的连续不成功健康检查次数。
+    # 默认为 6，必须介于 2 和 10 之间
+
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "20"
+    # 对每个实例进行健康检查时，连续两次检查之间的大致间隔秒数
+    # 默认为 10，必须介于 5 和 300 之间
+
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "5"
+    # 时长秒数，在此期间没有响应意味着健康检查失败
+    # 此值必须小于 service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval
+    # 默认值为 5，必须介于 2 和 60 之间
+
+    service.beta.kubernetes.io/aws-load-balancer-extra-security-groups: "sg-53fae93f,sg-42efd82e"
+    # 要添加到 ELB 上的额外安全组列表
+```
+##### 2.9.2.8 AWS 上负载均衡器支持
+> 该特性始于：Kubernetes v1.15 [beta]
+
+要在 AWS 上使用网络负载均衡器，可以使用注解 service.beta.kubernetes.io/aws-load-balancer-type，将其取值设为 nlb。
+```
+metadata:
+  name: my-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+```
+> **说明**： NLB 仅适用于某些实例类。有关受支持的实例类型的列表， 请参见[AWS文档](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-register-targets.html#register-deregister-targets)中关于所支持的实例类型的 Elastic Load Balancing 说明。
+
+与经典弹性负载平衡器不同，网络负载平衡器（NLB）将客户端的 IP 地址转发到该节点。 如果服务的 `.spec.externalTrafficPolicy` 设置为 `Cluster`，则客户端的IP地址不会传达到最终的 Pod。
+
+通过将 `.spec.externalTrafficPolicy` 设置为 `Local`，客户端IP地址将传播到最终的 Pod， 但这可能导致流量分配不均。 没有针对特定 `LoadBalancer` 服务的任何 Pod 的节点将无法通过自动分配的 `.spec.healthCheckNodePort` 进行 NLB 目标组的运行状况检查，并且不会收到任何流量。
+
+为了获得均衡流量，请使用 DaemonSet 或指定 [Pod 反亲和性](https://kubernetes.io/zh/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) 使其不在同一节点上。
+
+你还可以将 NLB 服务与[内部负载平衡器](https://kubernetes.io/zh/docs/concepts/services-networking/service/#internal-load-balancer)注解一起使用。
+
+为了使客户端流量能够到达 NLB 后面的实例，使用以下 IP 规则修改了节点安全组：
+Rule|Protocol|Port(s)|IpRange(s)|IpRange Description
+--------|--------|--------|--------|--------
+Health Check|TCP|NodePort(s) (.spec.healthCheckNodePort for .spec.externalTrafficPolicy=Local)|VPC CIDR|kubernetes.io/rule/nlb/health=<loadBalancerName>
+Client Traffic|TCP|NodePort(s)|.spec.loadBalancerSourceRanges (defaults to 0.0.0.0/0)|kubernetes.io/rule/nlb/client=<loadBalancerName>
+MTU Discovery|ICMP|3,4|.spec.loadBalancerSourceRanges (defaults to 0.0.0.0/0)|kubernetes.io/rule/nlb/mtu=<loadBalancerName>
+
+为了限制哪些客户端IP可以访问网络负载平衡器，请指定 loadBalancerSourceRanges：
+```
+spec:
+  loadBalancerSourceRanges:
+    - "143.231.0.0/16"
+```
+> **说明**： 如果未设置 .spec.loadBalancerSourceRanges ，则 Kubernetes 允许从 0.0.0.0/0 到节点安全组的流量。 如果节点具有公共 IP 地址，请注意，非 NLB 流量也可以到达那些修改后的安全组中的所有实例。
+#### 2.9.3 ExternalName 类型
+类型为 ExternalName 的服务将服务映射到 DNS 名称，而不是典型的选择器，例如 my-service 或者 cassandra。 您可以使用 spec.externalName 参数指定这些服务。
+
+例如，以下 Service 定义将 prod 名称空间中的 my-service 服务映射到 my.database.example.com：
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  namespace: prod
+spec:
+  type: ExternalName
+  externalName: my.database.example.com
+```
+> **说明**： ExternalName 服务接受 IPv4 地址字符串，但作为包含数字的 DNS 名称，而不是 IP 地址。 类似于 IPv4 地址的外部名称不能由 CoreDNS 或 ingress-nginx 解析，因为外部名称旨在指定规范的 DNS 名称。 要对 IP 地址进行硬编码，请考虑使用[headless Services](https://kubernetes.io/zh/docs/concepts/services-networking/service/#headless-services)。
+
+当查找主机 `my-service.prod.svc.cluster.local` 时，集群 DNS 服务返回 CNAME 记录， 其值为 `my.database.example.com`。 访问 my-service 的方式与其他服务的方式相同，但主要区别在于重定向发生在 DNS 级别，而不是通过代理或转发。 如果以后您决定将数据库移到群集中，则可以启动其 Pod，添加适当的选择器或端点以及更改服务的 type。
+
+> **说明**：本部分感谢 Alen Komljen的 [Kubernetes Tips - Part1](https://akomljen.com/kubernetes-tips-part-1/) 博客文章。
+##### 2.9.3.1 外部 IP
+如果外部的 IP 路由到集群中一个或多个 Node 上，Kubernetes Service 会被暴露给这些 externalIPs。 通过外部 IP（作为目的 IP 地址）进入到集群，打到 Service 的端口上的流量，将会被路由到 Service 的 Endpoint 上。 externalIPs 不会被 Kubernetes 管理，它属于集群管理员的职责范畴。
+
+根据 Service 的规定，externalIPs 可以同任意的 ServiceType 来一起指定。 在上面的例子中，my-service 可以在 "80.11.12.10:80"(externalIP:port) 上被客户端访问。
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: MyApp
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 9376
+  externalIPs:
+    - 80.11.12.10
+```
 ### 2.10 不足之处
+为 VIP 使用用户空间代理，将只适合小型到中型规模的集群，不能够扩展到上千 Service 的大型集群。 查看最初设计方案 获取更多细节。
+
+使用用户空间代理，隐藏了访问 Service 的数据包的源 IP 地址。 这使得一些类型的防火墙无法起作用。 iptables 代理不会隐藏 Kubernetes 集群内部的 IP 地址，但却要求客户端请求必须通过一个负载均衡器或 Node 端口。
+
+Type 字段支持嵌套功能 —— 每一层需要添加到上一层里面。 不会严格要求所有云提供商（例如，GCE 就没必要为了使一个 LoadBalancer 能工作而分配一个 NodePort，但是 AWS 需要 ），但当前 API 是强制要求的。
 ### 2.11 虚拟IP实施
+对很多想使用 Service 的人来说，前面的信息应该足够了。 然而，有很多内部原理性的内容，还是值去理解的。
+#### 2.11.1 避免冲突
+Kubernetes 最主要的哲学之一，是用户不应该暴露那些能够导致他们操作失败、但又不是他们的过错的场景。 对于 Service 资源的设计，这意味着如果用户的选择有可能与他人冲突，那就不要让用户自行选择端口号。 这是一个隔离性的失败。
+
+为了使用户能够为他们的 Service 选择一个端口号，我们必须确保不能有2个 Service 发生冲突。 Kubernetes 通过为每个 Service 分配它们自己的 IP 地址来实现。
+
+为了保证每个 Service 被分配到一个唯一的 IP，需要一个内部的分配器能够原子地更新 etcd 中的一个全局分配映射表， 这个更新操作要先于创建每一个 Service。 为了使 Service 能够获取到 IP，这个映射表对象必须在注册中心存在， 否则创建 Service 将会失败，指示一个 IP 不能被分配。
+
+在控制平面中，一个后台 Controller 的职责是创建映射表 （需要支持从使用了内存锁的 Kubernetes 的旧版本迁移过来）。 同时 Kubernetes 会通过控制器检查不合理的分配（如管理员干预导致的） 以及清理已被分配但不再被任何 Service 使用的 IP 地址。
+#### 2.11.2 Service IP 地址
+不像 Pod 的 IP 地址，它实际路由到一个固定的目的地，Service 的 IP 实际上不能通过单个主机来进行应答。 相反，我们使用 iptables（Linux 中的数据包处理逻辑）来定义一个虚拟IP地址（VIP），它可以根据需要透明地进行重定向。 当客户端连接到 VIP 时，它们的流量会自动地传输到一个合适的 Endpoint。 环境变量和 DNS，实际上会根据 Service 的 VIP 和端口来进行填充。
+
+kube-proxy支持三种代理模式: 用户空间，iptables和IPVS；它们各自的操作略有不同。
+##### Userspace
+作为一个例子，考虑前面提到的图片处理应用程序。 当创建后端 Service 时，Kubernetes master 会给它指派一个虚拟 IP 地址，比如 10.0.0.1。 假设 Service 的端口是 1234，该 Service 会被集群中所有的 kube-proxy 实例观察到。 当代理看到一个新的 Service， 它会打开一个新的端口，建立一个从该 VIP 重定向到新端口的 iptables，并开始接收请求连接。
+
+当一个客户端连接到一个 VIP，iptables 规则开始起作用，它会重定向该数据包到 "服务代理" 的端口。 "服务代理" 选择一个后端，并将客户端的流量代理到后端上。
+
+这意味着 Service 的所有者能够选择任何他们想使用的端口，而不存在冲突的风险。 客户端可以简单地连接到一个 IP 和端口，而不需要知道实际访问了哪些 Pod。
+##### iptables
+再次考虑前面提到的图片处理应用程序。 当创建后端 Service 时，Kubernetes 控制面板会给它指派一个虚拟 IP 地址，比如 10.0.0.1。 假设 Service 的端口是 1234，该 Service 会被集群中所有的 kube-proxy 实例观察到。 当代理看到一个新的 Service， 它会配置一系列的 iptables 规则，从 VIP 重定向到每个 Service 规则。 该特定于服务的规则连接到特定于 Endpoint 的规则，而后者会重定向（目标地址转译）到后端。
+
+当客户端连接到一个 VIP，iptables 规则开始起作用。一个后端会被选择（或者根据会话亲和性，或者随机）， 数据包被重定向到这个后端。 不像用户空间代理，数据包从来不拷贝到用户空间，kube-proxy 不是必须为该 VIP 工作而运行， 并且客户端 IP 是不可更改的。 当流量打到 Node 的端口上，或通过负载均衡器，会执行相同的基本流程， 但是在那些案例中客户端 IP 是可以更改的。
+##### IPVS
+在大规模集群（例如 10000 个服务）中，iptables 操作会显着降低速度。 IPVS 专为负载平衡而设计，并基于内核内哈希表。 因此，您可以通过基于 IPVS 的 kube-proxy 在大量服务中实现性能一致性。 同时，基于 IPVS 的 kube-proxy 具有更复杂的负载平衡算法（最小连接，局部性，加权，持久性）。
 ### 2.12 API 对象
+Service 是 Kubernetes REST API 中的顶级资源。您可以在以下位置找到有关A PI 对象的更多详细信息：[Service 对象 API](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#service-v1-core).
 ### 2.13 受支持的协议
+#### 2.13.1 TCP：该特性始于：Kubernetes v1.0 [stable]
+您可以将 TCP 用于任何类型的服务，这是默认的网络协议。
+#### 2.13.2 UDP：该特性始于：Kubernetes v1.0 [stable]
+您可以将 UDP 用于大多数服务。 对于 type=LoadBalancer 服务，对 UDP 的支持取决于提供此功能的云提供商。
+#### 2.13.3 HTTP：该特性始于：Kubernetes v1.1 [stable]
+如果您的云提供商支持它，则可以在 LoadBalancer 模式下使用服务来设置外部 HTTP/HTTPS 反向代理，并将其转发到该服务的 Endpoints。
+> **说明**： 您还可以使用 Ingres 代替 Service 来公开 HTTP/HTTPS 服务。
+#### 2.13.4 PROXY 协议：该特性始于：Kubernetes v1.1 [stable]
+如果您的云提供商支持它（例如, [AWS](https://kubernetes.io/zh/docs/concepts/cluster-administration/cloud-providers/#aws)）， 则可以在 LoadBalancer 模式下使用 Service 在 Kubernetes 本身之外配置负载均衡器， 该负载均衡器将转发前缀为 [PROXY协议](https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) 的连接。
+
+负载平衡器将发送一系列初始字节，描述传入的连接，类似于此示例：
+```
+  PROXY TCP4 192.0.2.202 10.0.42.7 12345 7\r\n
+```
+接下来是来自客户端的数据。
+#### 2.13.5 SCTP：该特性始于：Kubernetes v1.12 [alpha]
+作为一种 alpha 功能，Kubernetes 支持 SCTP 作为 Service、Endpoint、NetworkPolicy 和 Pod 定义中的 protocol 值。 要启用此功能，集群管理员需要在 API 服务器上启用 `SCTPSupport` 特性门控， 例如 `--feature-gates=SCTPSupport=true,...`。
+
+启用特性门控后，你可以将 Service、Endpoints、NetworkPolicy 或 Pod 的 `protocol` 字段设置为 SCTP。 Kubernetes 相应地为 SCTP 关联设置网络，就像为 TCP 连接所做的一样。
+
+##### 警告
+- 支持多宿主SCTP关联
+  > **警告**： 对多宿主 SCTP 关联的支持要求 CNI 插件可以支持将多个接口和 IP 地址分配给 Pod。 用于多宿主 SCTP 关联的 NAT 在相应的内核模块中需要特殊的逻辑。
+- Service 类型为 LoadBalancer 的服务
+  > **警告**： 如果云提供商的负载平衡器实现支持将 SCTP 作为协议，则只能使用 type LoadBalancer 加上 protocol SCTP 创建服务。否则，服务创建请求将被拒绝。 当前的云负载平衡器提供商（Azure、AWS、CloudStack、GCE、OpenStack）都缺乏对 SCTP 的支持。
+- Windows
+  > **警告**： 基于 Windows 的节点不支持 SCTP。
+- 用户空间 kube-proxy
+  > **警告**： 当 kube-proxy 处于用户空间模式时，它不支持 SCTP 关联的管理。
 ### 2.14 未来工作
+未来我们能预见到，代理策略可能会变得比简单的轮转均衡策略有更多细微的差别，比如主控节点选举或分片。 我们也能想到，某些 Service 将具有 “真正” 的负载均衡器，这种情况下 VIP 将简化数据包的传输。
+
+Kubernetes 项目打算为 L7（HTTP）服务改进支持。
+
+Kubernetes 项目打算为 Service 实现更加灵活的请求进入模式， 这些模式包含当前的 ClusterIP、NodePort 和 LoadBalancer 模式，或者更多。
 ## 3. 端点切片（Endpoint Slices）
+> 该特性始于：Kubernetes v1.17 [beta]
+
+端点切片（Endpoint Slices） 提供了一种简单的方法来跟踪 Kubernetes 集群中的网络端点 （network endpoints）。它们为 Endpoints 提供了一种可伸缩和可拓展的替代方案。
+### 3.1 Endpoint Slice 资源
+在 Kubernetes 中，EndpointSlice 包含对一组网络端点的引用。 指定选择器后，EndpointSlice 控制器会自动为 Kubernetes 服务创建 EndpointSlice。 这些 EndpointSlice 将包含对与服务选择器匹配的所有 Pod 的引用。EndpointSlice 通过唯一的服务和端口组合将网络端点组织在一起。
+
+例如，这里是 Kubernetes服务 example 的示例 EndpointSlice 资源。
+```
+apiVersion: discovery.k8s.io/v1beta1
+kind: EndpointSlice
+metadata:
+  name: example-abc
+  labels:
+    kubernetes.io/service-name: example
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 80
+endpoints:
+  - addresses:
+    - "10.1.2.3"
+    conditions:
+      ready: true
+    hostname: pod-1
+    topology:
+      kubernetes.io/hostname: node-1
+      topology.kubernetes.io/zone: us-west2-a
+```
+默认情况下，由 EndpointSlice 控制器管理的 Endpoint Slice 将有不超过 100 个端点。 低于此比例时，Endpoint Slices 应与 Endpoints 和服务进行 1:1 映射，并具有相似的性能。
+
+当涉及如何路由内部流量时，Endpoint Slices 可以充当 kube-proxy 的真实来源。 启用该功能后，在服务的 endpoints 规模庞大时会有可观的性能提升。
+### 3.2 地址类型
+EndpointSlice 支持三种地址类型：
+- IPv4
+- IPv6
+- FQDN (完全合格的域名)
+### 3.3 动机
+Endpoints API 提供了一种简单明了的方法在 Kubernetes 中跟踪网络端点。 不幸的是，随着 Kubernetes 集群与服务的增长，该 API 的局限性变得更加明显。 最值得注意的是，这包含了扩展到更多网络端点的挑战。
+
+由于服务的所有网络端点都存储在单个 Endpoints 资源中， 因此这些资源可能会变得很大。 这影响了 Kubernetes 组件（尤其是主控制平面）的性能，并在 Endpoints 发生更改时导致大量网络流量和处理。 Endpoint Slices 可帮助您缓解这些问题并提供可扩展的 附加特性（例如拓扑路由）平台。
 ## 4. Pod 与 Service 的 DNS
+本页面提供 Kubernetes 对 DNS 的支持的概述。
 ## 5. 使用 Service 连接到应用
 ## 6. Ingress
 ## 7. Ingress 控制器
