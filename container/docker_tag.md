@@ -34,3 +34,4 @@ docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
 
 ## Reference
 - [docker tag](https://docs.docker.com/engine/reference/commandline/tag/)
+- [The misunderstood Docker tag: latest](https://medium.com/@mccode/the-misunderstood-docker-tag-latest-af3babfd6375#:~:text=Latest%20is%20just%20a%20tag%20with%20a%20special%20name.&text=%E2%80%9CLatest%E2%80%9D%20simply%20means%20%E2%80%9Cthe,build%20%2Dt%20marc%2Ftest%20.&text=sudo%20docker%20build%20%2Dt%20marc%2Ftest%20.,-sudo%20docker%20tag)

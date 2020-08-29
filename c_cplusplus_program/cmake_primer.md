@@ -162,13 +162,62 @@ endforeach()
 ```
 和条件语句很相似，这些可以按你期待的方式工作，并且它们没有自己的作用域。
 
-CMake也支持 `while` 循环，但他们未在LLVM 管饭是用。
+CMake也支持 `while` 循环，但未在LLVM 中广泛使用。
 ## 模块，函数和宏（Modules, Functions and Macros）
-### Modules
-### Argument Handling
-### Functions Vs Macros
+### 模块（Modules）
+模块是CMake代码复用的媒介，CMake模块仅仅是CMake脚本文件。它们可以包含执行代码也可以包含命令定义。
+
+在CMake中，宏和函数被普遍思称为命令。塔恩是定义代码从而多次调用的主要方法。
+
+在LLVM 中我们拥有几个模块作为我们的分发版的一部分，它们主要服务于不从源代码构建我们的项目的开发人员。这些模块是利用CMake构建基于LLVM的项目的基础部分。我们也依赖模块作为LLVM 项目内部保持构建系统的功能，并实现可维护性及可复用性的一种方式。
+### 参数处理（Argument Handling）
+当定义一个CMake命令时处理参数是非常有用的。本节的所有示例都将使用CMake 的函数块，但这也适用于宏块。
+
+CMake命令可以有命名参数，从而需要每次调用时传递。另外，所有的命令将隐式地接受可变数量的参数（C语言的说法，所有的命令都是变参函数）。当一个命令被带有额外参数（命名蚕食之外）调用时，CMake将参数的完整列表（命名参数和非命名参数）存储在一个加 `ARGV` 的列表中，非命名参数被存储在一个名为 `ARGN` 的子列表中。下面是一个小例子，它提供了CMake内建函数 `add_dependencies`的一个简单封装。
+```
+function(add_deps target)
+  add_dependencies(${target} ${ARGN})
+endfunction()
+```
+上面的示例定义了一个新的宏 `add_deps` ，它带有一个必须参数，其实现仅仅调用另一个函数并传递第一个参数及所有尾参数。
+
+CMake提供了一个模块 `CMakeParseArguments` ，它提供了高级参数解析的实现。我们在几乎所有LLVM中使用它，对于任何需要复杂参数行为和可选参数函数它都是推荐使用的。关于模块的CMake官方文档在 `cmake-modules` 手册页面，从[CMake模块在线文档](https://cmake.org/cmake/help/v3.4/module/CMakeParseArguments.html)也可访问的到。
+> **注意**：从CMake 3.5开始 `cmake_parse_arguments` 命令已经成为了一个原生命令，`CMakeParseArguments` 模块已经为空，留在那里仅仅是为了兼容性。
+### 函数和宏（Functions Vs Macros）
+函数和宏从使用方式上看很相似，但两者之间有一个基础的差别。函数有其自己的作用域，宏则没有。这意味着宏中的变量集会逃逸到外部作用域，这使得宏只适合定义较小的功能。
+
+另一个函数和宏的区别是参数传递的方式。传递给宏的参数并不被设置为变量，反之在执行之前参数的解引用扩整个宏进行。如果使用了未被引用的变量，则可能导致一些不被期待的行为。例如：
+```
+macro(print_list my_list)
+  foreach(var IN LISTS my_list)
+    message("${var}")
+  endforeach()
+endmacro()
+
+set(my_list a b c d)
+set(my_list_of_numbers 1 2 3 4)
+print_list(my_list_of_numbers)
+# prints:
+# a
+# b
+# c
+# d
+```
+通常来讲这个问题不常见。因为它要求使用未被解引用的变量，且名字与其父作用域中的重叠。但它是很重要的，因为它可能导致很微妙的Bug。
 ## LLVM项目包装器（LLVM Project Wrappers）
+LLVM 项目提供了很多对CMake内建命令的包装器。我们使用这些包装器提供跨LLVM组件的一致的行为，并减少代码重复。
+
+我们通常（但不总是）遵循这样的惯例：以 `llvm_`开头的命令仅仅用于为其它命令构建块。用于直接使用的包装器命令通常映射在命令名字的中间（比如`add_llvm_executable` 是`add_executable`的包装器）。LLVM `add_*` 包装定义在AddLLVM.cmake的函数，它是作为LLVM 发布的一部分被安装的。它可被需要LLVM的LLVM子项目包含和使用。
+> **注意**：并不是所有的LLVM 项目需要LLVM 。例如`compiler-rt`并不需要LLVM即可构建，并且`compiler-rt sanitizer`库主要用于GCC。
 ## 有用的内建命令（Useful Built-in Commands）
+CMake用于丰富的内建命令。本文档并不打算它们的细节应为CMake项目拥有优秀的文档。一部分投出的供呢个如下：
+- [add_custom_command](https://cmake.org/cmake/help/v3.4/command/add_custom_command.html)
+- [add_custom_target](https://cmake.org/cmake/help/v3.4/command/add_custom_target.html)
+- [file](https://cmake.org/cmake/help/v3.4/command/file.html)
+- [list](https://cmake.org/cmake/help/v3.4/command/list.html)
+- [math](https://cmake.org/cmake/help/v3.4/command/math.html)
+- [string](https://cmake.org/cmake/help/v3.4/command/string.html)
+关于CMake 命令的完整文档在 `cmake-commands` 的手册页和[CMake网页](https://cmake.org/cmake/help/v3.4/manual/cmake-commands.7.html)。
 
 ## Reference
 - [CMake Primer](https://llvm.org/docs/CMakePrimer.html)
