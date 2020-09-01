@@ -9,43 +9,24 @@
 
 如果你对CMake的历史和内部架构感兴趣，请看看在[The Architecture of Open Source Applications](http://aosabook.org/en/index.html)一书中的文章[CMake](http://www.aosabook.org/en/cmake.html)。
 ## General
-
-### Use at least CMake version 3.0.0.
-
-Modern CMake is only available starting with version 3.0.0.
-
-### Treat CMake code like production code. 
-
-CMake is code. Therefore, it should be clean. Use the same principles for `CMakeLists.txt` and modules as for the rest of the codebase.
-
-### Define project properties globally.
-
-For example, a project might use a common set of compiler warnings. Defining such properties globally in the top-level `CMakeLists.txt` file prevents scenarios where public headers of a dependent target causing a depending target not to compile because the depending target uses stricter compiler options. Defining such project properties globally makes it easier to manage the project with all its targets.
-
-### Forget the commands `add_compile_options`, `include_directories`, `link_directories`, `link_libraries`.
-
-Those commands operate on the directory level. All targets defined on that level inherit those properties. This increases the chance of hidden dependencies. Better operate on the targets directly.
-
-### Get your hands off `CMAKE_CXX_FLAGS`.
-
-Different compilers use different command-line parameter formats. Setting the C++ standard via `-std=c++14` in `CMAKE_CXX_FLAGS` will brake in the future, because those requirements are also fulfilled in other standards like C++17 and the compiler option is not the same on old compilers. So it’s much better to tell CMake the compile features so that it can figure out the appropriate compiler option to use.
-
-### Don’t abuse usage requirements.
-
-As an example, don’t add `-Wall` to the `PUBLIC` or `INTERFACE` section of `target_compile_options`, since it is not required to build depending targets.
-
-## Modules
-
-### Use modern find modules that declare exported targets.
-
-Starting with CMake 3.4, more and more find modules export targets that can be used via `target_link_libraries`.
-
-### Use exported targets of external packages.
-
-Don’t fall back to the old CMake style of using variables defined by external packages. Use the exported targets via `target_link_libraries` instead.
-
-### Use a find module for third-party libraries that do not support clients to use CMake.
-
+### 使用至少CMake版本3.0.0.
+现代CMake只有从版本3.0.0后才可用。
+### 对待CMake代码应像对待产品代码
+CMake时代吗。因此它应该是干净的。对`CMakeLists.txt`和模块使用与其它代码基同样的原则，
+### 全局定义项目属性（Define project properties globally)
+比如，一个项目可能使用一套公共编译警告。在顶部`CMakeLists.txt`中全局定义这些属性可以防止一些情况：一个依赖目标的公共头文件导致它不能通过编译，原因在于依赖目标使用更严格的编译选项。全局定义此类项目属性使得管理项目及其所有目标更简单。
+### 忘记这些命令吧：`add_compile_options`, `include_directories`, `link_directories`, `link_libraries`
+这些命令运作于目录级别。所有在该级别上定义的所有目标继承了这些属性。这增加了隐藏依赖的几率。最好直接在这些目标上运作。
+### 放手 `CMAKE_CXX_FLAGS`
+不同的编译器使用不同的命令行参数格式。借助`CMAKE_CXX_FLAGS`中的`-std=c++14`来设置C++标准未来很可能会刹车，因为这些需求也被其它标准如C++17实现了，并且（同一标准）编译器选项与老的编译器选项并不相同。因此告诉CMake编译特性从而给定使用的合适的编译特性会好得多。
+### 不要滥用使用需求（Don’t abuse usage requirements）
+作为一个例子，请不要添加`-Wall`到`target_compile_options`的`PUBLIC` 或 `INTERFACE`段，因为它并不用于构建依赖目标。
+## 模块
+### 使用现代find模块来声明导出目标
+从CMake 3.4开始，越来越多的find 模块导出可通过`target_link_libraries`使用的目标。
+### 使用外部包的导出目标（Use exported targets of external packages）
+不要回到老的使用外部包定义的变量的CMake模式。取而代之，通过`target_link_libraries`使用倒出目标。
+### 使用find 模块来支持不支持客户使用CMake的第三方库
 CMake provides a collection of find modules for third-party libraries. For example, Boost doesn't support CMake. Instead, CMake provides a find module to use Boost in CMake.
 
 ### Report it as a bug to third-party library authors if a library does not support clients to use CMake. If the library is an open-source project, consider sending a patch.
