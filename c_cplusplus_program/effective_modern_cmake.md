@@ -25,60 +25,40 @@ CMake时代吗。因此它应该是干净的。对`CMakeLists.txt`和模块使�
 ### 使用现代find模块来声明导出目标
 从CMake 3.4开始，越来越多的find 模块导出可通过`target_link_libraries`使用的目标。
 ### 使用外部包的导出目标（Use exported targets of external packages）
-不要回到老的使用外部包定义的变量的CMake模式。取而代之，通过`target_link_libraries`使用倒出目标。
+不要回到老的使用外部包定义的变量的CMake模式。取而代之，通过`target_link_libraries`使用导出目标。
 ### 使用find 模块来支持不支持客户使用CMake的第三方库
-CMake provides a collection of find modules for third-party libraries. For example, Boost doesn't support CMake. Instead, CMake provides a find module to use Boost in CMake.
+CMake为第三方库提供了一套查找模块。例如，Boost不支持CMake，取而代之，CMake提供了查找模块来在CMake中使用Boost。
+### 如果一个第三方库不支持客户使用CMake，将其作为一个bug报告给库作者。如果该库是一个开源项目，考虑发送一个补丁包。
+CMake已经统治了构建行业，如果一个库不支持CMake，那就是库作者的问题。
+### 对于不支持客户使用CMake的第三方库，写一个查找模块
+可能需要翻新一个查找模块使其能够导出目标到一个不支持CMake的外部包。
+### 如果你是库作者，导出你的库接口
+请查看Daniel Pfeifer的 C++Now 2017 演讲[Effective CMake](https://youtu.be/bsXLMQ6WgIk?t=37m15s) ([slide](https://github.com/boostcon/cppnow_presentations_2017/blob/master/05-19-2017_friday/effective_cmake__daniel_pfeifer__cppnow_05-19-2017.pdf) 24ff.) 关于如何实现这个。记住导出正确的信息，使用`BUILD_INTERFACE` 和 `INSTALL_INTERFACE`生成器表达式作为过滤器。
+## 项目
+### 避免在项目命令的参数中引入自定义变量
+保持事情简单。不要引入不必要的自定义变量。取代`add_library(a ${MY_HEADERS} ${MY_SOURCES})`，使用`add_library(a b.h b.cpp)`。
+### 在项目中不要使用`file(GLOB)`
+CMake是一个构建系统生成器，并不是一个构建系统。在产生构建系统时，它对`GLOB`表达式求值，并得到一系列文件。构建系统接下来在这些文件上工作。因此，构建系统不能检测到文件系统中的某些更改。
 
-### Report it as a bug to third-party library authors if a library does not support clients to use CMake. If the library is an open-source project, consider sending a patch.
+CMake不能仅仅把`GLOB`转发给构建系统，因此表达式在构建时求值。CMake期待成为所有支持的构建系统的公共分母。并不是所有构建系统支持这个，因此CMake也不支持它。
+### 将CI特定的设置放置在CTest脚本中，而不是在项目里
+它仅仅使得事情简单。 通过CTest Script查看Dashboard苦户端来获取更多信息。
+### 对于测试名，遵从一个命名规范
+这简化了在通过CTest运行测试时的正则式过滤功能。
+## 目标和属性
+### 考虑目标和属性
+就目标而言，通过定义属性（如编译定义，编译选项，编译特性，包含目录和库依赖），它帮助开发人员在目标级别推断系统。开发人员不需要理解整个系统以推断单个目标。构建系统会传递性地处理它。
+### 把目标想象成对象
+调用成员函数修改一个对象的成员变量。
 
-CMake dominates the industry. It’s a problem if a library author does not support CMake.
-
-### Write a find module for third-party libraries that do not support clients to use CMake.
-
-It’s possible to retrofit a find module that properly exports targets to an external package that does not support CMake. 
-
-### Export your library’s interface, if you are a library author.
-
-See Daniel Pfeifer’s C++Now 2017 talk [Effective CMake](https://youtu.be/bsXLMQ6WgIk?t=37m15s) ([slide](https://github.com/boostcon/cppnow_presentations_2017/blob/master/05-19-2017_friday/effective_cmake__daniel_pfeifer__cppnow_05-19-2017.pdf) 24ff.) on how to do this. Keep in mind to export the right information. Use `BUILD_INTERFACE` and `INSTALL_INTERFACE` generator expressions as filters.
-
-## Projects 
-
-### Avoid custom variables in the arguments of project commands.
-
-Keep things simple. Don't introduce unnecessary custom variables. Instead of `add_library(a ${MY_HEADERS} ${MY_SOURCES})`, do `add_library(a b.h b.cpp)`.
-
-### Don't use `file(GLOB)` in projects. 
-
-CMake is a build system generator, not a build system. It evaluates the `GLOB` expression to a list of files when generating the build system. The build system then operates on this list of files. Therefore, the build system cannot detect that something changed in the file system.
-
-CMake cannot just forward the `GLOB` expression to the build system, so that the expression is evaluated when building. CMake wants to be the common denominator of the supported build systems. Not all build systems support this, so CMake cannot support it neither. 
-
-### Put CI-specific settings in CTest scripts, not in the project.
-
-It just makes things simpler. See Dashboard Client via CTest Script for more information.
-
-### Follow a naming convention for test names. 
-
-This simplifies filtering by regex when running tests via CTest.
-
-## Targets and Properties
-
-### Think in terms of targets and properties.
-
-By defining properties (i.e., compile definitions, compile options, compile features, include directories, and library dependencies) in terms of targets, it helps the developer to reason about the system at the target level. The developer does not need to understand the whole system in order to reason about a single target. The build system handles transitivity.
-
-### Imagine targets as objects.
-
-Calling the member functions modifies the member variables of the object.
-
-Analogy to constructors:
+同构造函数类似：
 * `add_executable`
 * `add_library`
 
-Analogy to member variables: 
+同成员变量相似： 
 * target properties (too many to list here)
 
-Analogy to member functions:
+同成员函数类似:
 * `target_compile_definitions`
 * `target_compile_features`
 * `target_compile_options`
@@ -88,22 +68,14 @@ Analogy to member functions:
 * `get_target_property`
 * `set_target_property`
 
-### Keep internal properties `PRIVATE`.
-
-If a target needs properties internally (i.e., compile definitions, compile options, compile features, include directories, and library dependencies), add them to the `PRIVATE` section of the `target_*` commands.
-
-### Declare compile definitions with `target_compile_definitions`.
-
-This associates the compile definitions with their visibility (`PRIVATE`, `PUBLIC`, `INTERFACE`) to the target. This is better than using `add_compile_definitions`, which has no association with a target.
-
-### Declare compile options with `target_compile_options`.
-
-This associates the compile options with their visibility (`PRIVATE`, `PUBLIC`, `INTERFACE`) to the target. This is better than using `add_compile_options`, which has no association with a target. But be careful not to declare compile options that affect the ABI. Declare those options globally. See “Don’t use `target_compile_options` to set options that affect the ABI.”
-
-### Declare compile features with `target_compile_features`.
-
-t.b.d.
-
+### 保持内部属性 `PRIVATE`
+入股一个目标需要内部属性（如编译定义，编译选项，编译特性，包含目录和库依赖），将它们添加到`target_*`的`PRIVATE`部分。
+### 利用`target_compile_definitions`声明编译定义
+这将把编译定义与它们的可见性（`PRIVATE`, `PUBLIC`, `INTERFACE`）关联到目标上。这比使用`add_compile_definitions`要好，后者并不与一个目标关联。
+### 利用`target_compile_options`声明编译选项
+这将把编译选项与它们的可见性（`PRIVATE`, `PUBLIC`, `INTERFACE`）关联到目标上。这比使用`add_compile_options`要好，后者并不与一个目标关联。但要注意不要声明影响ABI的编译选项。全局声明这些选项，可查看“不要使用`target_compile_options`来设置印象ABI的选项”。
+### 利用`target_compile_features`声明编译特性
+留待添加。
 ### Declare include directories with `target_include_directories`.
 
 This associates the include directories with their visibility (`PRIVATE`, `PUBLIC`, `INTERFACE`) to the target. This is better than using `include_directories`, which has no association with a target.
