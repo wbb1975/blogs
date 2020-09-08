@@ -811,4 +811,4 @@ metadata:
 
 ## Reference
 - [使用Kubernetes对象](https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/)
-- [Working with Kubernetes Objects](Working with Kubernetes Objects)
+- [Working with Kubernetes Objects](https://kubernetes.io/docs/concepts/overview/working-with-objects/)
