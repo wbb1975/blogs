@@ -97,3 +97,5 @@ StatsD灵感来自于Flickr同名项目。在博文[Counting and timing](http://
 
 ## Reference
 - [StatsD Home](https://github.com/statsd/statsd)
+- [StatsD Metrics Export Specification v0.1](https://github.com/b/statsd_spec)
+- [Dropwizard官方教程](https://www.jianshu.com/p/3bb308c9bbcb)
