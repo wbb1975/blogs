@@ -6,7 +6,7 @@
 - 值（values）
   每个统计点都有一个值，它被如何解释依赖于其修饰符。通常值应改为整数。
 - flush
-- 在flush间隔超时后（由`config.flushInterval`定义，默认为10秒），统计点被汇集并被上传到后端服务。
+  在flush间隔超时后（由`config.flushInterval`定义，默认为10秒），统计点被汇集并被上传到后端服务。
 ## 安装和配置
 ### Docker
 StatsD 以两种方式支持Docker：
