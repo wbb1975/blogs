@@ -74,9 +74,22 @@ Prometheus 给了我们一种很容易的方式来配置规则，当其被打破
 ### 1.8 资源
 如果你倾向于射频格式学习，从[Tom Gregory Tech](https://www.youtube.com/channel/UCxOVEOhPNXcJuyfVLhm_BfQ) YouTube频道看看本文的伴生视频。
 ## 2. Prometheus
+### 2.1 概貌
+Prometheus是一个服务，它通过轮询一套配置的目标应用来获取它们的指标数据值。在Prometheus 的术语中，轮询被称为刮（scraping）。
+
+高级概览如下图：
+![Prometheus](images/Prometheus-overview-1.png)
+
+Prometheus 可被配置为从任意多的应用刮取指标。一旦Prometheus 获取到这些数据，Prometheus 将以某种方式存储它们并建立索引，然后我们可以以欧中有意义的方式查询数据。
+### 2.2 指标语法
+
+## 3. Rules & Alerting
+## 4. Visualisation & Graphing
 
 ## Reference
 - [Monitoring A Spring Boot Application, Part 1: Fundamentals](https://tomgregory.com/monitoring-a-spring-boot-application-part-1-fundamentals/)
 - [Monitoring A Spring Boot Application, Part 2: Prometheus](https://tomgregory.com/monitoring-a-spring-boot-application-part-2-prometheus/)
+- [Monitoring A Spring Boot Application, Part 3: Rules & Alerting](https://tomgregory.com/monitoring-a-spring-boot-application-part-3-rules-and-alerting/)
+- [Monitoring A Spring Boot Application, Part 4: Visualisation & Graphing](https://tomgregory.com/monitoring-a-spring-boot-application-part-4-visualisation-and-graphing/)
 - [Spring Boot default metrics](https://tomgregory.com/spring-boot-default-metrics/)
 - [Spring Metrics](https://docs.spring.io/spring-metrics/docs/current/public/prometheus)
