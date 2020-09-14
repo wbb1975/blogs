@@ -77,6 +77,86 @@ failover时没有数据丢失|很高的操作负荷
 failover时没有数据丢失|很高的操作负荷
 高可用性，可容忍一个区域的失败或分区|写操作最终一致性读的延迟很高；第二个区域使成本翻倍
 ## 存储选项
+在on-premises 部署中，Cassandra 部署使用本地磁盘来存储数据。对于EC2实例，我们有两种存储选择。
+- [临时存储 (实例存储)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html)
+- [Amazon EBS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html)
+
+你的存储选择与你的Cassandra集群支持的负载类型紧密相关。实例存储对大多数通用Cassandra集群都工作的很好。但是，对于读负载较重的集群，Amazon EBS是一个更好的选择。
+
+[实例](https://aws.amazon.com/ec2/instance-types/)类型的通常由存储类型驱动：
+- 如果你的应用需要临时存储，一个存储优化的实例(I3) 是最佳选择
+- 如果你的工作负载需要Amazon EBS, 最好选用计算优化的(C5) 实例
+- 突发实例类型(T2) 不能为Cassandra 部署提供好的性能。
+### 实例存储
+临时存储是EC2的本地存储。它可能基于实例类型提供较高的IOPs。一个基于SSD的实例存储在I3实例上可以提供3.3MIOPS。这种高性能使它成为交易性或写密集型应用如Cassandra的理想选择。
+
+一般来讲，实例存储建议用于支持交易的，大型或中等大小的Cassandra 集群。对于一个大的集群，读写流量呗平均分配到更多的节点上，所以一个节点的失效带来的影响更小。但是，对于小些的集群，失效节点的快速恢复是重要的。
+
+作为一个例子，对一个100个节点的集群，一个节点的失效导致 3.33% 的数据丢失（复制因子为3）。类似地，对于提个10个节点的集群，一个节点的失效导致 33% 的性能损失（复制因子为3）。
+选项|临时存储|Amazon EBS|Comments
+--------|--------|--------|--------
+IOPS（它意味着更高的查询性能）|I3上最高可达3.3M|80K/实例，10K/gp2/卷，32K/io1/卷|这导致每个节点上较高的查询性能。但是，Cassandra隐式地支持很好的横向扩展。一般来讲，我们建议首先选择横向扩展。接下来，垂直扩展来减轻特定问题。
+AWS实例类型|I3|计算优化C5|无论横向或垂直扩展，能够基于CPU，内存选择不同的实例类型是一个很大的优势
+备份恢复|自定义|AWS上已有可用的组件|Amazon EBS在此提供了独特的优势。只需要很小的工程量就可以建立一套备份恢复战略。a）如果实例失败，失败实例的EBS 卷可被新的实例挂载；b）如果EBS卷失败，数据可以从最后的snapshot上创建一个新的EBS卷恢复。
+### Amazon EBS
+EBS卷提供高可用性，IOPs 可基于你的存储需求配置。EBS卷还具备独特的优势在于其恢复时间。EBS卷可以支持最高每卷32K IOPS，在RAID 配置下每实例可以达到最高 80K IOPS。它们年化失败率 (AFR) 为0.1–0.2%，这使得EBS卷提供了比典型民用磁盘驱动器20倍的可靠性。
+
+在Cassandra部署中使用Amazon EBS的主要优势在于当一个节点失败或被替换时能够降低数据传输的量。替换节点可以很快加入集群。但是，取决于你的数据存储要求Amazon EBS可能是更昂贵。
+
+Cassandra 拥有内建的fault tolerance--通过跨可配置的节点复制数据到别的分区。它不仅能经受节点失败，而且如果一个节点失败，它可以通过从一个副本拷贝到新的节点来恢复数据。取决于你的应用，这可能意味着拷贝多大10G的数据。这可能给恢复过程带来额外的延迟，增加网络流量，进而影响Cassandra集群恢复时的性能。
+
+Amazon EBS上存储的数据在一个实例失败或终止保持持久化。节点存储在EBS上的数据保持不变，并且EBS卷可被挂载到一个新的EC2实例上。被替换节点大部分副本数据已经在EBS 卷上，不需要通过网络从别的节点上拷贝。只有原先节点失败后发生的修改需要通过网络传送。这使得这个过程快的多。
+
+EBS卷定期做快照。因此，如果一个卷失败，一个新卷可以从最后的好的快照创建出来，并被一个新的实例挂载。这比创建一个新的卷并拷贝数据到其上要快的多。
+
+大部分Cassandra 安装使用复制因子为3，但是，Amazon EBS 为了fault tolerance使用自己的复制。实践中，EBS卷的可靠性是典型磁盘驱动的20倍。因此，有可能只使用复制因子2.这不仅节省成本，也可以在只有两个可用区的区域部署。
+
+EBS 卷推荐用于读密集且需要大量数据存储的小的集群（更少的节点）。记住 Amazon EBS规划的IOPS 可能变得很贵。通用目的的[EBS卷](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)当有适合性能需求的集群规模时工作的很好。
+## 网络
+如果你的集群可能收到较高的读写流量，选择一个能提供10Gb/s的[实例类型](https://aws.amazon.com/ec2/instance-types/)。作为一个例子， i3.8xlarge 和 c5.9xlarge 都提供了10–Gb/s的网络性能。同家族较小的实例类型拥有相对低的网络新能。
+
+Cassandra 基于IP地址为每个节点产生一个UUID。这个UUID是为了在环上飞培vnodes。
+
+**在一个AWS 部署上，当一个EC2实例被创建时自动赋予一个IP地址。伴随这个新的IP地址，数据分布改变了，整个环都必须再平衡**。这并不是期待的。
+
+为了保留赋予的IP地址，随一个固定IP地址使用一个[第二弹性网络接口](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#scenarios-enis)。在用一个新的EC2实例替换一个EC2之前，将第二网络接口从旧的实例上`detach` 下来，并将其附加到洗呢实例上。这种方式`UUID` 保持一致，数据在整个进群中的分布没有任何变化。
+
+如果你在多个区域中部署，你可以使用[cross-region VPC peering](https://aws.amazon.com/answers/networking/aws-multiple-region-multi-vpc-connectivity/)连接在两个区域的VPCs。
+## 高可用性和可靠性
+Cassandra 设计就是当多个节点失效时fault-tolerant及高可用性的。在之前本文描述的模式下，你把Cassandra部署到3个可用区上，复制因子为3。即使它限制AWS 区域选择为要求至少3个或更多可用区，它通常提供了一个可用区失效的保护，以及单独一个区域网络分区的保护。本文前面描述的多区域部署可保护一个区域的许多资源在断断续续失败。
+
+弹性通过基础架构自动化来确保。部署模式都需要对一个失效节点的替换。当一个区域整体失效时，但你部署为多区域选项时，流量可被导向活动区域，尽管同时失效区域证字恢复中。在不可预知的数据毁坏情况下，standby 集群可以利用存储在[AWS S3](https://aws.amazon.com/s3)的时间点备份恢复。
+## 可维护性
+在本节，我们将查看确保你的Cassandra 集群健康的方法：
+- 缩放
+- 升级
+- 备份和恢复
+### 缩放
+Cassandra 可用过添加更多实例到环上来实现水平扩展。我们建议在以此扩展操作中把节点数增加一倍。这可以让数据跨可用区均匀地分布。类似地，当收缩时，最好对节点数简版来确保数据均匀分布。
+
+Cassandra 可通过增加每个节点算力来实现垂直扩展。更大的实例类型拥有按比例更大的内存，使用自动化部署来用大的实例替换小的实例而无需服务断线或数据丢失。
+### 升级
+所有三种升级（Cassandra, 操作系统patching, 以及实例类型改变）遵从同样的滚动更新模式。
+
+在这个过程中，你启动了一个新的EC2实例，安装软件并对其打patching。之后，从环上移掉一个节点。更多信息，请参见[Cassandra集群滚动升级](http://www.doc.ic.ac.uk/~pg1712/blog/cassandra-cluster-rolling-upgrade/)。接下来，你从环上一个运行的EC2实例上剥离其第二网络接口，并将其附在新的EC2实例上。从起Cassandra 服务并等待其同步。对集群中的所有集群重复上面的步骤。
+### 备份和恢复
+你的备份和恢复战略依赖于你的部署所使用的存储类型。Cassandra 支持快照和增量备份。当时用实例存储时，一个基于文件的备份工具工作得最好。用户通常使用rsync 或其它第三方产品来从实例拷贝到长期存储上。需要在集群的每个节点上重复上述过程以完成一个完整的备份。这些备份文件被拷贝到新实例以恢复。我们推荐使用S3来持久存储这些备份文件以作长期存储。
+
+对基于Amazon EBS的部署，你可以开启[EBS卷自动快照](http://docs.aws.amazon.com/AmazonCloudWatch/latest/events/TakeScheduledSnapshot.html)，新的EBS卷可以从这些快照创建以作恢复。
+## 安全性
+我们推荐你考虑部署各个方面的安全性。第一步是确保数据时加密的（at rest）和 in transit，第二步是限制非授权用户的访问。更多安全问题，请参见[Cassandra文档](http://cassandra.apache.org/doc/latest/operating/security.html)。
+### Encryption at rest
+可通过对 EBS卷开启加密来实现Encryption at rest。Amazon EBS使用[AWS KMS](https://aws.amazon.com/kms)来加密。更多信息，请参见[AWS EBS 加密](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html)。
+
+基于实例存储的部署需要是用一个加密文件系统或者AWS合作伙伴的解决方案。
+### Encryption in transit
+Cassandra 使用TLS来加密客户与节点键通讯。
+### Authentication
+安全机制是可插拔的，这意味着你可以很容易地用一种认证方法替换另一种。你可以向Cassandra提供自己的认证方法，比如一个Kerberos ticket，或者如果你想将密码存储在一个不同的位置，比如LDAP 目录。
+### Authorization
+默认可插拔授权工具真`org.apache.cassandra.auth.Allow AllAuthorizer`，Cassandra也提供了基于角色的访问控制`(RBAC)`能力，它允许你查U那个键角色并把权限赋给这些角色。
+## 结论 
+在本文中，我们讨论了在AWS云上运行Cassandra的几种模式。它描述了如何管理在AWS EC2实例上运行的Cassandra 数据库。AWS 也提供了一些托管数据库，为了了解更多，可参见[你的应用需要的特定目的数据库](https://aws.amazon.com/products/databases/)。
 
 ## Reference
 - [Best Practices for Running Apache Cassandra on Amazon EC2](https://aws.amazon.com/cn/blogs/big-data/best-practices-for-running-apache-cassandra-on-amazon-ec2/)
