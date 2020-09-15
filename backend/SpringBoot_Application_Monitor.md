@@ -82,7 +82,146 @@ Prometheus是一个服务，它通过轮询一套配置的目标应用来获取�
 
 Prometheus 可被配置为从任意多的应用刮取指标。一旦Prometheus 获取到这些数据，Prometheus 将以某种方式存储它们并建立索引，然后我们可以以欧中有意义的方式查询数据。
 ### 2.2 指标语法
+一个应用必须在端口上以一种特殊格式向Prometheus 暴露指标。在Spring Boot中如果你遵从上个Post的步骤，你就会自动获得该功能。在Spring Boot中为Prometheus刮取 暴露的端口位于`/actuator/prometheus`。
 
+一个实例指标如下所示：
+```
+http_server_requests_seconds_count{exception="None",method="GET",outcome="SUCCESS",status="200",uri="/doit",} 6.0
+```
+起个事遵从：
+```
+metric_name{labe1Name="label1Value",label2Name="label2Value",...}
+```
+- `http_server_requests_seconds_count`是一个持有HTTP 请求数量的指标（不用担心其名字中包含单词`seconds`）。了解更多默认指标，请参考文章[Spring Boot默认指标](https://tomgregory.com/spring-boot-default-metrics/)。
+- `exception, method, outcome, status, 和 uri`是将ian个死指标组合在一起的有用的标签。例如，任何对 `/doit` 的GET请求的成功返回（200)都会导致指标递增。
+### 2.3 查询语法
+如果一个像上面提到的指标已经被Prometheus的刮取过程消费（默认每15秒钟一次），那我们就可以查询它了。
+#### 基本查询
+在这种基本形式下，查询语法与指标语法非常相似。例如，为了得到http_server_requests_seconds_count metric指标的所有值，我晕行下买你的查询：
+```
+http_server_requests_seconds_count
+```
+它将给我们返回下面的数据：
+```
+http_server_requests_seconds_count{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/**/favicon.ico"} 9
+
+http_server_requests_seconds_count{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/actuator/prometheus"} 1
+
+http_server_requests_seconds_count{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/doit"} 10
+```
+这代表已经静茹应用的所有请求，包括：
+- 一个前面谈到的对`/doit`请求的指标
+- 一个 `/actuator/prometheus` 请求的指标，它是Prometheus 什么时候在向应用刮取数据的指标。
+- 一个对`facicon.ico`的请求，Chrome 默认会请求它。
+#### 带标签查询
+我们可以通过添加标签而获得更特定的查询，例如：
+```
+http_server_requests_seconds_count{uri="/doit"}
+```
+仅仅返回一个与/doit关联的简单指标：
+```
+ttp_server_requests_seconds_count{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/doit"} 15 
+```
+使用同样的语法，我们就可以运行一个查询以获取 来自/doit的非200回复：
+```
+http_server_requests_seconds_count{uri="/doit",status!="200"}
+```
+#### 带函数查询
+Prometheus 提供[函数](https://prometheus.io/docs/prometheus/latest/querying/functions/)以运行更优雅的查询。这是rate函数的例子，它计算每秒的速度，在以指定的时间范围内算出平均值：
+```
+rate(http_server_requests_seconds_count{uri="/doit"}[5m])
+```
+> 注意：本实例中的[5m]被称为`范围向量选择器`(range vector selector)，我们告诉Prometheus 使用最近5分钟的指标来计算我们的平均值。
+
+查询返回一个单独的行如下，显式速度为每秒0.15个请求。并非一个很时髦的API：
+```
+{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/doit"}  0.15 
+```
+另一个有用的函数是sum。如果我们仅仅对整体请求速度干兴趣，且并不局限于/doit，我们可以宇星一个类似下面的查询：
+```
+sum(rate(http_server_requests_seconds_count[5m]))
+```
+它返回：
+```
+{} 0.3416666666666667 
+```
+sum 函数把不同速率的返回解雇相加，如果我们不包括sum，我们将得到每个 http_server_requests_seconds_count 指标的速度数据（/doit, /actuator/prometheus 等）。
+### 2.4 一个可工作的例子实例
+现在你已经了解了更多的Prometheus，让我们把它运行起来并从一个Spring Boot应用刮取数据。如果你想按照下面的步骤操作，你需要安装Docker.
+
+我们将使用`Docker Compose`，这是使得对个Docker容器启动并运行且能互相通讯的非常简单的方法。
+
+我们将使用2个Docker镜像：
+- tkgregory/sample-metrics-application:latest 这是一个示例Spring Boot应用，在标准路径http://localhost:8080/actuator/metrics上暴露指标
+- prom/prometheus:latest 官方Prometheus Docker镜像
+#### 运行Spring Boot应用
+常见一个`docker-compose.yml`文件，并填充下面的内容：
+```
+version: "3"
+services:
+  application:
+    image: tkgregory/sample-metrics-application:latest
+    ports:
+      - 8080:8080
+```
+它指定了我们需要一个使用`tkgregory/sample-metrics-application:latest`镜像名为`application`的容器，暴露端口8080。我们可以将它运行起来：
+```
+docker-compose up
+```
+导航到 http://localhost:8080/actuator/prometheus，你就爱你刚看到像下面的图：
+![SpringBoot Appication DEfault Metrics](images/springboot_default_metrics.png)
+
+你也可以点击http://localhost:8080/doit，如果你想得到`http_server_requests_seconds_count`指标，你将看到它在不断增长。
+#### 运行Prometheus
+首先，在与`docker-compose.yml`同一目录下创建`prometheus.yml`。这个文件将包含Prometheus的配置，尤其是`scrape_configs`，它定义了Prometheus 将从哪里刮取指标：
+```
+scrape_configs:
+  - job_name: 'application'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['application:8080']
+```
+> 注意：Prometheus将会轮询http://application:8080/actuator/prometheus以获取指标。注意默认情况下Docker 使得容器名成为hostname，以此来允许不同容器间的通讯。
+
+到目前为止的所有内容，将下面的小姐添加进`docker-compose.yml`：
+```
+prometheus:
+  image: prom/prometheus:latest
+  volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  ports:
+    - "9090:9090"
+```
+> 注意：这里我们配置prometheus 在端口9090运行，将本地prometheus.yml配置文件挂载进容器Prometheus期待的默认位置。
+
+再次运行`docker-compose up`以启动Prometheus，你现在可以导航到http://localhost:9090以访问Prometheus。
+#### 运行一些查询
+现在你可以执行一些我们早先谈到的查询。例如，试试下面的查询过去5分钟每个请求路径的HTTP 请求速率：
+```
+rate(http_server_requests_seconds_count[5m])
+```
+在标为Expression 的文本输入框中输入上面的查询，并点击绿色的Execute 按钮：
+![Prometheus查询界面](images/prometheus_query_interface.png)
+
+你将看到如下的差序你饿过：
+```
+{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/**/favicon.ico"} 0
+
+{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/actuator/prometheus"}  0.016666666666666666 
+
+{exception="None",instance="application:8080",job="application",method="GET",outcome="SUCCESS",status="200",uri="/doit"} 0
+```
+如果你看到这个，/doit 的速度为0，你可以另起页面http://localhost:8080/doit并请求多次。在运行查询观察更新的结果。注意Prometheus 每15秒运行一次，因此其值是不是立刻更新的。
+#### 图
+如果一旦你已经运行了一个查询，你可以点击Graph ，从而可以以可视化的格式观察数据：
+![Prometheus Graph](images/prometheus_graph.png)
+
+这向你显示了你的历史查询选定时间的结果，这是可视化数据的一种快速方式，但并未提供完整的仪表板功能。在以后的博文中我们将讨论Grafana。
+### 2.5 结论
+你已经看到Prometheus 如何收集指标，并且是它们存储的中心。有比较容易的方式来运行针对这些指标的查询，甚至可以看到可视化的输出。
+### 2.6 资源
+1. 本文讨论的示例：[GitHub](https://github.com/tkgregory/monitoring-example)
+2. [Prometheus](https://prometheus.io/)
 ## 3. Rules & Alerting
 ## 4. Visualisation & Graphing
 
@@ -93,3 +232,4 @@ Prometheus 可被配置为从任意多的应用刮取指标。一旦Prometheus �
 - [Monitoring A Spring Boot Application, Part 4: Visualisation & Graphing](https://tomgregory.com/monitoring-a-spring-boot-application-part-4-visualisation-and-graphing/)
 - [Spring Boot default metrics](https://tomgregory.com/spring-boot-default-metrics/)
 - [Spring Metrics](https://docs.spring.io/spring-metrics/docs/current/public/prometheus)
+- [Prometheus](https://prometheus.io/)
