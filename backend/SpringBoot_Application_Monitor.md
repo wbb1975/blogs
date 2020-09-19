@@ -72,9 +72,9 @@ Prometheus 给了我们一种很容易的方式来配置规则，当其被打破
 ### 1.7 结论
 用用监控绝对非常重要，应该在应用开发过程中就被考虑到而非之后。当前可用的工具如Spring Boot, Prometheus, AlertManager, 何 Grafana，使得我们为我们的应用创建一个监控方案相当直截了当。
 ### 1.8 资源
-如果你倾向于射频格式学习，从[Tom Gregory Tech](https://www.youtube.com/channel/UCxOVEOhPNXcJuyfVLhm_BfQ) YouTube频道看看本文的伴生视频。
+如果你倾向于视频格式学习，从[Tom Gregory Tech](https://www.youtube.com/channel/UCxOVEOhPNXcJuyfVLhm_BfQ) YouTube频道看看本文的伴生视频。
 ## 2. Prometheus
-### 2.1 概貌
+### 2.1 概览
 Prometheus是一个服务，它通过轮询一套配置的目标应用来获取它们的指标数据值。在Prometheus 的术语中，轮询被称为刮（scraping）。
 
 高级概览如下图：
@@ -223,6 +223,187 @@ rate(http_server_requests_seconds_count[5m])
 1. 本文讨论的示例：[GitHub](https://github.com/tkgregory/monitoring-example)
 2. [Prometheus](https://prometheus.io/)
 ## 3. Rules & Alerting
+### 3.1 概览
+Prometheus 被配置从你的应用刮取指标。正如在上篇文章看到的，查询这些指标并值从而知晓你的应用发生了什么是很直接的。
+
+为了知道什么时候发生了问题，我们使用这些查询来配置规则，它处在正常状态和被打破状态。当一个规则被打破，一个警报会通过我们另外建立的一个服务AlertManager触发。
+
+在AlertManager 中你配置如何处理警报。某些警报发送邮件就够了，但有些警报可能需要随时打电话给相关人员来处理。
+### 3.2 Rules
+下面是一些你可能配置的规则的示例：
+- 我的服务没在运行吗？
+- 我的服务器请求速率过高吗？
+- 我的服务器内存使用率超95%了吗？
+
+一个规则拥有二元即对或错两种答案。一旦一个规则被打破，一个警报将被触发。
+#### Rule语法
+在上篇文章我们看到了我们可以查询对一个特定端点的请求速率：
+```
+rate(http_server_requests_seconds_count{uri="/doit"}[5m])
+```
+这个特定查询为我们发挥过去5分钟发往 `doit` 端点的请求速率。
+
+一个规则就是一个指标和规则条件。如果我们想创建一个规则，当我们的应用请求速率超过0时，规则看起来如下：
+```
+rate(http_server_requests_seconds_count{uri="/doit"}[5m]) > 0
+```
+#### Prometheus 规则配置
+在Prometheus 语言中触发一个警告的规则叫作“警告规则”。它与其它一些信息一起被定义：
+```
+groups:
+  - name: default
+    rules:
+      - alert: RequestRate
+        expr:  rate(http_server_requests_seconds_count{uri="/doit"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: Application receiving too many requests
+```
+- alert – 当该规则被打破时，触发的警报名
+- expr – 实际规则定义，已经解释过了
+- for – 在警报发出之前， 该规则被打过多久。在我们的例子中，如果请求思虑超过0持续了1分钟，一个警报将被触发
+- labels – 附在警报上的额外信息，例如严重级别
+- annotations – 附在警报上的额外描述，例如总结描述
+### 3.3 警报
+如果Prometheus已经配制了一个AlertManager 实例，当一个规则被打破时，它会发送一个包含很多细节的警报。
+
+AlertManager 是一个单独的服务，其中你可以配置警报如何精确地被处理，它们应被送往哪里。它有两个概念值得理解：
+- 接收器（receivers） – 警报“浮出水面”的通道，如 email, Slack, webhooks等。
+- 路由（routes） – 基于警报的标签，警报将随一个特殊的路径流动，并通过一个特殊的接收器浮出水面。例如，我们可能有一个每个警报都含有的`application` 标签，它用于把警报路由到负责该应用维护的团队的电子邮箱中。
+
+这些是很关键的，你需要掌握以建立一个基础的报警系统。AlertManager 确实提供了更多高级功能，例如组织报警，通过其UI经报警归零，禁止规则触发报警等。
+### 3.4 工作实例
+我们继续从上篇文章的例子出发，扩展我们的Spring Boot Docker compose以包括以下组件：
+- 一个基本的AlertManager 配置，对于它收到的任何警报，它都会向我们发邮件
+- 一个AlertManager 容器
+- 一个基本的Prometheus 规则配置
+- 一个Prometheus 向AlertManager推送的配置
+
+对于这个例子，我们将设置通过一个gmail账户发送邮件，因此请确保你在[gmail.com](http://gmail.com/)上设置过了。
+#### Gmail 设置
+我们将用一个gmail账户来配置AlertManager，单位了实现这个我们需要在Gmail产生一个叫作app密码的东西。 Gmail关于这个有一个[完整的指南](https://support.google.com/accounts/answer/185833?hl=en)，但关键的是你需要去你的Gmail账户找到[安全设置](https://myaccount.google.com/security)，然后在登录Google下点击“App Passwords”。
+![Gmail Security Setup](images/gmail_security_setuo.png)
+
+下一页你可以通过选择app Mail 和 device Other（在文本框中输入AlertManager）来创建一个新的app密码。你接下来将得到一个新的app密码用于AlertManager 配置。
+![Gmail Security Setup](images/google-app-password.png)
+#### AlertManager配置
+创建一个文件alertmanager.yml并添加下面的配置，用你的Gmail邮箱账户和app密码替换。
+```
+route:
+  receiver: emailer
+receivers:
+- name: emailer
+  email_configs:
+  - to: <gmail-email-address>
+    from:  <gmail-email-address> 
+    smarthost: smtp.gmail.com:587 
+    auth_username: <gmail-email-address>  
+    auth_identity: <gmail-email-address>  
+    auth_password: <gmail-app-password>  
+```
+> **注意**：如前面的章节所述，我们在设置一个路由和一个接收器。路由是最基本的，并告诉AlertManager 对任何警报使用同样的emailer接收器。接收器是email类型，包括所有连接到你的email账户所需信息。
+#### AlertManager容器
+为了添加一个AlertManager 容器，让我们扩展我们的`docker-compose.yml`文件，添加如下家出的段：
+```
+version: "3"
+ services:
+   application:
+     image: tkgregory/sample-metrics-application:latest
+     ports:
+       - 8080:8080
+     depends_on:
+       - prometheus
+   prometheus:
+     image: prom/prometheus:latest
+     volumes:
+       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+       - ./rules.yml:/etc/prometheus/rules.yml
+     ports:
+       - 9090:9090
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+```
+> **注意**：额外的配置告诉Docker 在端口9093启动AlertManager。我们还把alertmanager.yml挂载到容器里默认的AlertManager 配置文件位置。
+
+运行`docker-compose up`你就会发现你已经有一个AlertManager 实例运行在`http://localhost:9093.`：
+![Running AlertManager](images/AlertManager-Running.png)
+#### Prometheus规则配置
+为了在Prometheus中配置规则，你在一个规则文件中添加规则。创建一个规则文件包含以前描述过的规则：
+```
+groups:
+  - name: default
+    rules:
+      - alert: RequestRate
+        expr:  rate(http_server_requests_seconds_count{uri="/doit"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: Application stopped receiving requests
+```
+规则文件需要在主prometheus.yml 配置文件中被引用到，添加下面的内容：
+```
+scrape_configs:
+  - job_name: 'application'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['application:8080']
+rule_files:
+  - 'rules.yml'
+```
+#### Prometheus AlertManager配置
+我们需要更新prometheus.yml以包含Prometheus 如何连接到我们的AlertManager 容器的细节。再一次，添加下面的内容：
+```
+scrape_configs:
+  - job_name: 'application'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['application:8080']
+rule_files:
+  - rules.yml
+alerting:
+   alertmanagers:
+     - static_configs: 
+         - targets:
+             - alertmanager:9093 
+```
+> **注意**：这里我们告诉Prometheus 向alertmanager:9093链接我们运行的AlertManager 实例。请记住默认地Docker 会自动芭欧容器名 alertmanager 作为网络上的主机名。
+#### 把它们结合在一起
+现在所有的一切已经配置好了，再次运行`docker-compose up`。因为只要对http://localhost:8080/doit的请求速率超过就会触发警报，多次点击该链接。15秒钟后重复该操作。
+> **注意**：Prometheus 的速率函数依赖于两个单独的刮取指标值。这就是我们几点/doit两次的原因，每次间隔15秒（默认刮取间隔）。以此初始化指标，以此增加指标值。
+
+你可以关注http://localhost:9090/alerts来查看RequestRate 规则的状态。你可能至多需要5分钟知道规则发生了改变。它首先变成黄色（yellow），指示它处于`PENDING` 状态；当rules.yml 中指定的间隔时间（我们的例子中是1分钟）过去，它变成红色，指示 `FIRING` 状态。
+![AlertManager Firing Rule](images/firing-rule.png)
+
+当该规则处于FIRING 状态，Prometheus 将联系AlertManager 产生一警报。AlertManager 将决定如何处理该警报，在我们的例子中将发送邮件。
+
+你将在你的收件箱中收到如下邮件：
+![AlertManager Alerting Emaile](images/alerting-email.png)
+
+一段时间之后，只要没有新的请求到达 `/doit`，规则将会重新变为绿色。恐惧过去了！
+
+如果你期待事情发生后收到邮件，你应更新`alertmanager.yml`配置在`email_configs`下添加`send_resolved: true`。
+### 3.5 结论
+把Prometheus 和AlertManager 结合在一起让我们很容易针对指标制定规则，并针对我们需要知道的重要情景发警报。
+
+我们看到了很容易配置AlertManager 发送警报邮件至Gmail 账号。可以有多个接收器，可以去 [AlertManager网站](https://prometheus.io/docs/alerting/configuration/)了解更多。
+
+如果你想学习如何以一种易于理解的方式可视化指标数据，可以很快作出决定，阅读下一章。
+### 3.6 资源
+导航到 [GitHub repository](https://github.com/tkgregory/monitoring-example)可看到本中涉及的所有代码。
+
+其它一些资源可见下面的链接：
+- [Prometheus 文档](https://prometheus.io/docs/introduction/overview/)和[Docker镜像](https://hub.docker.com/r/prom/prometheus/)
+- [AlertManager 文档](https://prometheus.io/docs/alerting/overview/)和[Docker镜像](https://hub.docker.com/r/prom/alertmanager)
+- 实例指标应用[Docker镜像](https://hub.docker.com/r/tkgregory/sample-metrics-application)
+
+如果你倾向于视频格式学习，从[Tom Gregory Tech](https://www.youtube.com/channel/UCxOVEOhPNXcJuyfVLhm_BfQ) YouTube频道看看本文的伴生视频。
 ## 4. Visualisation & Graphing
 
 ## Reference
