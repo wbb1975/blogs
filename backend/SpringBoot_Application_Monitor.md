@@ -373,7 +373,7 @@ alerting:
          - targets:
              - alertmanager:9093 
 ```
-> **注意**：这里我们告诉Prometheus 向alertmanager:9093链接我们运行的AlertManager 实例。请记住默认地Docker 会自动芭欧容器名 alertmanager 作为网络上的主机名。
+> **注意**：这里我们告诉Prometheus 向alertmanager:9093链接我们运行的AlertManager 实例。请记住默认地Docker 会自动导出容器名 alertmanager 作为网络上的主机名。
 #### 把它们结合在一起
 现在所有的一切已经配置好了，再次运行`docker-compose up`。因为只要对http://localhost:8080/doit的请求速率超过就会触发警报，多次点击该链接。15秒钟后重复该操作。
 > **注意**：Prometheus 的速率函数依赖于两个单独的刮取指标值。这就是我们几点/doit两次的原因，每次间隔15秒（默认刮取间隔）。以此初始化指标，以此增加指标值。
@@ -405,6 +405,120 @@ alerting:
 
 如果你倾向于视频格式学习，从[Tom Gregory Tech](https://www.youtube.com/channel/UCxOVEOhPNXcJuyfVLhm_BfQ) YouTube频道看看本文的伴生视频。
 ## 4. Visualisation & Graphing
+### 4.1 概览
+当你半夜被一个报警电话叫醒的时候，并不总是问题很明显。设想一个HTTP请求的平均花费时间超过了一个预定义阀值（5秒钟），你收到了关于它的警报
+
+发生了什么错误？我该联系谁？
+
+没有更多信息，你回答这些问题就很挣扎，尤其在一个激动的没有睡眠的状态下。
+
+如果有一个仪表板，就可以为你提供一个应用如何运行的一个深刻洞察。在本例中，我们可以看到很长一段时间的查询平均花费时间的一个图。一个较长时间里的内存使用图可以帮助显示可能发生的问题峰值。
+
+我们可以事先需要接收一下教育猜测什么信息在该情况下是需要的。当问题不断出现，我们了解得越来越多时，仪表板就会不停的改变。
+
+总之，我们最好有一个工具，它能够：
+- 很容易地从Prometheus 指标数据创建图表
+- 能以大多数用户场景下适用的方式可视化数据
+- 对我们感兴趣的任何时间段的数据显示图表
+- 创建可被其他人查看的仪表板
+- 让我们很容易地做出改变
+
+正如你可能猜测的，本文将介绍的工具将覆盖以上所有功能甚至更多。
+### 4.2 Grafana
+Grafana 是一个服务，它允许你配置任何你需要的图表和仪表板。它也可能与其它许多系统集成，但对我们重要的是它可以查询Prometheus。
+
+前文已经讨论过，Prometheus 是一个服务，它搜集一个应用所有的指标，并允许我们查询它们。对于你可以在Prometheus发布的所有查询，你也可以用于在Grafana创建图表。你可以将Grafana视为对Prometheus 指标的一个可视化工具。
+### 4.3 工作示例
+我们将在前文的示例之上构建，之前我们已经设置了一个Spring Boot应用来产生指标，Prometheus 来刮取这些指标，AlertManager 当配置的规则被打破时发送警报。
+
+为了扩展这些，我们会：
+- 创建一个Grafana 配置来添加Prometheus 数据源
+- 在Docker compose中设置Grafana 容器来使用该配置
+- 导入一个Spring Boot 仪表板
+- 创建一个新的图表来显示请求速率数据
+#### Grafana 配置
+在Grafana中，一个数据源单指产生图表的数据来自的地方。在我们的例子中，它是Prometheus。因此，让我们创建一个文件datasource.yml ，并配置如下：
+```
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+```
+> **注意**：这是一个极小配置，仅仅告诉Grafana 创建Prometheus数据源类型，只想我们的Prometheus URL。请记住默认地Docker compose 会自动导出容器名作为主机名，这就是我们可以使用Prometheus 来引用 http://prometheus:9090的原因。
+#### Grafana 容器
+现在让我们告诉Docker compose来创建一个Grafana容器。将下买你的内容添加到docker-compose.yml：
+```
+grafana:
+  image: grafana/grafana
+  ports:
+    - 3000:3000
+  volumes:
+    - ./datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+  depends_on:
+    - prometheus
+```
+> **注意**：这里我们使用标准来自Docker Hub的 [Grafana docker镜像](https://hub.docker.com/r/grafana/grafana/)。默认Grafana 在端口3000上监听。我们挂载一个卷，如此该配置文件就被挂载到容器内Grafana 期待的魔人位置。
+
+运行`docker-compose up`你就会发现Grafana在http://localhost:3000开始运行，默认用户名为`admin` ，密码为`admin`。
+
+如果你导航到`Configuration (cog icon) > Data Sources`，你就会看到我们刚刚建立的Prometheus 数据源。
+![](images/Grafana_Datasource.png)
+#### 导入一个Spring Boot仪表板
+已经有一些开箱即得的针对Spring Boot应用的Grafana 仪表板。它们使用Spring Boot提供的缺省指标，为我们展示一些有用的图标来显示我们的应用如何运行。我推荐的一个就是[JVM (Micrometer)](https://grafana.com/grafana/dashboards/4701)。
+
+为了导入这个仪表板，导航到`Create (plus icon) > Import`，那里它提到`Grafana.com`仪表板，粘贴到`4701`，它是仪表板id。你将看到下面的图表：
+![Grafana Import](images/grafana_import.png)
+
+在选项里，它提到选择一个Prometheus数据源，从下拉列表中选取Prometheus ，然后选择导入。现在你可以看到整个图标的导入。
+
+不要担心它没有大量的数据，因为你可能刚刚启动你的容器，还没有历史指标。默认时间范围是过去的24小时，但你可以在右上角改变这个设置。选择过去的15分钟，NIKE看到图表更新如下：
+![Grafana Update](images/grafana_update.png)
+
+可以看看这个仪表板，你会发现还有一些其它的指标：
+- 运行时间统计
+- 输入输出统计
+- JVM统计
+- 垃圾回收统计
+
+毫无疑问这都是我们需要的，但它只是一个起点。在我们离开这个页面前，确保你点击了上面的`Save dashboard`。
+#### 添加自定义图表
+这些图标很好，但如果能够看到我们的应用随着时间的推移的请求速率是不是会更好？
+
+如图你在第二篇文章里看到的，很容易从Prometheus得到这个信息。例如，下面的查询将向我们显示`/doit`端点的请求速率：
+```
+rate(http_server_requests_seconds_count{uri="/doit"}[5m])
+```
+> **注意**：例子中的[5m]告诉Prometheus 仅仅使用过去5分钟的指标计算速率。但返回的速率是每秒数据。
+
+1. 在仪表板上方点击`Add panel`按钮
+2. 选择`Add query`，现在你在一个可以设置你的图表细节的页面
+3. 从查询的下拉列表中，选择Prometheus
+4. 哪里它提示：`Enter a PromQL`，从上面输入查询`rate(http_server_requests_seconds_count{uri="/doit"}[5m]) and hit enter`
+5. 刚开始你可能不会从该图表上看到任何东西，因为我们还未产生任何请求。点击 `http://localhost:8080/doit` 多次，直到如下图表被显示：
+   ![Grafana持续更新](images/grafana_update_after_hit.png)
+   > 提示：你可以在右上角更新图表刷新频率。
+
+让我们来查看图表的更多属性：
+1. 在`legend`文本框输入`/doit`
+2. 点击`General (cog icon)`并在`Title`文本框输入`Request rate`
+3. 点击左上角回退箭头回到仪表板
+
+现在娱乐时间到了。拉拽图表，缩放图表直至它们看起来如下：
+![Grafana More Properties](images/grafana_more_properties.png)
+
+再一次，点击保存按钮来留住你的修改。
+### 4.4 结论
+现在你已经看到了如何设置一个Grafana 容器来使用Prometheus 数据源。在Grafana 你已经看到了如何使用预先存在额仪表板来启动系统，以及如何定制自己的图表。
+
+在这一点上，值得在Grafana 上投入更多。你可以在其上添加一条线来显示/actuator/prometheus吗？
+### 4.5 资源
+- 检出[GitHub repository](https://github.com/tkgregory/monitoring-example)你会看到与本文相关的一个完整的可运行例子
+- 从[Docker Hub](https://hub.docker.com/r/grafana/grafana/)了解更多关于 Grafana Docker镜像的知识。
+- 从[Grafana docs](https://grafana.com/docs/)学习更多有关这个工具的知识
+
+如果你倾向于视频格式学习，从[Tom Gregory Tech](https://www.youtube.com/channel/UCxOVEOhPNXcJuyfVLhm_BfQ) YouTube频道看看本文的伴生视频。
 
 ## Reference
 - [Monitoring A Spring Boot Application, Part 1: Fundamentals](https://tomgregory.com/monitoring-a-spring-boot-application-part-1-fundamentals/)
