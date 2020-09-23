@@ -32,7 +32,7 @@ StatsD用于从基础设施收集指标。它是基于推送的：客户端向�
 <metric name>:<value>|h
 ```
 ### Meters
-一个meter 随时间流逝的事件的速率，副武器端计算。它们可以被视为只增的counters。有效的meter 值范围为 [0, 2^64^)：
+一个meter 随时间流逝的事件的速率，服务器端计算。它们可以被视为只增的counters。有效的meter 值范围为 [0, 2^64^)：
 ```
 <metric name>:<value>|m
 ```
