@@ -7,7 +7,7 @@
 - NodePort 在每个节点的 IP 地址静态端口上公开服务。
 - LoadBalancer 使用负载均衡器在外部公开服务。
 
-注意：Amazon EKS 通过 LoadBalancer 为运行在 Amazon Elastic Compute Cloud (Amazon EC2) 实例工作线程节点上的 pod 提供网络负载均衡器和 Classic Load Balancer 支持。Amazon EKS 不为 AWS Fargate 上运行的 pod 提供网络负载均衡器和 Classic Load Balancer 支持。对于 Fargate 入口，最佳做法是在 [Amazon EKS 上使用用于 Kubernetes 的 AWS Application Load Balancer (ALB) 入口控制器（最低版本 1.1.4）](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html)。
+注意：Amazon EKS 通过 LoadBalancer 为运行在 Amazon Elastic Compute Cloud (Amazon EC2) 实例工作线程节点上的 pod 提供网络负载均衡器和 传统负载均衡器支持。Amazon EKS 不为 AWS Fargate 上运行的 pod 提供网络负载均衡器和 Classic Load Balancer 支持。对于 Fargate 入口，最佳做法是在 [Amazon EKS 上使用用于 Kubernetes 的 AWS Application Load Balancer (ALB) 入口控制器（最低版本 1.1.4）](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html)。
 ## 解决方法
 ### 创建示例应用程序：
 1. 要创建示例 NGINX 部署，请运行以下命令：
@@ -161,3 +161,4 @@
 
 ## Reference
 - [我如何公开在 Amazon EKS 集群上运行的 Kubernetes 服务？](https://aws.amazon.com/cn/premiumsupport/knowledge-center/eks-kubernetes-services-cluster/)
+- [Using Kubernetes LoadBalancer Services on AWS](https://www.giantswarm.io/blog/load-balancer-service-use-cases-on-aws)
