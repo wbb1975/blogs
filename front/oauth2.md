@@ -285,3 +285,6 @@ OAuth2是一种授权标准框架，用来解决的是第三方服务在无需�
 - [豆瓣OAuth2 API（Implicit )](https://developers.douban.com/wiki/?title=browser)
 - [QQ OAuth2 API（Implicit）](http://wiki.connect.qq.com/%e4%bd%bf%e7%94%a8implicit_grant%e6%96%b9%e5%bc%8f%e8%8e%b7%e5%8f%96access_token)
 - [微信公众号获取access_token（Client Credentials Grant）](https://mp.weixin.qq.com/wiki?id=mp1421140183&t=0.2731444596120334)
+- [postman入门指南](https://www.jianshu.com/p/46d44c09d94c)
+- [理解OAuth 2.0](http://www.ruanyifeng.com/blog/2014/05/oauth_2_0.html)
+- [OAuth 2.0 的一个简单解释]()http://www.ruanyifeng.com/blog/2019/04/oauth_design.html
