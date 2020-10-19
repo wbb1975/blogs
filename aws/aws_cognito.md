@@ -289,6 +289,467 @@ https://www.example.com/#id_token=123456789tokens123456789&expires_in=3600&token
 
 
 ### 7.2 Amazon Cognito 用户池 Auth API 参考
+#### 7.2.1 AUTHORIZATION 终端节点
+/oauth2/authorize 终端节点让用户登录。
+##### GET /oauth2/authorize
+/oauth2/authorize 端点仅支持 HTTPS GET。用户池客户端通常通过浏览器发出此请求。Web 浏览器包括 Chrome 或 Firefox。Android 浏览器包括自定义 Chrome 选项卡。iOS 浏览器包括 Safari View 控件。
+
+授权服务器在访问授权终端节点时需要 HTTPS 而不是 HTTP 作为协议。有关规范的更多信息，请参阅[授权终端节点](http://openid.net/specs/openid-connect-core-1_0.html#ImplicitAuthorizationEndpoint)。
+##### 请求参数
+- response_type
+  响应类型。必须 code 或 token。指示客户端是否想要为最终用户提供授权代码(授权代码授予流)或直接为最终用户发行令牌(隐式流)。
+
+  必填。
+- client_id
+  客户端 ID。
+
+  必须是在用户池中预注册的客户端，并且必须已启用联合功能。
+
+  必填。
+- redirect_uri
+  在用户授权之后，身份验证服务器将浏览器重定向到的 URL。
+
+  重定向 URI 必须：
+  + 是绝对 URI。
+  + 已预先向客户端注册。
+  + 不包含片段组件。
+
+  请参阅 [OAuth 2.0 – 重定向终端节点](https://tools.ietf.org/html/rfc6749#section-3.1.2)。
+
+  Amazon Cognito 需要基于 HTTP 的 HTTPS，对于仅用于测试目的的 http://localhost 除外。
+
+  应用程序回调 URL（如 myapp://example）也受支持。
+
+  必填。
+- state
+  客户端添加到初始请求的不透明值。授权服务器在重定向回客户端时包括此值。
+
+  客户端必须使用此值来防止 [CSRF](https://en.wikipedia.org/wiki/Cross-site_request_forgery) 攻击。
+
+  此值可选，但强烈建议使用。
+- identity_provider
+  由开发人员直接用来在特定提供商处进行身份验证。
+  + 对于社交登录，有效值为 Facebook、Google、LoginWithAmazon 和 SignInWithApple。
+  + 对于 Amazon Cognito 用户池，有效值为 COGNITO。
+  + 对于其他身份提供商，这将是您在用户池中分配给 IdP 的名称。
+  
+  可选。
+- idp_identifier
+  由开发人员用于映射到提供商名称而不公开提供商名称。
+
+  可选。
+- scope
+  可以是任何系统预留范围或与客户端关联的自定义范围的组合。范围必须以空格分隔。系统保留的范围是 openid, email, phone, profile、和 aws.cognito.signin.user.admin。所使用的任何范围必须与客户端预先关联,否则将在运行时忽略。
+
+  如果客户端不请求任何范围，则身份验证服务器使用与客户端关联的所有范围。
+
+  如果请求 openid 范围，则只返回 ID 令牌。如果请求 aws.cognito.signin.user.admin 范围，则访问令牌只能用于 Amazon Cognito 用户池。如果同时请求了 phone 范围，则只能请求 email、profile 和 openid 范围。这些范围控制进入 ID 令牌中的声明。
+
+  可选。
+- code_challenge_method
+  用于生成质询的方法。[PKCE RFC](https://tools.ietf.org/html/rfc7636) 定义两个方法：S256 和 plain；但是，Amazon Cognito 身份验证服务器仅支持 S256。
+
+  可选。
+- code_challenge
+  从 code_verifier 生成的质询。
+
+  仅在指定 code_challenge_method 时必需。
+##### 具有正向响应的示例请求
+###### 授予授权代码
+**示例请求**
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/authorize?
+response_type=code&
+client_id=ad398u21ijw3s9w3939&
+redirect_uri=https://YOUR_APP/redirect_uri&
+state=STATE&
+scope=openid+profile+aws.cognito.signin.user.admin
+```
+
+**示例响应**
+Amazon Cognito 身份验证服务器使用授权代码和状态重定向回您的应用程序。代码和状态必须在查询字符串参数中返回，而不是在片段中。查询字符串是 Web 请求的一部分，显示在 字符之后；该字符串可以包含一个或多个使用 字符分隔的参数。片段是 Web 请求中显示在“#”字符后的部分，用于指定文档的子部分。
+```
+HTTP/1.1 302 Found
+Location: https://YOUR_APP/redirect_uri?code=AUTHORIZATION_CODE&state=STATE
+```
+###### 具有 PKCE 的授权代码授予
+**示例请求**
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/authorize?
+response_type=code&
+client_id=ad398u21ijw3s9w3939&
+redirect_uri=https://YOUR_APP/redirect_uri&
+state=STATE&
+scope=aws.cognito.signin.user.admin&
+code_challenge_method=S256&
+code_challenge=CODE_CHALLENGE
+```
+
+**示例响应**
+身份验证服务器使用授权代码和状态重定向回您的应用程序。代码和状态必须在查询字符串参数中返回，而不是在片段中。
+```
+HTTP/1.1 302 Found
+Location: https://YOUR_APP/redirect_uri?code=AUTHORIZATION_CODE&state=STATE
+```
+###### 不带 openid 范围的令牌授予
+**示例请求**
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/authorize?
+response_type=token&
+client_id=ad398u21ijw3s9w3939&
+redirect_uri=https://YOUR_APP/redirect_uri&
+state=STATE&
+scope=aws.cognito.signin.user.admin
+```
+
+**示例响应**
+Amazon Cognito 授权服务器重定向回您的应用程序，带有访问令牌。由于未请求 openid 范围，不会返回 ID 令牌。此流中从不返回刷新令牌。令牌和状态在片段中返回，而不是在查询字符串中。
+```
+HTTP/1.1 302 Found
+Location: https://YOUR_APP/redirect_uri#access_token=ACCESS_TOKEN&token_type=bearer&expires_in=3600&state=STATE
+```
+###### 具有 openid 范围的令牌授予
+**示例请求**
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/authorize? 
+response_type=token& 
+client_id=ad398u21ijw3s9w3939& 
+redirect_uri=https://YOUR_APP/redirect_uri& 
+state=STATE&
+scope=aws.cognito.signin.user.admin+openid+profile
+```
+
+**示例响应**
+授权服务器重定向回您的应用程序，带有访问令牌和 ID 令牌 (因为包括了 openid 范围)。
+```
+HTTP/1.1 302 Found
+Location: https://YOUR_APP/redirect_ur#id_token=ID_TOKEN&access_token=ACCESS_TOKEN&token_type=bearer&expires_in=3600&state=STATE
+```
+##### 负向响应的示例
+以下是负向响应的示例：
+- 如果 client_id 和 redirect_uri 有效，但请求参数有其他问题 (例如，如果未包括 response_type；如果提供了 code_challenge 但未提供 code_challenge_method；或者如果 code_challenge_method 不是“S256”)，则身份验证服务器会将错误重定向到客户端的 redirect_uri。
+   ```
+   HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request
+   ```
+- 如果客户端在 response_type 中请求“code”或“token”，但没有这些请求的权限，则 Amazon Cognito 授权服务器应将 unauthorized_client 返回到客户端的 redirect_uri，如下所示：
+   ```
+   HTTP 1.1 302 Found Location: https://client_redirect_uri?error=unauthorized_client
+   ```
+- 如果客户端请求无效、未知、范围格式错误，则 Amazon Cognito 授权服务器应将 invalid_scope 返回到客户端 redirect_uri，如下所示：
+   ```
+   HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_scope
+   ```
+- 如果服务器出现意外错误,则认证服务器应返回 server_error 至客户的 redirect_uri。不应是浏览器中显示的向最终用户显示的HTTP500错误,因为此错误不会发送到客户端。应返回以下错误：
+   ```
+   HTTP 1.1 302 Found Location: https://client_redirect_uri?error=server_error
+   ```
+- 通过联合第三方身份提供商进行身份验证时，Cognito 可能会遇到以下连接问题：
+  + 如果从身份提供商处请求令牌时连接超时，身份验证服务器会将该错误重定向到客户端的 redirect_uri，如下所示：
+  ```
+  HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request&error_description=Timeout+occurred+in+calling+IdP+token+endpoint
+  ```
+  + 如果在调用 jwks 终端节点进行 id_token 验证时连接超时，身份验证服务器会将该错误重定向到客户端的 redirect_uri，如下所示：
+  ```
+  HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request&error_description=error_description=Timeout+in+calling+jwks+uri
+  ```
+- 通过联合第三方身份提供商进行身份验证时，提供商可能会因配置错误或其他原因返回错误响应，如下所示：
+  + 如果从其他提供商处收到错误响应，身份验证服务器会将该错误重定向到客户端的 redirect_uri，如下所示：
+  ```
+  HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request&error_description=[IdP name]+Error+-+[status code]+error getting token
+  ````
+  + 如果从 Google 收到错误响应，身份验证服务器会将该错误重定向到客户端的 redirect_uri，如下所示：
+  ```
+  HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request&error_description=Google+Error+-+[status code]+[Google provided error code]
+  ```
+  +在极少数情况下，如果 Cognito 在与外部身份提供商建立连接时遇到通信协议异常，身份验证服务器会将该错误重定向到客户端的 redirect_uri，并显式以下错误消息：
+     + `HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request&error_description=Connection+reset`
+     + `HTTP 1.1 302 Found Location: https://client_redirect_uri?error=invalid_request&error_description=Read+timed+out`
+#### 7.2.2 TOKEN 终端节点
+/oauth2/token 终端节点获取用户的令牌。
+##### POST /oauth2/token
+/oauth2/token端点仅支持 HTTPS POST。用户池客户端直接对此端点发出请求,而不是通过系统浏览器发出请求。
+
+有关规范的更多信息，请参阅[令牌终端节点](http://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint)。
+##### 标头中的请求参数
+- Authorization、*
+  如果向客户端发布了密钥，则客户端必须通过基本 HTTP 授权在其授权标头中传递 client_id 和 client_secret。密钥是[基本](https://en.wikipedia.org/wiki/Basic_access_authentication#Client_side) Base64Encode(client_id:client_secret)。
+- Content-Type
+  必须始终为 'application/x-www-form-urlencoded'。
+##### 正文中的请求参数
+- grant_type
+  授予类型。
+
+  必须为 authorization_code 或 refresh_token 或 client_credentials。
+
+  必填
+- client_id
+  客户端 ID
+
+  必须是用户池中的预注册客户端。必须为客户端启用了 Amazon Cognito 联合(The client must be enabled for Amazon Cognito federation)。
+
+  如果客户端是公有的且没有密钥，则为必需。
+- scope
+  可以是任何与客户端关联的自定义范围的组合。请求的任意范围必须预先与客户端关联，否则它将在运行时被忽略。如果客户端不请求任何范围，则身份验证服务器使用与客户端关联的所有自定义范围。
+
+  可选。仅当 grant_type 为 client_credentials 时使用。
+- redirect_uri
+  必须是在 /oauth2/authorize 中用于获取 redirect_uri 的相同 authorization_code。
+
+  仅当 grant_type 为 authorization_code 时必需。
+- refresh_token
+  刷新令牌。
+
+  > **注意** 仅当 grant_type 为 authorization_code 时，令牌终端节点才返回 refresh_token。
+- code
+  如果 grant_type 为 authorization_code，则必需。
+- code_verifier
+  证明密钥。
+
+  如果 grant_type 为 authorization_code 并且使用 PKCE 请求了授权代码，则必需。
+##### 具有正向响应的示例请求
+###### 为获取令牌交换授权代码
+**示例请求**
+```
+POST https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/token&
+Content-Type='application/x-www-form-urlencoded'&
+Authorization=Basic aSdxd892iujendek328uedj
+
+grant_type=authorization_code&
+client_id=djc98u3jiedmi283eu928&
+code=AUTHORIZATION_CODE&
+redirect_uri=com.myclientapp://myclient/redirect
+```
+
+**示例响应**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{ 
+ "access_token":"eyJz9sdfsdfsdfsd", 
+ "refresh_token":"dn43ud8uj32nk2je", 
+ "id_token":"dmcxd329ujdmkemkd349r",
+ "token_type":"Bearer", 
+ "expires_in":3600
+}
+```
+> **注意** 仅当 grant_type 为 authorization_code 时，令牌终端节点才返回 refresh_token。
+###### 为获取访问令牌交换客户端凭证
+**示例请求**
+```
+POST https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/token >
+Content-Type='application/x-www-form-urlencoded'&
+Authorization=Basic aSdxd892iujendek328uedj
+
+grant_type=client_credentials&
+scope={resourceServerIdentifier1}/{scope1} {resourceServerIdentifier2}/{scope2}
+```
+
+**示例响应**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+ "access_token":"eyJz9sdfsdfsdfsd", 
+ "token_type":"Bearer", 
+ "expires_in":3600
+}
+```
+###### 为获取令牌交换具有 PKCE 的授权代码授予
+**示例请求**
+```
+POST https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/token
+Content-Type='application/x-www-form-urlencoded'&
+Authorization=Basic aSdxd892iujendek328uedj
+
+grant_type=authorization_code&
+client_id=djc98u3jiedmi283eu928&
+code=AUTHORIZATION_CODE&
+code_verifier=CODE_VERIFIER&
+redirect_uri=com.myclientapp://myclient/redirect
+                        
+```
+**示例响应**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+ "access_token":"eyJz9sdfsdfsdfsd",
+ "refresh_token":"dn43ud8uj32nk2je",
+ "id_token":"dmcxd329ujdmkemkd349r",
+ "token_type":"Bearer", 
+ "expires_in":3600
+}
+```
+> **注意** 仅当 grant_type 为 authorization_code 时，令牌终端节点才返回 refresh_token。
+###### 为获取令牌交换刷新令牌
+**示例请求**
+```
+POST https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/token >
+Content-Type='application/x-www-form-urlencoded'
+Authorization=Basic aSdxd892iujendek328uedj
+
+grant_type=refresh_token&
+client_id=djc98u3jiedmi283eu928&
+refresh_token=REFRESH_TOKEN
+```
+**示例响应**
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+ "access_token":"eyJz9sdfsdfsdfsd", 
+ "refresh_token":"dn43ud8uj32nk2je",
+ "id_token":"dmcxd329ujdmkemkd349r",
+ "token_type":"Bearer", 
+ "expires_in":3600
+}
+```
+> **注意** 仅当 grant_type 为 authorization_code 时，令牌终端节点才返回 refresh_token。
+##### 负向响应的示例
+**错误响应示例**
+```
+HTTP/1.1 400 Bad Request
+Content-Type: application/json;charset=UTF-8
+
+{
+"error":"invalid_request|invalid_client|invalid_grant|unauthorized_client|unsupported_grant_type|"
+}
+```
+- invalid_request
+  请求缺少必需的参数、包括不支持的参数值 (除了 unsupported_grant_type 之外) 或者格式错误。例如，grant_type 是 refresh_token 但未包括 refresh_token。
+- invalid_client
+  客户端身份验证失败。例如，客户端的授权标头中包含 client_id 和 client_secret，但没有这样的客户端带有 client_id 和 client_secret。
+-- invalid_grant
+  已撤销刷新令牌。
+  
+  授权代码已使用或不存在。
+- unauthorized_client
+  客户端不允许代码授予流或刷新令牌。
+- unsupported_grant_type
+  如果 grant_type 是 authorization_code 或 refresh_token 之外的任意内容，则返回。
+#### 7.2.3 USERINFO 终端节点
+/oauth2/userInfo 终端节点将返回有关经过身份验证的用户的信息。
+##### GET /oauth2/userInfo
+用户池客户端直接对此终端节点发出请求，而不通过浏览器。
+
+有关更多信息，请参阅 OpenID Connect (OIDC) 规范中的 [UserInfo 终端节点](http://openid.net/specs/openid-connect-core-1_0.html#UserInfo)。
+##### 标头中的请求参数
+- Authorization、* 承载 <access_token>
+  使用授权标头字段传递访问令牌。
+
+  必填
+##### 示例请求
+```
+GET https://<your-user-pool-domain>/oauth2/userInfo
+Authorization: Bearer <access_token>
+```
+##### 示例正向响应
+```
+HTTP/1.1 200 OK
+Content-Type: application/json;charset=UTF-8
+{
+   "sub": "248289761001",
+   "name": "Jane Doe",
+   "given_name": "Jane",
+   "family_name": "Doe",
+   "preferred_username": "j.doe",
+   "email": "janedoe@example.com"
+}
+```
+有关 OIDC 声明的列表，请参阅[标准声明](http://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)。
+##### 示例负向响应
+- 无效的请求
+  ```
+  HTTP/1.1 400 Bad Request
+  WWW-Authenticate: error="invalid_request",
+    error_description="Bad OAuth2 request at UserInfo Endpoint"
+  ```
+  invalid_request
+    请求缺少必需的参数、包括不支持的参数值或者格式错误。
+- 令牌无效
+  ```
+  HTTP/1.1 401 Unauthorized
+  WWW-Authenticate: error="invalid_token",
+    error_description="Access token is expired, disabled, or deleted, or the user has globally signed out."
+  ```
+  invalid_token
+    访问令牌已过期、已撤销、格式不正确或无效。
+#### 7.2.4 LOGIN 终端节点
+/login 终端节点让用户登录。它加载登录页面，并向用户显示为客户端配置的身份验证选项。
+##### GET /login
+login 端点仅支持 HTTPS GET。用户池客户端通过系统浏览器发出此请求。JavaScript 的系统浏览器包括 Chrome 或 Firefox。Android 浏览器包括自定义 Chrome 选项卡。iOS 浏览器包括 Safari View 控件。
+##### 请求参数
+- client_id
+  您的应用程序的应用程序客户端 ID。要获取应用程序客户端 ID，请在用户池中注册该应用程序。有关更多信息，请参阅[配置用户池应用程序客户端](https://docs.aws.amazon.com/zh_cn/cognito/latest/developerguide/user-pool-settings-client-apps.html)
+
+  必填
+- redirect_uri
+  身份验证成功后用户重定向到的 URI。它应在指定的 response_type 的 client_id 上配置。
+
+  必填
+- response_type
+  OAuth 响应类型，对于代码授予流，它可能是 code，对于隐式流，它可能是 token。
+
+  必填
+- state
+  客户端添加到初始请求的不透明值。然后在重定向时将该值返回给客户端。
+
+  客户端必须使用此值来防止 [CSRF 攻击](https://en.wikipedia.org/wiki/Cross-site_request_forgery)。
+
+  此值可选，但强烈建议使用。
+- scope
+  可以是任何系统预留范围或与客户端关联的自定义范围的组合。范围必须以空格分隔。系统保留的范围是 openid, email, phone, profile、和 aws.cognito.signin.user.admin。所使用的任何范围都必须与客户端预先关联,或者在运行时忽略。
+
+  如果客户端不请求任何范围，则身份验证服务器使用与客户端关联的所有范围。
+
+  只有在请求 openid 范围时，才返回 ID 令牌。只有在请求 aws.cognito.signin.user.admin 范围时，才能对 Amazon Cognito 用户池使用访问令牌。只有在同时请求了 phone 范围时，才能请求 email、profile 和 openid 范围。这些范围控制进入 ID 令牌中的声明。
+
+  可选。
+##### 示例请求 提示用户登录
+此示例显示登录屏幕。
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/login?
+response_type=code&
+client_id=ad398u21ijw3s9w3939&
+redirect_uri=https://YOUR_APP/redirect_uri&
+state=STATE&
+scope=openid+profile+aws.cognito.signin.user.admin
+```
+#### 7.2.5 LOGOUT 终端节点
+/logout 终端节点用于注销用户。
+##### GET /logout
+的 /logout 端点仅支持 HTTPS GET。用户池客户端通常通过系统浏览器发出此请求,通常是Android中的CustomChrome选项卡和iOS中的SafariViewControl。
+##### 请求参数
+- client_id
+  您的应用程序的应用程序客户端 ID。要获取应用程序客户端 ID，您必须在用户池中注册该应用程序。有关更多信息，请参阅 配置用户池应用程序客户端。)
+
+  必填
+- logout_uri
+  您为客户端应用程序注册的注销 URL。有关更多信息，请参阅 配置用户池应用程序客户端。)
+
+  可选。
+##### 示例请求
+###### 示例 #1 注销并重定向回客户端
+此示例将清除现有会话并重定向回客户端。两个参数都是必需的。
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/logout?
+client_id=ad398u21ijw3s9w3939&
+logout_uri=com.myclientapp://myclient/logout
+```
+###### 示例 2 注销并提示用户以其他用户身份登录
+此示例使用与 GET /oauth2/authorize 相同的参数，来清除现有会话并显示登录屏幕。
+```
+GET https://mydomain.auth.us-east-1.amazoncognito.com/logout?
+response_type=code&
+client_id=ad398u21ijw3s9w3939&
+redirect_uri=https://YOUR_APP/redirect_uri&
+state=STATE&
+scope=openid+profile+aws.cognito.signin.user.admin
+```
 ### 7.3 Amazon Cognito 身份池概念 (联合身份) API 参考
 ### 7.4 Amazon Cognito 同步 API 参考
 
