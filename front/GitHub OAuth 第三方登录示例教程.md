@@ -2,6 +2,7 @@
 这组 OAuth 系列教程，[第一篇](http://www.ruanyifeng.com/blog/2019/04/oauth_design.html)介绍了基本概念，[第二篇](http://www.ruanyifeng.com/blog/2019/04/oauth-grant-types.html)介绍了获取令牌的四种方式，今天演示一个实例，如何通过 OAuth 获取 API 数据。
 
 很多网站登录时，允许使用第三方网站的身份，这称为"第三方登录"。
+
 ![](images/third_party_login.jpg)
 ## 一、第三方登录的原理
 所谓第三方登录，实质就是 OAuth 授权。用户想要登录 A 网站，A 网站让用户提供第三方网站的数据，证明自己的身份。获取第三方网站的身份数据，就需要 OAuth 授权。
