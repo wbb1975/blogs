@@ -22,6 +22,7 @@
 所以，你要先去 GitHub 登记一下。当然，我已经登记过了，你使用我的登记信息也可以，但为了完整走一遍流程，还是建议大家自己登记。这是免费的。
 
 访问这个[网址](https://github.com/settings/applications/new)，填写登记表。
+
 ![应用登记](images/application_registration.jpg)
 
 应用的名称随便填，主页 `URL` 填写`http://localhost:8080`，跳转网址填写 `http://localhost:8080/oauth/redirect`。
@@ -51,6 +52,7 @@ $ node index.js
 浏览器访问`http://localhost:8080`，就可以看到这个示例了。
 ## 四、浏览器跳转 GitHub
 示例的首页很简单，就是一个链接，让用户跳转到 GitHub:
+
 ![示例首页](images/home_page_login.jpg)
 
 跳转的 URL 如下:
@@ -64,7 +66,8 @@ https://github.com/login/oauth/authorize?
 用户点击到了 GitHub，GitHub 会要求用户登录，确保是本人在操作。
 ## 五、授权码
 登录后，GitHub 询问用户，该应用正在请求数据，你是否同意授权。
-![授权码](images/autorize_application)
+
+![授权码](images/autorize_application.png)
 
 用户同意授权， GitHub 就会跳转到redirect_uri指定的跳转网址，并且带上授权码，跳转回来的 URL 就是下面的样子:
 ```
