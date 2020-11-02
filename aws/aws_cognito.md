@@ -273,13 +273,96 @@ https://www.example.com/#id_token=123456789tokens123456789&expires_in=3600&token
 ### 3.2 使用 Amazon Cognito 托管 UI 进行注册和登录
 ### 3.3 通过第三方添加用户池登录
 ### 3.4 使用 Lambda 触发器自定义用户池工作流
-### 3.5 将 Amazon Pinpoint 分析与 Amazon Cognito 用户池结合使用
-### 3.6 在用户池中管理用户
-### 3.7 Amazon Cognito 用户池的电子邮件设置
-### 3.8 将令牌与用户池结合使用
-### 3.9 在成功进行用户池身份验证后访问资源
-### 3.10 用户池参考 (AWS 管理控制台)
-### 3.11 管理错误响应
+### 3.5 在用户池中管理用户
+### 3.6 使用令牌
+#### 3.6.1 将令牌与用户池结合使用
+#### 3.6.2 验证 JSON Web 令牌
+这些步骤描述了验证用户池 JSON Web 令牌 (JWT) 的过程。
+- Prerequisites
+- 步骤 1. 确认JWT的结构
+- 步骤 2. 验证JWT签名
+- 步骤 3 验证索赔
+##### Prerequisites
+本节中的任务可能已经由您的库、SDK或软件框架处理。例如,在客户端上通过 Amazon Cognito SDK。同样, Mobile SDK for iOS 以及 适用于 Android 的 移动软件开发工具包 如果满足两个条件,将自动刷新您的ID并访问令牌: 必须提供有效的(未过期)刷新令牌,ID和访问令牌的有效期必须至少为5分钟。有关开发工具包以及适用于 JavaScript、Android 和 iOS 的示例代码，请参阅[Amazon Cognito 用户池开发工具包](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-sdk-links.html)。
+
+许多优秀的库可用于解码和验证JSONWeb令牌(JWT)。如果您需要手动处理用于服务器端API处理的令牌,或者使用其他编程语言,这些库可能会有所帮助。请参阅[用于处理 JWT 令牌的库的 OpenID Foundation 列表](http://openid.net/developers/jwt/)。
+##### 步骤 1. 确认JWT的结构
+一个 JSON Web 令牌 (JWT) 包含三个部分：
+- 标头
+- 负载
+- 签名
+
+```
+11111111111.22222222222.33333333333
+```
+这些部分编码为base64url字符串,并用点(.)字符分隔。如果您的JWT不符合此结构,则视为无效,不接受。
+##### 步骤 2. 验证JWT签名
+JWT签名是标头和有效负载的散列组合。 Amazon Cognito 为每个用户池生成两对RSA密码密钥。其中一对私有密钥用于对令牌进行签名。
+
+验证 JWT 令牌的签名：
+1. 解码 ID 令牌。
+   您可以使用 AWS Lambda 解码用户池 JWT。有关更多信息,请参阅[解码和验证 Amazon Cognito JWT令牌使用 Lambda](https://github.com/awslabs/aws-support-tools/tree/master/Cognito/decode-verify-jwt).
+
+   OpenID Foundation 还维护[用于处理 JWT 令牌的库列表](http://openid.net/developers/jwt/)。
+2. 比较本地密钥ID(kid)与公共密钥（Compare the local key ID (kid) to the public kid）。
+   a. 下载并存储用户池的相应公共JSONWeb密钥(JWK)。它可作为JSONWeb密钥集(JWKS)的一部分使用。您可以在https://cognito-idp.{region}.amazonaws.com/{userPoolId}/.well-known/jwks.json找到它。
+
+   有关更多 JWK 和 JWK 集的更多信息，请参阅 [JSON Web Key (JWK)](https://tools.ietf.org/html/rfc7517)。
+
+   > 注意：这是WebAPI处理令牌之前的一次性步骤。现在，每当 ID 令牌或访问令牌用于您的 Web API 时，您都可以执行以下步骤。
+
+   这是一个样本 jwks.json 文件:
+   ```
+   {
+    "keys": [{
+      "kid": "1234example=",
+      "alg": "RS256",
+      "kty": "RSA",
+      "e": "AQAB",
+      "n": "1234567890",
+      "use": "sig"
+    }, {
+      "kid": "5678example=",
+      "alg": "RS256",
+      "kty": "RSA",
+      "e": "AQAB",
+      "n": "987654321",
+      "use": "sig"
+    }]
+   }
+   ```
+  + 密钥ID(kid)： kid 是一个提示,指示用于保护令牌的JSONWeb签名(JWS)的密钥。
+  + 算法(alg)： alg 标头参数表示用于保护ID令牌的密码算法。用户池使用 RS256 加密算法，这是一种采用 SHA-256 的 RSA 签名。有关 RSA 的更多信息，请参阅 RSA 密码术。
+  + 密钥类型(kty)： kty 参数标识与密钥结合使用的加密算法系列，例如，在本示例中为“RSA”。
+  + RSA指数(e)： e 参数包含RSA公钥的指数值。它表示为采用 Base64urlUInt 编码的值。
+  + RSA模量(n)： n 参数包含RSA公钥的模量值。它表示为采用 Base64urlUInt 编码的值。
+  + 使用(use)： use 参数描述公钥的预期用途。对于本示例, use 价值 sig 表示签名。
+
+  b. 搜索与你的JWT Kid匹配的公共JSON Web密钥
+3. 使用公钥使用您的JWT库来验证签名。您可能需要首先将JWK格式转换为PEM格式。本示例采用 JWT 和 JWK 格式，并且使用 Node.js 库、jsonwebtoken，来验证 JWT 签名：
+   ···
+    var jwt = require('jsonwebtoken');
+    var jwkToPem = require('jwk-to-pem');
+    var pem = jwkToPem(jwk);
+    jwt.verify(token, pem, { algorithms: ['RS256'] }, function(err, decodedToken) {
+    });
+   ···
+##### 步骤 3 验证声明
+1. 确认该令牌没有过期。
+2. 受众(aud)索赔应与在 Amazon Cognito 用户池。
+3. 发行人(iss)索赔应与您的用户池匹配。例如,在 us-east-1 地区将有以下 iss 值:
+   ···
+   https://cognito-idp.us-east-1.amazonaws.com/<userpoolID>.
+   ···
+4. 检查 token_use 声明。
+   + 如果您在 Web API 中只接受访问令牌，则其值必须为 access。
+   + 如果您只使用 ID 令牌，则其值必须为 id。
+   + 如果您同时使用 ID 令牌和访问令牌，则 token_use 声明必须为 id 或 access。
+
+您现在可以信任该令牌内的声明。
+### 3.7 在登录后访问资源
+### 3.8 用户池参考 (AWS 管理控制台)
+### 3.9 管理错误响应
 ## 4. Amazon Cognito 身份池
 ## 5. Amazon Cognito Sync
 ## 6. 安全性
@@ -755,3 +838,4 @@ scope=openid+profile+aws.cognito.signin.user.admin
 
 ## Reference
 - [什么是 Amazon Cognito？](https://docs.aws.amazon.com/zh_cn/cognito/latest/developerguide/what-is-amazon-cognito.html)
+- [JWT, JWS, JWE, JWK, and JWA Implementations](https://openid.net/developers/jwt/)
