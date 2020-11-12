@@ -332,3 +332,4 @@ $ dig mx github.com
 - [DNS 原理入门](http://www.ruanyifeng.com/blog/2016/06/dns.html)
 - [DNS: The Good Parts](https://www.petekeen.net/dns-the-good-parts), by Pete Keen
 - [DNS 101, by Mark McDonnell](http://www.integralist.co.uk/posts/dnsbasics.html)
+- [在线域名检测](https://mxtoolbox.com/DnsLookup.aspx)
