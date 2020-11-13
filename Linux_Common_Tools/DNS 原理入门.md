@@ -129,6 +129,7 @@ c005mkkbjde03:/data/ThomsonReuters/quantum_framework # dig +short www.google.com
 下面我们根据前面这个例子，一步步还原，本机到底怎么得到域名`www.google.com`的IP地址。
 
 首先，本机一定要知道DNS服务器的IP地址，否则上不了网。通过DNS服务器，才能知道某个域名的IP地址到底是什么。
+
 ![DNS Server List](images/dns_server.jpg)
 
 DNS服务器的IP地址，有可能是动态的，每次上网时由网关分配，这叫做`DHCP`机制；也有可能是事先指定的固定地址。Linux系统里面，DNS服务器的IP地址保存在`/etc/resolv.conf`文件。
@@ -175,6 +176,7 @@ DNS服务器根据域名的层级，进行分级查询。
 仔细看上面的过程，你可能发现了，没有提到DNS服务器怎么知道"根域名服务器"的IP地址。回答是"根域名服务器"的NS记录和IP地址一般是不会变化的，所以内置在DNS服务器里面。
 
 下面是内置的根域名服务器IP地址的一个例子:
+
 ![根域名服务器IP地址](images/root_dnsserver.png)
 
 上面列表中，列出了根域名（`.root`）的三条NS记录`A.ROOT-SERVERS.NET`、`B.ROOT-SERVERS.NET`和`C.ROOT-SERVERS.NET`，以及它们的IP地址（即`A`记录）`198.41.0.4`、`192.228.79.201`、`192.33.4.12`。
@@ -212,14 +214,17 @@ c005mkkbjde03:/data/ThomsonReuters/quantum_framework # dig +trace www.google.com
 根据内置的根域名服务器IP地址，DNS服务器向所有这些IP地址发出查询请求，询问www.google.com的顶级域名服务器com.的NS记录。最先回复的根域名服务器将被缓存，以后只向这台服务器发请求。
 
 接着是第二段：
+
 ![com NS records](images/top_dns_servers.png)
 
 上面结果显示`.com`域名的13条NS记录，同时返回的还有每一条记录对应的IP地址。
 
 然后，DNS服务器向这些顶级域名服务器发出查询请求，询问`math.stackexchange.com`的次级域名`stackexchange.com`的NS记录：
+
 ![次级域名服务器列表](images/secondary_dns_servers.png)
 `
 然后，DNS服务器向上面这四台NS服务器查询`math.stackexchange.com`的主机名。
+
 ![DNS记录列表](images/leaf_dns_server.png)
 
 上面结果显示，`math.stackexchange.com`有4条A记录，即这四个IP地址都可以访问到网站。并且还显示，最先返回结果的NS服务器是`ns-463.awsdns-57.com`，IP地址为`205.251.193.207`。

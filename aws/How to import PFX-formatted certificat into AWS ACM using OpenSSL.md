@@ -88,4 +88,4 @@
 ## Reference
 - [How to import PFX-formatted certificates into AWS Certificate Manager using OpenSSL](https://aws.amazon.com/blogs/security/how-to-import-pfx-formatted-certificates-into-aws-certificate-manager-using-openssl/)
 - [How to use *.pfx certificate for Amazon ELB SSL](https://stackoverflow.com/questions/36156917/how-to-use-pfx-certificate-for-amazon-elb-ssl)
-- [SSL证书（SSL Certificates）]](https://www.aliyun.com/sswd/1110408-1.html)
+- [SSL证书（SSL Certificates）](https://www.aliyun.com/sswd/1110408-1.html)
