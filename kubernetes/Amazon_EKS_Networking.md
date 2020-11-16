@@ -116,6 +116,39 @@ Amazon EKS 支持使用适用于 Kubernetes 的 Amazon VPC 容器网络接口 (C
 ## 5. 安装或升级 CoreDNS
 ## 6. 在 Amazon EKS 上安装 Calico
 
+## Appendix A：WARM_ENI_TARGET, WARM_IP_TARGET and MINIMUM_IP_TARGET
+AWS VPC CNI 拥有两个组件：CNI二进制文件, `/opt/cni/bin/aws-cni`；[`ipamd`](https://en.wikipedia.org/wiki/IP_address_management)作为一个Kubernetes daemonset 运行，称为`aws-node`，在每个节点上添加一个Pod，追踪所有附加到该（EC2）实例上的所有ENI和IP地址。当一个新的Pod加入或一个已存在的Pod从节点移除时，CNI二进制文件被kubelet 调用。
+
+CNI二进制文件使用gRPC调用`ipamd`，请求为新的Pod分配一个IP。如果缓存中没有可用IP，它将返回一个错误。保持的IP数量由`WARM_ENI_TARGET`, `WARM_IP_TARGET` 和 `MINIMUM_IP_TARGET`控制。默认设置`WARM_ENI_TARGET=1`，意味着`ipamd` 应该保留一个全功能的ENI（"a full ENI"）及其所有可用IP。`ipamd`将会定期检查它是否拥有合适数量额附着IP地址，并在必要时调用EC2附加或解绑ENIs （ attach or detach ENIs）和IP，而不管Pod是添加到节点或是从节点删除Pod。
+
+如果工作节点运行在一个小的子网中，只有有限的可用IP，一起使用`WARM_IP_TARGET` 和 `MINIMUM_IP_TARGET`是一个选择。`MINIMUM_IP_TARGET`是每个节点保持IP数量的地板值（"floor"），如果你打算运行10个Pod，建议将`MINIMUM_IP_TARGET`稍高于这个值，比如12，并设置`WARM_IP_TARGET=2`。
+
+一些实例设置：
+实例类型|WARM_ENI_TARGET|WARM_IP_TARGET|MINIMUM_IP_TARGET|Pod数|附加ENI数|附加辅助IPs|未使用IPs|每个ENI的IPs
+--------|--------|--------|--------|--------|--------|--------|--------|--------
+t3.small|1|-|-|0|1|3|3|3
+t3.small|1|-|-|5|3|9|4|3,3,3
+t3.small|1|-|-|9|3|9|0|3,3,3
+t3.small|-|1|1|0|1|1|1|1
+t3.small|-|1|1|5|2|6|1|3,3
+t3.small|-|1|1|9|3|9|0|3,3,3
+t3.small|-|2||0|2|5|5|2,3
+t3.small|-|2|5|5|2|7|2|3,3,1
+t3.small|-|2|5|9|3|9|0|3,3,3
+p3dn.24xlarge|1|-|-|0|1|49|49|49
+p3dn.24xlarge|1|-|-|3|2|98|95|49,49
+p3dn.24xlarge|1|-|-|95|3|147|52|49,49,49
+p3dn.24xlarge|-|5|10|0|1|10|5|10
+p3dn.24xlarge|-|5|10|7|1|12|5|12
+p3dn.24xlarge|-|5|10|15|1|20|5|20
+p3dn.24xlarge|-|5|10|45|2|50|5|49,1
+
+为了清晰，对小型集群和Pod数量变动很小的集群仅仅设置`WARM_IP_TARGET`。我们也建议把`MINIMUM_IP_TARGET`设置得比每个节点上期待运行的Pod数量稍高一些。
+
+谨慎设置这个值的原因在于它将增加EC2 API 嗲用的次数，在每次调用中`ipamd` 都不得不去附加或解绑（ attach or detach）实例的IP。如果调用数很高，它们将被限流，如此就没有新的ENIs 或 IP被附加到集群中的任何实例上。
+
+这也是我们保持`WARM_ENI_TARGET=1`为默认设置的主要原因，它在太多无用的附加IP和EC2 API调用限流之间取得一个平衡。创建并附加一个新的ENI到一个节点将花费至多10秒钟。
+
 ## Reference
 - [Amazon EKS networking](https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/eks-networking.html)
 - [如何解决 Amazon EKS 的服务负载均衡器问题](https://aws.amazon.com/cn/premiumsupport/knowledge-center/eks-load-balancers-troubleshooting/)
