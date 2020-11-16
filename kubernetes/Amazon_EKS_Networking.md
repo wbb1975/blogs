@@ -90,8 +90,34 @@ kubernetes.io/role/internal-elb|1
 键|值
 --------|--------
 kubernetes.io/role/elb|1
+## 3. Amazon EKS 安全组注意事项
+## 4. Pod 联网 (CNI)
+Amazon EKS 支持使用适用于 Kubernetes 的 Amazon VPC 容器网络接口 (CNI) 插件的本机 VPC 网络。使用此插件允许 Kubernetes Pod 在 Pod 内具有与其在 VPC 网络上相同的 IP 地址。插件是一个在 GitHub 上维护的开源项目。有关更多信息,请参阅 [amazon-vpc-cni-k8s](https://github.com/aws/amazon-vpc-cni-k8s) 和[提议：适用于通过 AWS VPC 的 Kubernetes 联网的 CNI 插件](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/cni-proposal.md)GitHub。 完全支持在 Amazon EKS 和 AWS 上自行管理的 Kubernetes 集群上使用 Amazon VPC CNI 插件。
+> **注意** Kubernetes 可使用容器网络接口 (CNI) 进行可配置的网络设置。Amazon VPC CNI 插件可能不会满足所有使用案例的要求。Amazon EKS 维护一个合作伙伴网络,以提供具有商业支持选项的替代 CNI 解决方案。有关更多信息，请参阅[备选的兼容 CNI 插件](https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/alternate-cni-plugins.html)。
+
+当您创建 Amazon EKS 节点时，它有一个网络接口（network interface）。所有 Amazon EC2 实例类型都支持多个网络接口。在创建实例时附加到实例的网络接口称为主网络接口。附加到实例的任何其他网络接口称为辅助网络接口。可以为每个网络接口分配多个私有 IP 地址。其中一个私有 IP 地址是主要 IP 地址，而分配给网络接口的所有其它地址是辅助 IP 地址。有关网络接口的更多信息,请参阅Amazon EC2 用户指南（适用于 Linux 实例）中的[弹性网络接口](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html)。有关支持多少个网络接口和每个网络接口支持多少个私有 IP 地址数量的更多信息，请参阅Amazon EC2 用户指南（适用于 Linux 实例）中的[每个实例类型的每个网络接口的 IP 地址](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) 。例如，m5.large 实例类型支持3个网络接口，每个网络接口有 10 个私有 IP 地址。
+
+适用于 Kubernetes 的 Amazon VPC 容器网络接口 (CNI) 插件随您的每个节点一起部署。插件包含两个主要组件：
+- L-IPAM daemon
+  负责创建网络接口并将网络接口附加到 Amazon EC2 实例，将辅助 IP 地址分配给网络接口，并在每个节点上维护 IP 地址的暖池（a warm pool of IP addresses），以便当Kubernetes Pod调度到本节点时分配。当节点上运行的 Pod 数超过可分配给单个网络接口的地址数时，只要实例的最大网络接口数尚未附加，插件就会开始分配新的网络接口。有配置变量允许您更改插件创建新网络接口时的默认值。有关更多信息，请参阅GitHub上的 [WARM_ENI_TARGET、WARM_IP_TARGET 和 MINIMUM_IP_TARGET](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/eni-and-ip-target.md)。
+
+  您部署的每个 Pod 都会从附加到实例的其中一个网络接口分配一个辅助私有 IP 地址。之前提到一个m5.large 实例支持三个网络接口，每个网络接口支持10个私有 IP 地址。即使 m5.large 实例支持 30 个私有 IP 地址，您也无法向该节点部署 30 个 Pod。要确定可将多少 Pod 部署该节点，请使用以下公式:
+  ```
+  (Number of network interfaces for the instance type × (the number of IP addressess per network interface - 1)) + 2
+  ```
+
+  使用此公式，m5.large 实例类型最多可支持 29 个 Pod。有关每种实例类型支持的最大 Pod 数的列表，请参阅GitHub 上的 [eni-max-pods.txt](https://github.com/awslabs/amazon-eks-ami/blob/master/files/eni-max-pods.txt)。 系统 Pod 计入最大 Pod（System pods count towards the maximum pods）。例如，CNI 插件和 kube-proxy Pod 在集群中的每个节点上运行，因此您只能将 27 个额外的 Pod 部署到 m5.large 实例，而不是 29 个。此外，CoreDNS 在集群中的某些节点上运行，这会为其上运行的节点将最大 Pod 减少一个。
+
+  默认情况下，部署到节点的所有 Pod 都分配了相同的安全组，并分配了来自分配给实例的其中一个网络接口所连接子网的 CIDR 块的私有 IP 地址。您可以通过配置 CNI 自定义网络，从与主网络接口连接到的子网不同的 CIDR 块分配 IP 地址。您还可以使用 CNI 自定义网络来分配同一安全组节点上的所有 Pod。分配给所有 Pod 的安全组可能与分配给主网络接口的安全组不同。您可以使用 Pod 的安全组将唯一安全组分配给部署到多个 Amazon EC2 实例类型的 Pod。有关更多信息，请参阅[Pod 的安全组](https://docs.aws.amazon.com/eks/latest/userguide/security-groups-for-pods.html)。
+- CNI plugin
+  负责连接主机网络(例如，配置网络接口和虚拟以太网对)并向 Pod 命名空间添加正确的网络接口。
+
+> **重要**：如果你在使用CNI插件1.7.0及其更新版本，并且你指定了一个自定义Pod安全策略给`aws-node` Kubernetes服务账号，该账号用于由Daemonset部署的`aws-node` Pod，那么该策略必须在其`allowedCapabilities`段中包含`NET_ADMIN` ，并在策略的`spec`中包含`hostNetwork: true` and `privileged: true`。更多信息，请参阅[Pod安全策略](https://docs.aws.amazon.com/eks/latest/userguide/pod-security-policy.html).
+## 5. 安装或升级 CoreDNS
+## 6. 在 Amazon EKS 上安装 Calico
 
 ## Reference
 - [Amazon EKS networking](https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/eks-networking.html)
 - [如何解决 Amazon EKS 的服务负载均衡器问题](https://aws.amazon.com/cn/premiumsupport/knowledge-center/eks-load-balancers-troubleshooting/)
 - [我如何公开在 Amazon EKS 集群上运行的 Kubernetes 服务](https://aws.amazon.com/cn/premiumsupport/knowledge-center/eks-kubernetes-services-cluster/)
+- [WARM_ENI_TARGET, WARM_IP_TARGET and MINIMUM_IP_TARGET](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/eni-and-ip-target.md)
