@@ -51,7 +51,7 @@ VPC 终端节点使您能够将 VPC 私密地连接到支持的 AWS 服务和 VP
 
 在下图显示的示例中，子网 2 中有一个接口终端节点（对应 Amazon Kinesis Data Streams）和一个终端节点网络接口。您尚未为接口终端节点启用私有 DNS。子网的路由表具有以下路由：
 
-![子网的路由表](images/Route_Table_Without_Private_DNS.png)
+![子网的路由表](images/route_table_without_private_dns.png)
 
 任一子网中的实例都可以使用特定于终端节点的 DNS 主机名通过接口终端节点向 Amazon Kinesis Data Streams 发送请求。子网 1 中的实例可以使用其默认 DNS 名称，通过 AWS 区域中的公有 IP 地址空间与 Amazon Kinesis Data Streams 通信。
 
