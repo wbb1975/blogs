@@ -83,14 +83,248 @@ VPC 终端节点使您能够将 VPC 私密地连接到支持的 AWS 服务和 VP
 - [AWS Direct Connect](https://docs.aws.amazon.com/directconnect/latest/UserGuide/)
 - [AWS Site-to-Site VPN](https://docs.aws.amazon.com/vpn/latest/s2svpn/)
 ##### 接口终端节点生命周期
+从您创建接口终端节点 (终端节点连接请求) 时开始，接口终端节点将经历不同的阶段。在每个阶段，可能会有一些服务使用者和服务提供商可执行的操作。
+
+![接口终端节点生命周期](images/interface-endpoint-lifecycle-diagram.png)
+
+以下规则适用：
+- 服务提供商可将其服务配置为自动或手动接受接口终端节点请求。AWS 服务和 AWS Marketplace 服务一般会自动接受所有终端节点请求。
+- 服务提供商无法删除连接至其服务的接口终端节点。只有请求接口终端节点连接的服务使用者才可以删除接口终端节点。
+- 服务提供商可以在接口终端节点已被接受 (手动或自动) 并处于 available 状态之后拒绝它。
 ##### 接口终端节点可用区注意事项
+创建接口终端节点时，将在映射至您的账户且独立于其他账户的可用区中创建此终端节点。当服务提供商与使用者处于不同的账户中时，请使用可用区 ID 唯一且一致地识别接口终端节点可用区。例如，use1-az1 是us-east-1区域的可用区 ID，并映射到每个 AWS 账户中的相同位置。有关可用区 ID 的信息，请参阅 AWS RAM 用户指南 中的[您的资源的 AZ ID](https://docs.aws.amazon.com/ram/latest/userguide/working-with-az-ids.html) 或使用 [describe-availability-zones](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-availability-zones.html)。
+
+可能无法在所有可用区中通过接口终端节点使用服务。您可以使用以下操作中的任意一种，了解一项服务有哪些受支持的可用区：
+- [describe-vpc-endpoint-services (AWS CLI)](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoint-services.html)
+- [DescribeVpcEndpointServices (API)](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeVpcEndpointServices.html)
+
+您创建接口终端结点时使用的 Amazon VPC 控制台。有关更多信息，请参阅[创建接口终端节点](https://docs.aws.amazon.com/zh_cn/vpc/latest/userguide/vpce-interface.html#create-interface-endpoint)。
 ##### 接口终端节点的定价
+您在为某个服务创建和使用接口终端节点时需要付费。将按小时使用费率和数据处理费率收费。有关接口终端节点定价的更多信息，请参阅 [AWS PrivateLink 定价](http://aws.amazon.com/privatelink/pricing/)。您可以使用 Amazon VPC 控制台或 AWS CLI 查看接口终端节点的总数。
 ##### 查看可用的 AWS 服务名称
+使用 Amazon VPC 控制台创建终端节点时，可以获得可用 AWS 服务名称的列表。
+
+使用 AWS CLI 创建终端节点时，可以先使用 [describe-vpc-endpoint-services](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoint-services.html) 命令查看服务名称，然后再使用 [create-vpc-endpoint](https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-endpoint.html) 命令创建终端节点。
+
+**使用 AWS CLI 查看可用的 AWS 服务**
+使用 [describe-vpc-endpoint-services](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoint-services.html) 命令获取可用服务的列表。在返回的输出中，记录要连接到的服务的名称。ServiceType 字段指示是通过接口终端节点还是网关终端节点连接到服务。ServiceName 字段提供服务的名称。
+```
+aws ec2 describe-vpc-endpoint-services
+
+{
+    "VpcEndpoints": [
+        {
+            "VpcEndpointId": "vpce-08a979e28f97a9f7c",
+            "VpcEndpointType": "Interface",
+            "VpcId": "vpc-06e4ab6c6c3b23ae3",
+            "ServiceName": "com.amazonaws.us-east-2.monitoring",
+            "State": "available",
+            "PolicyDocument": "{\n  \"Statement\": [\n    {\n      \"Action\": \"*\", \n      \"Effect\": \"Allow\", \n      \"Principal\": \"*\", \n      \"Resource\": \"*\"\n    }\n  ]\n}",
+            "RouteTableIds": [],
+            "SubnetIds": [
+                "subnet-0931fc2fa5f1cbe44"
+            ],
+            "Groups": [
+                {
+                    "GroupId": "sg-06e1d57ab87d8f182",
+                    "GroupName": "default"
+                }
+            ],
+            "PrivateDnsEnabled": false,
+            "RequesterManaged": false,
+            "NetworkInterfaceIds": [
+                "eni-019b0bb3ede80ebfd"
+            ],
+            "DnsEntries": [
+                {
+                    "DnsName": "vpce-08a979e28f97a9f7c-4r5zme9n.monitoring.us-east-2.vpce.amazonaws.com",
+                    "HostedZoneId": "ZC8PG0KIFKBRI"
+                },
+                {
+                    "DnsName": "vpce-08a979e28f97a9f7c-4r5zme9n-us-east-2c.monitoring.us-east-2.vpce.amazonaws.com",
+                    "HostedZoneId": "ZC8PG0KIFKBRI"
+                }
+            ],
+            "CreationTimestamp": "2019-06-04T19:10:37.000Z",
+            "Tags": [],
+            "OwnerId": "123456789012"
+        }
+    ]
+```
+
+**使用 AWS Tools for Windows PowerShell 查看可用的 AWS 服务**
+- [Get-EC2VpcEndpointService](https://docs.aws.amazon.com/powershell/latest/reference/items/Get-EC2VpcEndpointService.html)
+
+**使用 API 查看可用的 AWS 服务**
+- [DescribeVpcEndpointServices](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeVpcEndpointServices.html)
 ##### 创建接口终端节点
+要创建接口终端节点，您必须指定要在其中创建接口终端节点的 VPC 和要连接到的服务。
+
+对于 AWS 服务或 AWS Marketplace 合作伙伴服务，您可以选择为终端节点启用私有 DNS，以使您可以使用默认的 DNS 主机名向服务发出请求。
+> **重要** 默认情况下，为 AWS 服务和 AWS Marketplace 合作伙伴服务创建的终端节点启用私有 DNS。
+
+**使用 AWS CLI 创建接口终端节点**
+1. 使用 [describe-vpc-endpoint-services](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoint-services.html) 命令获取可用服务的列表。在返回的输出中，记录要连接到的服务的名称。ServiceType 字段指示是通过接口终端节点还是网关终端节点连接到服务。ServiceName 字段提供服务的名称。
+2. 要创建接口终端节点，请使用 [create-vpc-endpoint](https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-endpoint.html) 命令并指定 VPC ID、VPC 终端节点（接口）的类型、服务名称、将使用终端节点的子网以及要与终端节点网络接口关联的安全组。
+
+    以下示例创建连接到 Elastic Load Balancing 服务的接口终端节点。
+    ```
+    aws ec2 create-vpc-endpoint --vpc-id vpc-ec43eb89 --vpc-endpoint-type Interface --service-name com.amazonaws.us-east-1.elasticloadbalancing --subnet-id subnet-abababab --security-group-id sg-1a2b3c4d
+
+    {
+        "VpcEndpoint": {
+            "PolicyDocument": "{\n  \"Statement\": [\n    {\n      \"Action\": \"*\", \n      \"Effect\": \"Allow\", \n      \"Principal\": \"*\", \n      \"Resource\": \"*\"\n    }\n  ]\n}", 
+            "VpcId": "vpc-ec43eb89", 
+            "NetworkInterfaceIds": [
+                "eni-bf8aa46b"
+            ], 
+            "SubnetIds": [
+                "subnet-abababab"
+            ], 
+            "PrivateDnsEnabled": true, 
+            "State": "pending", 
+            "ServiceName": "com.amazonaws.us-east-1.elasticloadbalancing", 
+            "RouteTableIds": [], 
+            "Groups": [
+                {
+                    "GroupName": "default", 
+                    "GroupId": "sg-1a2b3c4d"
+                }
+            ], 
+            "VpcEndpointId": "vpce-088d25a4bbf4a7abc", 
+            "VpcEndpointType": "Interface", 
+            "CreationTimestamp": "2017-09-05T20:14:41.240Z", 
+            "DnsEntries": [
+                {
+                    "HostedZoneId": "Z7HUB22UULQXV", 
+                    "DnsName": "vpce-088d25a4bbf4a7abc-ks83awe7.elasticloadbalancing.us-east-1.vpce.amazonaws.com"
+                }, 
+                {
+                    "HostedZoneId": "Z7HUB22UULQXV", 
+                    "DnsName": "vpce-088d25a4bbf4a7abc-ks83awe7-us-east-1a.elasticloadbalancing.us-east-1.vpce.amazonaws.com"
+                }, 
+                {
+                    "HostedZoneId": "Z1K56Z6FNPJRR", 
+                    "DnsName": "elasticloadbalancing.us-east-1.amazonaws.com"
+                }
+            ]
+        }
+    }
+    ```
+
+    或者，以下示例创建一个连接到另一 AWS 账户中的终端节点服务的接口终端节点 (服务提供商将为您提供终端节点服务的名称)。
+    ```
+    aws ec2 create-vpc-endpoint --vpc-id vpc-ec43eb89 --vpc-endpoint-type Interface --service-name com.amazonaws.vpce.us-east-1.vpce-svc-0e123abc123198abc --subnet-id subnet-abababab --security-group-id sg-1a2b3c4d
+    ```
+    在返回的输出中，记录 DnsName 字段。您可以使用这些 DNS 名称访问 AWS 服务。
+
+**使用 AWS Tools for Windows PowerShell 描述可用的服务并创建 VPC 终端节点**
+- [Get-EC2VpcEndpointService](https://docs.aws.amazon.com/powershell/latest/reference/items/Get-EC2VpcEndpointService.html)
+- [New-EC2VpcEndpoint](https://docs.aws.amazon.com/powershell/latest/reference/items/New-EC2VpcEndpoint.html)
+
+**描述可用的服务并使用 API 创建 VPC 终端节点**
+- [DescribeVpcEndpointServices](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeVpcEndpointServices.html)
+- [CreateVpcEndpoint](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-CreateVpcEndpoint.html)
 ##### 查看您的接口终端节点
+在创建接口终端节点之后，您可以查看有关它的信息。
+
+**使用控制台查看有关接口终端节点的信息**
+1. 通过以下网址打开 Amazon VPC 控制台：https://console.aws.amazon.com/vpc/。
+2. 在导航窗格中，选择 Endpoints 并选择您的接口终端节点。
+3. 要查看有关接口终端节点的信息，请选择 Details。DNS Names 字段将显示用于访问服务的 DNS 名称。
+4. 要查看已创建接口终端节点的子网以及每个子网中的终端节点网络接口的 ID，请选择 Subnets。
+5. 要查看与终端节点网络接口关联的安全组，请选择 Security Groups。
+
+**使用 AWS CLI 描述您的接口终端节点**
+您可使用 [describe-vpc-endpoints](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoints.html) 命令描述您的终端节点。
+```
+aws ec2 describe-vpc-endpoints --vpc-endpoint-ids vpce-088d25a4bbf4a7abc
+```
+
+**使用 AWS Tools for PowerShell 或 API 描述您的 VPC 终端节点**
+- [Get-EC2VpcEndpoint](https://docs.aws.amazon.com/powershell/latest/reference/items/Get-EC2VpcEndpoint.html)（适用于 Windows PowerShell 的 AWS 工具）
+- [DescribeVpcEndpoints](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeVpcEndpoints.html)（Amazon EC2 查询 API）
 ##### 为接口终端节点创建和管理通知
+您可以创建通知以接收针对您的接口终端节点上发生的特定事件的提醒。例如，您可在服务提供商接受接口终端节点时收到一封电子邮件。要创建通知，您必须将 [Amazon SNS 主题](https://docs.aws.amazon.com/sns/latest/dg/)与通知关联。您可以订阅 SNS 主题以在终端节点事件发生时收到电子邮件通知。
+
+您用于通知的 Amazon SNS 主题必须具有允许 Amazon 的 VPC 终端节点服务代表您发布通知的主题策略。确保在您的主题策略中包含以下语句。有关更多信息，请参阅 Amazon Simple Notification Service 开发人员指南 中的 [Amazon SNS 中的 Identity and Access Management](https://docs.aws.amazon.com/sns/latest/dg/sns-authentication-and-access-control.html)。
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "vpce.amazonaws.com"
+      },
+      "Action": "SNS:Publish",
+      "Resource": "arn:aws:sns:region:account:topic-name"
+    }
+  ]
+}
+```
+
+使用 AWS CLI 创建和管理通知：
+1. 要为接口终端节点创建通知，请使用 [create-vpc-endpoint-connection-notification](https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-endpoint-connection-notification.html) 命令。指定 SNS 主题的 ARN、要通知的事件以及终端节点的 ID，如以下示例所示。
+   ```
+   aws ec2 create-vpc-endpoint-connection-notification --connection-notification-arn arn:aws:sns:us-east-2:123456789012:EndpointNotification --connection-events Accept Reject --vpc-endpoint-id vpce-123abc3420c1931d7
+   ```
+2. 要查看您的通知，请使用 [describe-vpc-endpoint-connection-notifications](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoint-connection-notifications.html) 命令。
+   ```
+   aws ec2 describe-vpc-endpoint-connection-notifications
+   ```
+3. 要更改通知的 SNS 主题或终端节点事件，请使用 [modify-vpc-endpoint-connection-notification](https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-endpoint-connection-notification.html) 命令。
+   ```
+   aws ec2 modify-vpc-endpoint-connection-notification --connection-notification-id vpce-nfn-008776de7e03f5abc --connection-events Accept --connection-notification-arn arn:aws:sns:us-east-2:123456789012:mytopic
+   ```
+4. 要删除通知，请使用 [delete-vpc-endpoint-connection-notifications](https://docs.aws.amazon.com/cli/latest/reference/ec2/delete-vpc-endpoint-connection-notifications.html) 命令。
+   ```
+   aws ec2 delete-vpc-endpoint-connection-notifications --connection-notification-ids vpce-nfn-008776de7e03f5abc
+   ```
 ##### 通过接口终端节点访问服务
+在创建接口终端节点之后，您可以通过终端节点 URL 将请求提交给支持的服务。您可以使用以下命令：
+1. 如果您为终端节点启用了私有 DNS（私有托管区域；仅适用于 AWS 服务和 AWS Marketplace 合作伙伴服务），则为区域的 AWS 服务的默认 DNS 主机名。例如：`ec2.us-east-1.amazonaws.com`。
+2. 我们为接口终端节点生成的终端节点特定的区域 DNS 主机名。主机名在其名称中包含一个唯一终端节点标识符、服务标识符、区域以及 vpce.amazonaws.com。例如：`vpce-0fe5b17a0707d6abc-29p5708s.ec2.us-east-1.vpce.amazonaws.com`。
+3. 我们为终端节点可用的每个可用区生成的终端节点特定区域 DNS 主机名。主机名在其名称中包含可用区。例如：`vpce-0fe5b17a0707d6abc-29p5708s-us-east-1a.ec2.us-east-1.vpce.amazonaws.com`。如果架构隔离可用区（例如，为了故障遏制或降低区域数据传输费用），可使用此选项。
+
+   对区域 DNS 主机名的请求将流至服务提供商账户中的相应可用区位置 (可能没有与您的账户相同的可用区名称)。有关更多信息，请参阅[区域和可用区域概念](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-regions-availability-zones)。
+4. VPC 中的终端节点网络接口的私有 IP 地址。
+
+例如，在您已具有连接到 Elastic Load Balancing 的接口终端节点且您尚未为其启用私有 DNS 选项的子网中，通过一个实例使用以下 AWS CLI 命令来描述您的负载均衡器。此命令将使用终端节点特定的区域 DNS 主机名来使用接口终端节点发出请求。
+```
+aws elbv2 describe-load-balancers --endpoint-url https://vpce-0f89a33420c193abc-bluzidnv.elasticloadbalancing.us-east-1.vpce.amazonaws.com/
+```
+如果您启用私有 DNS 选项，则不必在请求中指定终端节点 URL。AWS CLI 将 AWS 服务的默认终端节点用于此区域 (`elasticloadbalancing.us-east-1.amazonaws.com`)。
 ##### 修改接口终端节点
+您可以修改接口终端节点的以下属性：
+- 接口终端节点所在的子网
+- 与终端网络接口关联的安全组
+- 标签
+- 私有 DNS 选项
+  > 注意： 启用私有 DNS 时，私有 IP 地址可能需要几分钟才能变为可用。
+- 终端节点策略（如果服务支持）
+
+如果您删除接口终端节点的子网，则将删除子网中相应的终端节点网络接口。
+
+**使用 AWS CLI 修改 VPC 终端节点**：
+1. 使用 [describe-vpc-endpoints](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-vpc-endpoints.html) 命令获取您的接口终端节点的 ID。
+   ```
+   aws ec2 describe-vpc-endpoints
+   ```
+2. 以下示例使用 [modify-vpc-endpoint](https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-endpoint.html) 命令将子网 subnet-aabb1122 添加到接口终端节点。
+   ```
+   aws ec2 modify-vpc-endpoint --vpc-endpoint-id vpce-0fe5b17a0707d6abc --add-subnet-id subnet-aabb1122
+   ```
+
+**使用 AWS Tools for Windows PowerShell 或 API 修改 VPC 终端节点**
+- [Edit-EC2VpcEndpoint](https://docs.aws.amazon.com/powershell/latest/reference/items/Edit-EC2VpcEndpoint.html) (AWS Tools for Windows PowerShell)
+- [ModifyVpcEndpoint](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-ModifyVpcEndpoint.html)（Amazon EC2 查询 API）
+
+**使用 AWS Tools for Windows PowerShell 或 API 添加或删除 VPC 终端节点标签**
+- [tag-resource](https://docs.aws.amazon.com/cli/latest/reference/directconnect/tag-resource.html) (AWS CLI)
+- [TagResource](https://docs.aws.amazon.com/directconnect/latest/APIReference/API_TagResource.html) (AWS Tools for Windows PowerShell)
+- [untag-resource](https://docs.aws.amazon.com/cli/latest/reference/directconnect/untag-resource.html) (AWS CLI)
+- [TagResource](https://docs.aws.amazon.com/directconnect/latest/APIReference/API_UntagResource.html) (AWS Tools for Windows PowerShell)
 #### 10.1.2 网关负载均衡终端节点
 #### 10.1.3 网关终端节点
 #### 10.1.4 使用 VPC 终端节点控制对服务的访问
