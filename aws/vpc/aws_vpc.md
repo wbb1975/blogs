@@ -326,6 +326,18 @@ aws elbv2 describe-load-balancers --endpoint-url https://vpce-0f89a33420c193abc-
 - [untag-resource](https://docs.aws.amazon.com/cli/latest/reference/directconnect/untag-resource.html) (AWS CLI)
 - [TagResource](https://docs.aws.amazon.com/directconnect/latest/APIReference/API_UntagResource.html) (AWS Tools for Windows PowerShell)
 #### 10.1.2 网关负载均衡终端节点
+要创建和设置网关终端节点，请执行以下常规步骤：
+1. 指定要在其中创建终端节点的 VPC 以及要连接到的服务。服务由 AWS 托管的前缀列表（即某个区域的服务的名称和 ID）标识。AWS 前缀列表 ID 使用 `pl-xxxxxxx` 格式，AWS 前缀列表名称使用`“com.amazonaws.region.service”`格式。使用 AWS 前缀列表名称（服务名称）创建终端节点。
+2. 将终端节点策略附加（attach）到终端节点上，该策略允许您对要连接的部分或所有服务进行访问。有关更多信息，请参阅[使用 VPC 终端节点策略](https://docs.aws.amazon.com/zh_cn/vpc/latest/userguide/vpc-endpoints-access.html#vpc-endpoint-policies)。
+3. 指定一个或多个路由表，在其中创建到服务的路由。路由表将控制 VPC 与其他服务之间的流量的路由。与其中任一路由表相关联的每个子网都可以访问终端节点，随后通过终端节点将来自这些子网实例的流量路由到服务。
+
+在下图中，子网 2 中的实例可通过网关终端节点访问 Amazon S3。
+
+![vpc-endpoint-s3-diagram](images/vpc-endpoint-s3-diagram.png)
+
+您可以在单个 VPC 中创建多个终端节点 (例如，针对多项服务)。您还可以为单项服务创建多个终端节点，并使用不同的路由表通过同一服务的多个子网强制执行不同的访问策略。
+
+创建终端节点后，您可以修改已连接到终端节点的终端节点策略，并添加或删除终端节点使用的路由表。
 #### 10.1.3 网关终端节点
 #### 10.1.4 使用 VPC 终端节点控制对服务的访问
 #### 10.1.5 删除 VPC 终端节点
