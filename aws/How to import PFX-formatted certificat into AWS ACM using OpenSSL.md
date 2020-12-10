@@ -12,17 +12,18 @@
 下面的解决方案使用[OpenSSL](https://www.openssl.org/)命令行工具将PFX编码的证书转化为PEM格式。证书然后被导入到ACM中。
 
 ![](images/Import-PFX-AWS-Certificate-Manager-Figure1.png)
+
 图1：使用OpenSSL工具将PFX编码的证书转化为PEM格式。证书然后被导入到ACM
 
 该方案由两部分，如前图所示：
 1. 使用OpenSSL工具将PFX编码的证书转化为PEM格式
 2. 将证书导入到ACM中
 ## 前提
-我们使用OpenSSL工具将PFX编码的证书转化为PEM格式。OpenSSL是一个操作加密文件的开源工具集，他也是一个通用加密库。
+我们使用OpenSSL工具将PFX编码的证书转化为PEM格式。OpenSSL是一个操作加密文件的开源工具集，它也是一个通用加密库。
 
 在本文中，我们使用密码保护的PFX编码文件--website.xyz.com.pfx--使用一个X.509标准的CA签名的证书，带有2048-位RSA私钥数据，
 1. 下载并安装OpenSSL工具箱
-   - 如果你在使用Linux，从[OpenSSL Downloads](https://www.openssl.org/source/)下载并安装最新TAR文件
+   - 如果你在使用Linux，从[OpenSSL Downloads](https://www.openssl.org/source/)下载并安装最新tar文件
    - 如果你在使用Windows，从[Shining Light Productions](http://slproweb.com/products/Win32OpenSSL.html)下载。
 2. 将OpenSSL二进制路径添加到你的系统PATH变量，如此这些二进制文件可在命令行下使用。
 ## 将PFX编码的证书转化为PEM格式
@@ -38,24 +39,28 @@
    openssl pkcs12 -in website.xyz.com.pfx -nocerts -out privatekey.pem
    ```
    ![提示输入PEM pass phrase](images/Import-PFX-AWS-Certificate-Manager-Figure2.png)
+
    图2：提示输入PEM pass phrase。
 2. 上一步产生一个密码保护的私钥。为了移除密码，运行下面的命令。当提示时，输入上一步的密码，当成功时，你会看到写了`RSA`密钥。
    ```
    openssl rsa -in privatekey.pem -out withoutpw-privatekey.pem
    ```
    ![写入RSA 密钥](images/Import-PFX-AWS-Certificate-Manager-Figure3.png)
+
    图3：写入RSA 密钥
 3. 使用下面的命令行将证书从PFX 文件中传送到一个PEM文件。这创建了一个PEM编码的证书文件名为`cert-file.pem`。如果成功，你会看你到`MAC verified OK`。
    ```
    openssl pkcs12 -in website.xyz.com.pfx -clcerts -nokeys -out cert-file.pem
    ```
    ![MAC verified OK](images/Import-PFX-AWS-Certificate-Manager-Figure4.png)
+
    图4：MAC verified OK
 4. 最后，使用下面的命令行从PFX 文件中提取证书链。这创建了证书链文件名为`ca-chain.pem`。如果成功，你会看你到`MAC verified OK`。
    ```
    openssl pkcs12 -in website.xyz.com.pfx -cacerts -nokeys -chain -out ca-chain.pem
    ```
    ![MAC verified OK](images/Import-PFX-AWS-Certificate-Manager-Figure5.png)
+
    图5：MAC verified OK
 
 但前面的所有步骤结束后，PFX编码的签名证书文件被分割，返回三个PEM格式的文件，如下图所示。为了看到一个目录下的文件列表，在Windows下运行`dir`命令，在Linux下运行`ls -l`命令。
@@ -64,6 +69,7 @@
 - ca-chain.pem
 
 ![PEM格式文件](images/Import-PFX-AWS-Certificate-Manager-Figure6.png)
+
 图6：PEM格式文件
 ## 将PEM 证书导入到ACM
 使用ACM console来导入PEM编码的SSL证书。你需要在上节创建的以下PEM文件：SSL证书（`cert-file.pem`），私钥（`withoutpw-privatekey.pem`），CA根证书（`ca-chain.pem`）。
@@ -76,14 +82,13 @@
    + 对于**Certificate chain**，拷贝和脸贴来自文件`ca-chain.pem`的从`–BEGIN CERTIFICATE–` 开始到`CERTIFICATE–`间的所有行
 
    ![PEM格式文件](images/Import-PFX-AWS-Certificate-Manager-Figure7.png)
+   
    图7：添加文件并导入证书
 4. 点击**Next**并为证书添加标签。每个标签包含一个你定义的名值对。标签帮助你管理，识别，组织，查询以及过滤资源
 5. 选择**Review and import**
 6. Review你的证书信息并点击**Import**
 ## 结论
 在本文中，我们讨论了你如何利用OpenSSL 将PFX编码的SSL/TLS正是导入到ACM中去。你可以将导入的证书文件用于ACM集成的AWS服务。ACM使得为一个网站或AWS上的应用建立SSL/TLS变得容易。ACM 可以替代许多与使用和管理SSL/TLS 证书相关的人工操作过程。ACM 也可以管理更新，它可以帮助你缩短错误配置，撤回，证书过期导致的服务中断时间，你可以从你的证书颁发机构获取并导入新的证书，从未更新并导入你的新证书，或者你可以从ACM申请一个新的证书。
-
-
 
 ## Reference
 - [How to import PFX-formatted certificates into AWS Certificate Manager using OpenSSL](https://aws.amazon.com/blogs/security/how-to-import-pfx-formatted-certificates-into-aws-certificate-manager-using-openssl/)
