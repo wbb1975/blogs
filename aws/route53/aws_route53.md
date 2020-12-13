@@ -239,7 +239,287 @@ Amazon Route 53 与 AWS Identity and Access Management (IAM) 集成，后者是�
 
 有关 AWS 服务账单的信息，包括如何查看账单和管理账户与付款，请参阅[AWS Billing and Cost Management 用户指南](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/)。
 ## 2. 设置
+本节中的概述和步骤将帮助您开始使用 AWS。
+### 2.1 注册 AWS
+在注册 AWS 时，将为您的 AWS 账户自动注册 AWS 中的所有服务，包括 Amazon Route 53。您只需为使用的服务付费。
+
+如果您已具有 AWS 账户，请跳到[访问您的账户](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/setting-up-route-53.html#setting-up-access-account)。如果您还没有 AWS 账户，请使用以下步骤创建。
+
+创建 AWS 账户
+1. 打开 https://portal.aws.amazon.com/billing/signup。
+2. 按照屏幕上的说明进行操作。
+
+   在注册时，您将接到一通电话，要求您使用电话键盘输入一个验证码。
+
+记下您的 AWS 账号，稍后您会用到它。
+### 2.2 访问您的账户
+可以通过以下任一选项使用 AWS 服务：
+1. AWS 管理控制台
+2. 每个服务的 API
+3. AWS Command Line Interface (AWS CLI)
+4. 适用于 Windows PowerShell 的 AWS 工具
+5. AWS 开发工具包
+
+对于以上各选项，均需要提供证明您有权使用这些服务的凭证，并访问您的 AWS 账户。
+#### 访问控制台
+首次访问 AWS 管理控制台时，需提供电子邮件地址和密码。这一电子邮件地址和密码组合称为根身份 或根账户凭证。在您首次访问您的账户后，我们强烈建议您不要在日常工作中再次使用您的根账户凭证。而应使用 AWS Identity and Access Management 创建新的凭证。为此，应为您自己创建一个称为 IAM 用户 的用户账户，然后将该 IAM 用户添加到具有管理权限的 IAM 组中，或者为 IAM 用户授予管理权限。然后，您可以使用 IAM 用户的专门 URL 和凭证访问 AWS。您也可以在稍后添加其他 IAM 用户，并限制他们对指定资源的访问权限。
+> **注意** Web 浏览器的一些广告拦截插件会干扰 Amazon Route 53 控制台操作，从而导致该控制台的行为无法预测。如果您为浏览器安装了广告阻止插件，我们建议您添加 Route 53 控制台, https://console.aws.amazon.com/route53/home 和 https://console.aws.amazon.com/route53/v2/home到插件允许的URL列表。
+#### 访问 API、AWS CLI、适用于 Windows PowerShell 的 AWS 工具或 AWS 开发工具包
+要使用 API、AWS CLI、适用于 Windows PowerShell 的 AWS 工具 或 AWS 开发工具包，您必须创建访问密钥。这些密钥由访问密钥 ID 和秘密访问密钥构成，用于签署您对 AWS 发出的编程请求。
+
+要创建密钥，需登录 AWS 管理控制台。我们强烈建议您使用 IAM 用户凭证而非根凭证登录。有关更多信息,请参阅IAM 用户指南中的[管理的访问密钥 IAM 用户](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) 。
+### 2.3 创建 IAM 用户
+执行以下过程为管理员创建一个组、创建 IAM 用户然后将 IAM 用户添加到管理员组。如果您注册了 AWS 但没有为自己创建一个 IAM 用户，则可以使用 IAM 控制台来创建。如果您不熟悉如何使用该控制台，请参阅[使用 AWS 管理控制台](https://docs.aws.amazon.com/awsconsolehelpdocs/latest/gsg/getting-started.html)以了解大致情况。
+#### 自行创建管理员用户并将该用户添加到管理员组（控制台）
+1. 通过选择**根用户**，然后输入您的 AWS 账户的电子邮件地址，以账户拥有者身份登录到[IAM 控制台](https://console.aws.amazon.com/iam/)。在下一页上，输入您的密码。
+   > **注意** 强烈建议您遵守以下使用 Administrator IAM 用户的最佳实践，妥善保存根用户凭证。只在执行少数账户和服务管理任务时才作为根用户登录。
+2. 在导航窗格中，选择**用户**，然后选择**添加用户**。
+3. 对于 **User name (用户名)**，输入 `Administrator`。
+4. 选中 **AWS 管理控制台访问** 旁边的复选框。然后选择**自定义密码**，并在文本框中输入新密码。
+5. （可选）默认情况下，AWS 要求新用户在首次登录时创建新密码。您可以清除 **User must create a new password at next sign-in (用户必须在下次登录时创建新密码) 旁边的复选框以允许新用户在登录后重置其密码**。
+6. 选择下一步: **权限**。
+7. 在**设置权限下**，选择**将用户添加到组**。
+8. 选择**创建组**。
+9.  在 **Create group (创建组)** 对话框中，对于 **Group name (组名称)**，输入 `Administrators`。
+10. 选择 **Filter policies (筛选策略)**，然后选择 **AWS managed-job function (AWS 托管的工作职能)** 以筛选表内容。
+11. 在策略列表中，选中 `AdministratorAccess` 的复选框。然后选择 **Create group (创建组)**。
+    > **注意** 您必须先激活 IAM 用户和角色对账单的访问权限，然后才能使用 `AdministratorAccess` 权限访问 AWS Billing and Cost Management 控制台。为此，请按照“[向账单控制台委派访问权限](https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_billing.html)”教程第 1 步中的说明进行操作。
+12. 返回到组列表中，选中您的新组所对应的复选框。如有必要，选择 **Refresh** 以在列表中查看该组。
+13. 选择下一步: **标签**。
+14. （可选）通过以键值对的形式附加标签来向用户添加元数据。有关在 IAM 中使用标签的更多信息，请参阅 [IAM 用户指南 中的标记 IAM 实体](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)。
+15. 选择 **Next: Review (下一步: 审核)** 以查看要添加到新用户的组成员资格的列表。如果您已准备好继续，请选择 **Create user**。
+
+您可使用此相同的流程创建更多的组和用户，并允许您的用户访问 AWS 账户资源。要了解有关使用策略限制用户对特定 AWS 资源的权限的信息，请参阅[访问管理](https://docs.aws.amazon.com/IAM/latest/UserGuide/access.html)和[示例策略](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_examples.html)。
+#### 以新 IAM 用户身份登录
+1. 从 AWS 控制台注销。
+2. 使用以下URL登录,其中 your_aws_account_id 是您的AWS帐号,不带连字符。例如，如果您的 AWS 账号是 `1234-5678-9012`，则您的 AWS 账户 ID 就是 `123456789012`：
+   ```
+   https://your_aws_account_id.signin.aws.amazon.com/console/
+   ```
+3. 输入您刚创建的 IAM 用户名（而不是电子邮件地址）和密码。登录后,导航栏将显示 `“your_user_name @ your_aws_account_id"`.
+   如果您不希望您的登录页面 URL 包含 AWS 账户 ID，可以创建账户别名。
+#### 创建账户别名及隐藏账户 ID
+1. 在 IAM 控制台上，选择导航窗格中的 **Dashboard**。
+2. 在控制面板上，选择 **Customize** 并输入别名，如您的公司名。
+3. 从 AWS 控制台注销。
+4. 使用以下 URL 登录：
+   ```
+   https://your_account_alias.signin.aws.amazon.com/console/
+   ```
+
+要为您的账户验证 IAM 用户的登录链接，请打开 IAM 控制台，并在控制面板上的 **IAM 用户登录链接**下面进行检查。
+
+有关使用 IAM 的更多信息，请参阅[Amazon Route 53 中的 Identity and access management](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/auth-and-access-control.html)。
+### 2.4 设置 AWS Command Line Interface 或 适用于 Windows PowerShell 的 AWS 工具
+AWS Command Line Interface (AWS CLI) 是一个用于管理 AWS 服务的统一工具。有关如何安装和配置的信息 AWS CLI,请参阅AWS Command Line Interface 用户指南中的[准备 AWS Command Line Interface](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-set-up.html) 。
+
+如果您有使用 Windows PowerShell 的经验，则可能倾向于使用 适用于 Windows PowerShell 的 AWS 工具。有关更多信息，请参阅 适用于 Windows PowerShell 的 AWS 工具 用户指南中的[设置适用于 Windows PowerShell 的 AWS 工具](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-getting-set-up.html)。
+### 2.5 下载 AWS 开发工具包
+如果您使用 AWS 为其提供开发工具包的编程语言，建议您使用开发工具包代替 Amazon Route 53 API。开发工具包使身份验证更简单，可以轻松地与您的开发环境集成，并提供对 Route 53 命令的轻松访问。有关更多信息，请参阅[适用于 Amazon Web Services 的工具](https://aws.amazon.com/tools/)。
 ## 3. 入门
+此入门教程演示如何执行以下任务：
+- 注册一个域名，如 example.com。
+- 创建一个 Amazon S3 存储桶并将其配置为托管一个网站。
+- 创建一个示例网站，并将文件保存到 S3 存储桶中
+- 配置 Amazon Route 53 以将流量路由到您的新网站
+
+完成后，您将能够打开一个浏览器，输入您的域名并查看您的网站。
+> **注意** 您也可以将现有域转移到 Route 53，但与注册一个新域相比，这一过程更复杂且更耗时。有关更多信息，请参阅[将域注册转移到 Amazon Route 53](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html)。
+
+**估算费用**
+- 注册域需要缴纳年费，金额从 9 USD 到数百美元不等，具体取决于是否为顶级域，例如 .com。有关更多信息，请参阅[Route 53 域注册定价。此费用不可退款](https://d32ze2gidvkk54.cloudfront.net/Amazon_Route_53_Domain_Registration_Pricing_20140731.pdf)。
+- 当您注册域时，我们会自动创建一个与该域同名的托管区域。可使用该托管区域指定希望 Route 53 将域流量路由到哪里。托管区域的费用为每月 0.50 USD。
+- 在本教程中，您将创建 Amazon S3 存储桶并上传示例网页。如果您是 AWS 新客户，可以免费试用 Amazon S3。如果您是现有 AWS 客户，将根据您存储的数据量、对数据的请求量和转移的数据量收费。有关更多信息，请参阅[Amazon S3 定价](https://aws.amazon.com/s3/pricing/)。
+### 3.1 Prerequisites
+开始之前，请确保您已完成[设置 Amazon Route 53](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/setting-up-route-53.html)中的步骤。
+### 3.2 第1步: 注册域
+要使用某个域名 (如 example.com)，您需要找到一个尚未被他人使用的域名并注册该域名。当您注册域名时，即表示您要保留它以供您在 Internet 上的任何位置独占使用，通常为期一年。默认情况下，我们会在每年年底自动续订您的域名，但您可以禁用自动续订。
+#### 使用 Amazon Route 53 注册新域
+1. 登录 AWS 管理控制台并通过以下网址打开 Route 53 控制台：https://console.aws.amazon.com/route53/。
+2. 如果你是新手 Route 53,选择**开始**.
+
+   如果您已经在使用 Route 53,在导航窗格中,选择**注册域**.
+3. 选择 **Register Domain**。
+4. 输入要注册的域名，选择 **Check** 来了解该域名是否可用。
+
+   有关如何指定除 a-z、0-9 和 - (连字符) 以外的字符以及如何指定国际化域名的信息，请参阅[DNS 域名格式](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/DomainNameFormat.html)。
+5. 果该域可用，则选择 **Add to cart**。域名将出现在您的购物车中。
+
+   **Related domain suggestions** 列表显示您可能希望注册的其他域，以在您的首选域不可用时代替首选域，或者在首选域之外注册其他域。对于您希望注册的每个额外域，选择 **Add to cart**，最多可选择五个域。
+
+   如果域名不可用，并且您不想使用建议的域名，请重复步骤 4，直到找到一个中意的可用域名。
+   > **注意** 如果您还希望用户能够使用 www.your-domain-name（如 www.example.com）来访问您的示例网站，则无需注册另一个域。在本入门主题的稍后部分，我们将解释如何将 www.your-domain-name 的流量路由到您的网站。
+6. 在购物车中，选择域要注册的年数。
+7 .要注册多个域，请重复步骤 4 到 6。
+8. 选择 **Continue (继续)**。
+9. 在 **Contact Details for Your n Domains** 页面上，输入域注册者、管理员和技术联系人的联系信息。您在此处输入的值将应用于您要注册的所有域。
+
+  默认情况下，我们对全部三个联系人使用相同信息。如果要为一个或多个联系人输入不同信息，请将 **My Registrant, Administrative, and Technical contacts are all the same** 的值更改为 No。
+
+  如果您要注册多个域，我们将对所有域使用相同的联系人信息。
+
+  有关更多信息，请参阅[您在注册或转移域时指定的值](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/domain-register-values-specify.html)。
+10. 对于某些顶级域 (TLD)，我们需要收集更多信息。对于这些 TLD，请在 **Postal/Zip Code** 字段后输入适用的值。
+11. 选择是否要向 WHOIS 查询隐藏您的联系人信息。有关更多信息，请参阅以下主题：
+  + [启用或禁用域联系信息的隐私保护](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/domain-privacy-protection.html)
+  + [可在 Amazon Route 53 注册的域](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/registrar-tld-list.html)
+12. 选择 **Continue (继续)**。
+13. 检查您输入的信息，阅读服务条款，并选中相应复选框，以确认您已阅读服务条款。
+14. 选择 **Complete Purchase**。
+    我们会向域注册人发送一封电子邮件，以确认可以按照您指定的电子邮件地址联系注册联系人。(这是ICANN的要求。)该电子邮件来自以下电子邮件地址之一:
+    + noreply@registrar.amazon.com – 用于 Amazon Registrar 注册的 TLD。
+    + noreply@domainnameverification.net – 用于我们的注册商合作者 Gandi 注册的 TLD。要确定您的 TLD 注册商是谁，请参阅[可在 Amazon Route 53 注册的域](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/registrar-tld-list.html)。
+
+   > **重要** 注册联系人必须按照电子邮件中的说明来确认已收到电子邮件，否则我们必须按照 ICANN 的要求暂停该域。域被暂停后，将无法在 Internet 上访问该域。
+
+当您的域注册获批后，您将收到另一封电子邮件。要确定您的请求的最新状态，请参阅[查看域注册的状态](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/domain-view-status.html)。
+
+默认情况下，域注册的有效期为一年。如果您不希望保留该域，可以禁用自动续订，则该域将在一年后过期。
+#### (可选) 禁用域的自动续订
+1. 在导航窗格中，选择 **Registered domains**。
+2. 在域列表中，选择**域名**。
+3. 如果 **Auto renew** 字段的值为 **Enabled (disable)**，则选择 **disable** 以关闭自动续订。更改会立即生效。
+   如果该字段的值为 **Disabled (enable)**，则不要更改设置。
+### 3.3 第2步: 创建S3bucket并将其配置为托管网站
+Amazon S3 允许您从 Internet 上的任何位置存储和检索您的数据。要整理您的数据，可使用 AWS 管理控制台创建存储桶并将数据上传到存储桶。可以使用 S3 在存储桶中托管静态网站。以下步骤介绍如何创建存储桶并进行配置，以用于网站托管。
+1. 通过以下网址打开 Amazon S3 控制台：https://console.aws.amazon.com/s3/。
+2. 选择 **Create bucket (创建存储桶)**。
+3. 输入以下值：
+   - **Bucket name**
+     输入域的名称，如 example.com。
+    - **Region**
+      选择最靠近您的大多数用户的区域。
+      记下所选择的区域；稍后您将需要此信息。
+4. 选择**下一步**。
+5. 在**Configure options (配置选项)** 页面上，选择 **Next (下一步)** 以接受默认值。
+6. 在**设置权限**页面上，取消选中 **Block all public access (阻止所有公有访问)** 复选框，然后选择 **Next (下一步)**。
+   > **注意** 控制台显示有关对存储桶的公有访问权限的消息。在此过程后面，您将添加用于限制对存储桶的访问权限的存储桶策略。
+7. 在 **Review (审核)** 页面上，选择 **Create bucket (创建存储桶)**。
+8. 在 S3 存储桶列表中，选择刚创建的存储桶的名称。
+9. 选择 **Properties** 选项卡。
+10. 选择 **Static website hosting**。
+11. 选择 **Use this bucket to host a website (使用此存储桶托管网站)**。
+12. 对于**索引文档**，输入包含网站主页的文件的名称。
+    > **注意** 在此过程中，您将创建一个 HTML 文件，稍后将其上传到您的存储桶。
+13. 选择 **Save (保存)**。
+14. 选择 **Permissions** 选项卡。
+15. 选择**存储桶策略**。
+16. 复制下面的存储桶策略并粘贴到文本编辑器中。此策略授予 Internet 上的每个人 ("Principal":"*") 权限，来获得与您的域名 ("arn:aws:s3:::your-domain-name/*") 关联的 S3 存储桶中的文件 ("Action":["s3:GetObject"])。
+    ```
+    {
+    `   "Version":"2012-10-17",
+      "Statement":[{
+          "Sid":"AddPerm",
+          "Effect":"Allow",
+          "Principal":"*",
+          "Action":[
+            "s3:GetObject"
+          ],
+          "Resource":[
+            "arn:aws:s3:::your-domain-name/*"
+          ]
+        }]
+    }
+`   ```
+17. 在桶策略中,替换值 `your-domain-name` 使用域的名称,例如 `example.com`。此值必须与存储桶的名称匹配。
+18. 选择 **Save (保存)**。
+### 3.4 步骤3 (可选): 为www.your-domain-name创建另一个存储桶
+在前面的过程中，您为域名 (如 example.com) 创建了一个存储桶。这样您的用户就可以使用您的域名 (如 example.com) 访问您的网站。
+
+如果您还希望用户能够使用 www.your-domain-name,例如www.example.com,要访问您的示例网站,您需要创建第二个S3bucket。然后对第二个存储桶进行配置，将流量路由至第一个存储桶。
+> **注意** 网站通常重定向 your-domain-name 至 www.your-domain-name，例如,从example.com到www.example.com。由于 S3 的工作方式，您必须按相反的方向设置重定向（从 www.example.com 到 example.com）。
+1. 选择 **Create bucket (创建存储桶)**。
+2. 输入以下值：
+   - **Bucket name**
+     输入 www.your-domain-name。例如,如果您注册了域名 `example.com`，请输入 `www.example.com`.
+   - **Region**
+     选择创建第一个存储桶时所在的同一区域。
+3. 选择**下一步**。
+4. 在 **Configure options (配置选项)** 页面上，选择 **Next (下一步)** 以接受默认值。
+5. 在 **Set permissions (设置权限)** 页面上，选择 **Next (下一步)** 以接受默认值。
+6. 在 **Review (审核)** 页面上，选择 **Create bucket (创建存储桶)**。
+7. 在 S3 存储桶列表中，选择刚创建的存储桶的名称。
+8. 选择 **Properties** 选项卡。
+9.  选择 **Static website hosting**。
+10. 选择 **Redirect requests**。
+11. 输入以下值：
+    - **目标存储桶或域**
+       输入要将请求重定向到的存储桶的名称。这是您在过程创建一个 S3 存储桶并进行配置，以便托管一个网站中创建的存储桶的名称。
+    - **协议**
+       输入 http。您正在将请求重定向到配置为网站终端节点的 S3 存储桶，并且 Amazon S3 对于网站终端节点不支持 HTTPS 连接。
+12. 选择 **Save (保存)**。
+### 3.5 第4步: 创建网站并将其上传到您的S3bucket
+现在，您有了一个可以保存网站的 S3 存储桶，您可以为网站创建首页并将其上传 (保存) 到您的存储桶。
+1. 复制下面的文本并粘贴到文本编辑器中：
+   ```
+   <html>
+    <head>
+    <title>Amazon Route 53 Getting Started</title>	
+    </head>
+
+    <body>
+
+    <h1>Routing Internet Traffic to an Amazon S3 Bucket for Your Website</h1>
+
+    <p>For more information, see 
+    <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/getting-started.html">Getting Started with Amazon Route 53</a> 
+    in the <emphasis>Amazon Route 53 开发人员指南</emphasis>.</p>
+
+    </body>
+
+   </html>
+   ```
+2. 保存该文件并命名为 **index.html**。
+3. 在 Amazon S3 控制台中，选择[在创建一个 S3 存储桶并进行配置，以便托管一个网站](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/getting-started.html#getting-started-create-s3-website-bucket-procedure)过程中创建的存储桶的名称。
+4. 选择 **Upload**。
+5. 选择 **Add files (添加文件)**。
+6. 按照屏幕上的提示选择 **index.html**，然后选择 **Upload (上传)**。
+### 3.6 第5步: 将域的DNS流量路由到您的网站存储桶
+现在，您的 S3 存储桶中有了一个包含一个网页的网站。要开始将您的域的 Internet 流量路由到您的 S3 存储桶，请执行以下过程。
+1. 通过以下网址打开 Route 53 控制台：https://console.aws.amazon.com/route53/。
+2. 在导航窗格中，选择 **Hosted zones**。
+   > **注意** 当您注册域时，Amazon Route 53 将自动使用相同的名称创建一个托管区域。托管区域包含有关您希望 Route 53 如何路由域流量的信息。
+3. 在托管区域列表中，选择您的域名。
+4. 选择**创建记录**.
+   > **注意** 每个记录都包含有关您希望如何路由某个域 (如 example.com) 或子域 (如 www.example.com 或 test.example.com) 流量的信息。记录存储在域的托管区域中。
+5. 选择**简单路由** 并选择 **下一步**.
+6. 选择**定义简单记录**.
+7. 指定以下值：
+   - **记录名称**
+   - 对于您创建的第一个记录，接受默认值，该值为您的托管区域和您的域的名称。这会将 Internet 流量路由到与您的域同名的存储桶。
+
+     如果您为 `www.your-domain-name`,请重复此步骤以创建第二条记录。对于第二个记录，输入 **www**。这会将 Internet 流量路由至 `www.your-domain-name` 桶。
+   - **值/路由流量至**
+   - 选择 与S3网站端点的别名,然后选择在中创建存储桶的AWS区域。
+
+     对于您创建的第一条记录，请选择与托管区域和域名同名的存储桶。
+
+     对于第二条记录,选择名为 www.your-domain-name.
+
+     如果另一个帐户创建了S3bucket,请输入您在中创建S3bucket的Region(地区)的名称。使用 AWS General Reference 网站端点表中的[AmazonS3网站端点](https://docs.aws.amazon.com/general/latest/gr/s3.html#s3_website_region_endpoints).
+
+     > **注意** 如果不同的帐户创建了托管区域和S3bucket，则您为指定的值相同 选择S3bucket 记录。 Route 53 根据记录的名称，找出将流量路由到哪个存储桶。
+   - **记录类型**
+   - 接受的默认值A – 将流量路由到IPv4地址和某些AWS资源.
+   - **Evaluate Target Health**
+     接受的默认值 **是**
+8. 选择**定义简单记录**
+9. 选择**创建记录**
+10. 如果您为 www.your-domain-name创建了另一个S3存储桶，重复步骤4到9，在同一托管区为www.your-domain-name也创建一个记录。
+### 3.7 第6步: 测试您的网站
+要验证您的网站是否工作正常，请打开一个 Web 浏览器并浏览到下列 URL：
+- http://your-domain-name – 键显示在 your-domain-name 存储桶中的首页
+- http://www.your-domain-name – 将您的请求重定向到 your-domain-name 存储桶
+
+在某些情况下，您可能需要清除缓存才能看到预期行为。
+
+有关路由 Internet 流量的更多高级信息，请参阅[将 Amazon Route 53 配置为 DNS 服务](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/dns-configuring.html)。有关将 Internet 流量路由到 AWS 资源的更多信息，请参阅[将 Internet 流量路由到您的 AWS 资源](https://docs.aws.amazon.com/zh_cn/Route53/latest/DeveloperGuide/routing-to-aws-resources.html)。
+### 3.8 步骤7(可选): 使用 Amazon CloudFront 加快内容的分发
+CloudFront 是一个 Web 服务，它加快将静态和动态 Web 内容（如 .html、.css、.js 和图像文件）分发到用户的速度。CloudFront 通过全球数据中心网络传输内容，这些数据中心称为边缘站点。当用户请求您用 CloudFront 提供的内容时，用户被路由到提供最低延迟 (时间延迟) 的边缘站点，从而以尽可能最佳的性能传送内容。
+- 如果该内容已经在延迟最短的边缘站点上，CloudFront 将直接提供它。
+- 如果内容不在边缘站点中，CloudFront 将从已确定为内容最终版本的源的 Amazon S3 存储桶或 HTTP 服务器（例如，Web 服务器）中进行检索。
+
+有关使用的信息 CloudFront 将内容分发到您的 Amazon S3 桶,请参见 Amazon CloudFront 开发人员指南中的[当从Amazon S3分发内容时添加 CloudFront](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/MigrateS3ToCloudFront.html#adding-cloudfront-to-s3) 。
 ## 4. 与其他服务集成
 ## 5. DNS 域名格式
 ## 6. 注册域名
