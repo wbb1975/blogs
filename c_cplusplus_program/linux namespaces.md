@@ -90,6 +90,39 @@ uts.nodename in parent: antero
 
 另一个可能性是set-user-ID应用可能使用主机名作为文件锁名字的一部分。如果一个非特权用户可以在一个UTS名字空间中以任意主机名运行应用，这将使得该应用对各种攻击开放。最简单的，这将使得文件锁无效，从而触发运行在不同 UTS 名字空间的应用行为异常。另外，一个不怀好意的用户可能在一个带有特定主机名的 UTS 名字空间运行set-user-ID应用创建锁文件而覆盖重要文件（主机名可以包含任意字符，甚至斜杠）。
 ### 2.2 /proc/PID/ns 文件
+每个进程都拥有一个 `/proc/PID/ns` 目录，其下每个名字空间有一个对应文件。从Linux 3.8开始，每个文件是一个特殊的符号链接，它提供了对一个进程的名字空间执行相关操作的句柄（handler）:
+```
+$ ls -l /proc/$$/ns         # $$ is replaced by shell's PID
+wangbb@c005mkkbjde03:~> ls -l /proc/15112/ns
+total 0
+lrwxrwxrwx. 1 wangbb wangbb 0 Dec 20 12:23 ipc -> ipc:[4026531839]
+lrwxrwxrwx. 1 wangbb wangbb 0 Dec 20 12:23 mnt -> mnt:[4026531840]
+lrwxrwxrwx. 1 wangbb wangbb 0 Dec 20 12:23 net -> net:[4026531956]
+lrwxrwxrwx. 1 wangbb wangbb 0 Dec 20 12:23 pid -> pid:[4026531836]
+lrwxrwxrwx. 1 wangbb wangbb 0 Dec 20 12:23 user -> user:[4026531837]
+lrwxrwxrwx. 1 wangbb wangbb 0 Dec 20 12:23 uts -> uts:[4026531838]
+```
+这些符号链接的一个用途是发现两个进程是否在同一名字空间。内核做了一些魔法可以确保如果两个进程在同一名字空间，在`/proc/PID/ns`下的符号链接文件的inode号是一样的。inode号可以通过系统调用 [stat()](http://man7.org/linux/man-pages/man2/stat.2.html)（在返回结构体的st_ino成员里）。
+
+但是，内核也在`/proc/PID/ns`构造了每一个符号链接，并且其名字包含可用于识别名字空间类型的字符串，其后跟随有inode号。我们可以使用 `ls -l` 或`readlink`命令来检查这个名字。让我们回到上次我们运行`demo_uts_namespaces`的shell会话，查看父进程和子进程在/proc/PID/ns下的符号链接提供了检测两个进程是否在同一个UTS名字空间的方法。
+```
+^Z                                # Stop parent and child
+[1]+  Stopped          ./demo_uts_namespaces bizarro
+# jobs -l                         # Show PID of parent process
+[1]+ 27513 Stopped         ./demo_uts_namespaces bizarro
+# readlink /proc/27513/ns/uts     # Show parent UTS namespace
+uts:[4026531838]
+# readlink /proc/27514/ns/uts     # Show child UTS namespace
+uts:[4026532338]
+```
+正如你看到的，/proc/PID/ns/uts 符号链接的内容是不同的，指示两个进程位于不同的 UTS名字空间里。
+
+/proc/PID/ns 符号链接也用于其它目的。如果我们打开其中任一文件，名字空间将保持打开，只要文件描述符把持打开，甚至名字空间里的所有进程都已经终止。通过挂载符号链接中的一个到文件系统的其它位置可以取得同样的效果。
+```
+# touch ~/uts                            # Create mount point
+# mount --bind /proc/27514/ns/uts ~/uts
+```
+在Linux 3.8之前，/proc/PID/ns下的文件是硬链接而非上文描述的特殊符号链接形式。此外，只有ipc, net 和 uts 存在。
 ### 2.3 假如一个已有名字空间：setns()
 ### 2.4 脱离一个名字空间：unshare()
 ### 2.5 总结评论（Concluding remarks）
