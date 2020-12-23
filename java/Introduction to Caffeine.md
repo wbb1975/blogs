@@ -74,7 +74,7 @@ assertNull(dataObject);
 ### 3.2 同步加载
 这种缓存加载的方法需要一个 Function，它被用于初始化值，就像手动战略里的 get 方法。让我们来查看如何使用它。
 
-首先，我们乔初始化缓存：
+首先，我们需要初始化缓存：
 ```
 LoadingCache<String, DataObject> cache = Caffeine.newBuilder()
   .maximumSize(100)
@@ -104,7 +104,7 @@ AsyncLoadingCache<String, DataObject> cache = Caffeine.newBuilder()
   .expireAfterWrite(1, TimeUnit.MINUTES)
   .buildAsync(k -> DataObject.get("Data for " + k));
 ```
-我们可以以同样的方式使用get和getAll方法，除了需要考虑到这个事实--它们返回CompletableFuture：
+我们可以**以同样的方式使用get和getAll方法**，除了需要考虑到这个事实--它们返回CompletableFuture：
 ```
 String key = "A";
 
@@ -254,3 +254,5 @@ assertEquals(1, cache.stats().missCount());
 
 ## REference
 - [Introduction to Caffeine](https://www.baeldung.com/java-caching-caffeine)
+- [Guide To CompletableFuture](https://www.baeldung.com/java-completablefuture)
+- [Spring Boot and Caffeine Cache](https://www.baeldung.com/spring-boot-caffeine-cache)

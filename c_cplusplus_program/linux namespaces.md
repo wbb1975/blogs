@@ -117,13 +117,20 @@ uts:[4026532338]
 ```
 正如你看到的，/proc/PID/ns/uts 符号链接的内容是不同的，指示两个进程位于不同的 UTS名字空间里。
 
-/proc/PID/ns 符号链接也用于其它目的。如果我们打开其中任一文件，名字空间将保持打开，只要文件描述符把持打开，甚至名字空间里的所有进程都已经终止。通过挂载符号链接中的一个到文件系统的其它位置可以取得同样的效果。
+/proc/PID/ns 符号链接也用于其它目的。如果我们打开其中任一文件，名字空间将保持打开，只要文件描述符把持打开，甚至名字空间里的所有进程都已经终止。通过绑定挂载（bind mounting）符号链接中的一个到文件系统的其它位置可以取得同样的效果。
 ```
 # touch ~/uts                            # Create mount point
 # mount --bind /proc/27514/ns/uts ~/uts
 ```
 在Linux 3.8之前，/proc/PID/ns下的文件是硬链接而非上文描述的特殊符号链接形式。此外，只有ipc, net 和 uts 存在。
-### 2.3 假如一个已有名字空间：setns()
+### 2.3 加入一个已有名字空间：setns()
+保持一个没有任何进程在里面的名字空间开放只在一种情况下有用：我们稍后会向其添加新的进程。这是系统调用[setns()](http://man7.org/linux/man-pages/man2/setns.2.html)的任务，它允许调用进程加入到一个已经存在的名字空间。
+```
+int setns(int fd, int nstype);
+```
+更准确地讲，setns() 把调用进程与一个特定类型的名字空间实例解除绑定（disassociates ），然后将该进程与同类型名字空间的另一个实例绑定。
+
+`fd` 参数指定了将要加入的名字空间，它是指向 `/proc/PID/ns` 下的一个符号链接的文件描述符。该文件描述符可以通过两种方式获得：直接打开一个符号链接或一个与该链接绑定挂载的文件。
 ### 2.4 脱离一个名字空间：unshare()
 ### 2.5 总结评论（Concluding remarks）
 ## Part 3: PID namespaces
@@ -134,6 +141,39 @@ uts:[4026532338]
 ## Mount namespaces and shared subtrees
 ## Mount namespaces, mount propagation, and unbindable mounts
 ## Append A namespaces(7)
+## Append B What is a bind mount?
+### B1 What is a bind mount?
+绑定挂载（bind mount）是目录树的另一种视图。传统上挂载将为存储设备创建一个目录树视图。绑定挂载则将一个已存在的目录树复制到一个不同的（挂载）点下。绑定挂载点下的文件和目录与源头一模一样。在一边的任何修改立即在另一边得到反映--两个视图显示同样的数据。
+
+例如，发出下面的命令：
+```
+mount --bind /some/where /else/where
+```
+目录 `/some/where` 和 `/else/where` 拥有同样的内容，即 `/some/where` 的内容（如果 `/else/where` 不空，则其之前的内容将被隐藏）。
+
+不像硬链接和符号链接，一个绑定挂载并不影响文件系统存储的内容，它只是运行系统（live system）的一个属性。
+### B2 How do I create a bind mount?
+#### bindfs
+[bindfs](http://bindfs.org/)文件系统是一种[FUSE](http://en.wikipedia.org/wiki/Filesystem_in_Userspace)，它创建了目录树的一个视图。例如，下面的命令：
+```
+bindfs /some/where /else/where
+```
+使得 `/else/where` 成为一个挂载点，其下`/some/where`中的内容可见。
+
+因为 `bindfs` 是一个单独的文件系统，对应用来讲 `/some/where/foo` 和 `/else/where/foo` 是不同的文件（bindfs文件系统有其自己的 `st_dev` 值）。在一边的修改可以很魔幻地在另一个体现出来。但是文件相同的事实只有在一个人知道 `bindfs` 如何运行时才是明显的。
+
+bindfs 并不了解挂载点，因此如果在`/else/where`下有一个挂载点，它看起来就像是在`/else/where`下的另一个目录。在`/else/where`下挂载或下载一个文件系统，看起来就像是`/else/where`下对应目录的一个修改。
+
+bindfs 可能改变文件的某些元信息：它可以显示文件的错误权限和所有权。查看[手册](http://bindfs.org/docs/bindfs.1.html)以了解更多细节，查看下面的内容一看到更多示例。
+
+bindfs 文件系统可以由一个非root账号挂载，你进进只需要挂载`FUSE`文件系统的权限。依赖于你的分发版，这可能要求在`fuse` 组，或者对所有用户开放。为了卸载一个`FUSE`文件系统，使用`fusermount -u`而不是`umount`等。
+```
+fusermount -u /else/where
+```
+#### nullfs
+#### Linux bind mount
+#### I can't get bind mounts to work!
+### B3 Use cases
 
 ## Referecen
 - [Namespaces in operation](https://lwn.net/Articles/531114/)
@@ -143,3 +183,4 @@ uts:[4026532338]
 - [Linux kernel namespaces](https://www.kernel.org/doc/Documentation/namespaces/)
 - [cgroups(7) — Linux manual page](https://man7.org/linux/man-pages/man7/cgroups.7.html)
 - [clone() system call](https://man7.org/linux/man-pages/man2/clone.2.html)
+- [What is a bind mount?](https://unix.stackexchange.com/questions/198590/what-is-a-bind-mount)
