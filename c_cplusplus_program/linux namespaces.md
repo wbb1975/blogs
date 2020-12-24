@@ -131,7 +131,39 @@ int setns(int fd, int nstype);
 更准确地讲，setns() 把调用进程与一个特定类型的名字空间实例解除绑定（disassociates ），然后将该进程与同类型名字空间的另一个实例绑定。
 
 `fd` 参数指定了将要加入的名字空间，它是指向 `/proc/PID/ns` 下的一个符号链接的文件描述符。该文件描述符可以通过两种方式获得：直接打开一个符号链接或一个与该链接绑定挂载的文件。
+
+`nstype` 参数让调用方检验`fd`参数引用的名字空间类型。如果这个参数被指定为0，就不会执行检查。当调用方已经知道名字空间类型或者不关心类型时，这个特性可能有用。我们售后将讨论的示例程序（ns_exec.c）属于后者：它被设计为与任何名字空间类型工作。指定`nstype`为CLONE_NEW* 常量之一会促使内核验证`fd`是指向对应名字空间类型的文件描述符。这可能很有用，例如，调用方被通过UNIX域套接字传递一个文件描述符，需要验证它所指向的名字空间类型。
+
+使用`setns()` 和 `execve()` (或者其它 `exec()` 函数族之一) 可以让我们构建一个简单单有用的工具：一个程序可以加入到一个特定名字空间并在其中执行命令。
+
+我们的应用（ns_exec.c，其完整代码可在[这里](https://lwn.net/Articles/531271/)找到）可传递两个或更多命令行参数。第一个参数是一个 `/proc/PID/ns/*` 下的符号链接的路径名（或一个文件绑定挂载指向这些符号链接中的一个）。剩余的参数是在名字空间执行的程序名，对应该符号链接以及一些传递给该程序的可选参数。程序的主要步骤如下：
+```
+fd = open(argv[1], O_RDONLY);   /* Get descriptor for namespace */
+
+setns(fd, 0);                   /* Join that namespace */
+
+execvp(argv[2], &argv[2]);      /* Execute a command in namespace */
+```
+在一个名字空间里执行的一个有趣的程序是 `shell`。我们可以使用连接UTS 名字空间的绑定挂载（该名字空间先前由ns_exec 创建）并在我们用demo_uts_namespaces创建的新的UTS名字空间里执行`shell`。
+```
+# ./ns_exec ~/uts /bin/bash     # ~/uts is bound to /proc/27514/ns/uts
+My PID is: 28788
+```
+我们可以验证`shell`和由`demo_uts_namespaces`创建的子进程在同一个UTS名字空间里，都通过检查主机名以及比较 `/proc/PID/ns/uts` 文件的inode号，
+```
+# hostname
+bizarro
+# readlink /proc/27514/ns/uts
+uts:[4026532338]
+# readlink /proc/$$/ns/uts      # $$ is replaced by shell's PID
+uts:[4026532338]
+```
+在早期内核版本中，不能使用setns()来加入挂载, 进程ID, 和用户名字空间，但是从Linux 3.8 开始，setns()支持加入所有的名字空间。
 ### 2.4 脱离一个名字空间：unshare()
+名字空间API的最后一个系统调用是[unshare()](http://man7.org/linux/man-pages/man2/unshare.2.html):
+```
+    int unshare(int flags);
+```
 ### 2.5 总结评论（Concluding remarks）
 ## Part 3: PID namespaces
 ## Part 4: more on PID namespaces
