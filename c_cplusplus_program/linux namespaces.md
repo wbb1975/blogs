@@ -142,7 +142,7 @@ int setns(int fd, int nstype);
 ## Mount namespaces, mount propagation, and unbindable mounts
 ## Append A namespaces(7)
 ## Append B What is a bind mount?
-### B1 What is a bind mount?
+### B.1 What is a bind mount?
 绑定挂载（bind mount）是目录树的另一种视图。传统上挂载将为存储设备创建一个目录树视图。绑定挂载则将一个已存在的目录树复制到一个不同的（挂载）点下。绑定挂载点下的文件和目录与源头一模一样。在一边的任何修改立即在另一边得到反映--两个视图显示同样的数据。
 
 例如，发出下面的命令：
@@ -152,7 +152,7 @@ mount --bind /some/where /else/where
 目录 `/some/where` 和 `/else/where` 拥有同样的内容，即 `/some/where` 的内容（如果 `/else/where` 不空，则其之前的内容将被隐藏）。
 
 不像硬链接和符号链接，一个绑定挂载并不影响文件系统存储的内容，它只是运行系统（live system）的一个属性。
-### B2 How do I create a bind mount?
+### B.2 我们如何创建一个绑定挂载（bind mount）？
 #### bindfs
 [bindfs](http://bindfs.org/)文件系统是一种[FUSE](http://en.wikipedia.org/wiki/Filesystem_in_Userspace)，它创建了目录树的一个视图。例如，下面的命令：
 ```
@@ -171,9 +171,57 @@ bindfs 文件系统可以由一个非root账号挂载，你进进只需要挂载
 fusermount -u /else/where
 ```
 #### nullfs
-#### Linux bind mount
-#### I can't get bind mounts to work!
-### B3 Use cases
+FreeBSD 提供了 [nullfs](https://www.freebsd.org/cgi/man.cgi?query=nullfs&sektion=5)文件系统，它创建了文件系统的另一个视图。下面的两个命令等价：
+```
+mount -t nullfs /some/where /else/where
+mount_nullfs /some/where /else/where
+```
+当发布以上任意一条命令后，`/else/where`成了一个挂载点，其下`/some/where/foo`的内容皆可见。
+
+因为 nullfs 是一个单独的文件系统，对应用来讲 `/some/where/foo` 和 `/else/where/foo` 是不同的文件（nullfs文件系统有其自己的 `st_dev` 值）。在一边的修改可以很魔幻地在另一个体现出来。但是文件相同的事实只有在一个人知道 `nullfs` 如何运行时才是明显的。
+
+不像FUSE bindfs，它在目录树级别运行，FreeBSD的nullfs 更深入内核运行。因此`/else/where`下的挂载点是不可见的： 只有同一个挂载点例如`/some/where`的树的部分可以在`/else/where`下见到。
+
+nullfs 文件系统可能在其它BSD变种平台下可用（OS X, OpenBSD, NetBSD），但它并未被编译为默认系统的一部分。
+#### Linux 绑定挂载
+在Linux下，绑定挂载以内核特性的方式可用。你可以使用[mount](http://man7.org/linux/man-pages/man8/mount.8.html)命令创建，通过传递`--bind`命令行选项或者`bind` 挂载选项。下面的两个命令等价：
+```
+mount --bind /some/where /else/where
+mount -o bind /some/where /else/where
+```
+这里“设备”`/some/where`并非一个磁盘分区，因此它不是磁盘上的文件系统，而是一个已经存在的目录。像平常一样`/else/where`必须是一个已经存在的目录。注意任一种方式都无需指定文件系统类型：构建一个绑定挂载并不涉及文件系统驱动，它从原始挂载点拷贝内核数据结构。
+
+`mount --bin`也支持挂载一个非目录到另一个非目录：`/some/where`可以是一个常规文件（在这种情况下`/else/where`也必须是一个常规文件）。
+
+一个Linux绑定挂载点不能与其原始文件区别，命令`df -T /else/where`将显示和`df -T /some/where`同样的设备和文件系统类型。文件 `/some/where/foo` 和 `/else/where/foo` 也是不可区分的，就像它们是硬链接一样。可以在卸载`/some/where`的同时保持`/else/where`的挂载状态。
+
+对于某些旧版本内核（我不知道确切版本但到某些3.X为止），绑定挂载与源文件完全不可区分。最近的内核可以追踪挂载绑定，并通过`<code/proc/PID/mountinfo`暴露信息，这允许[findmnt](https://unix.stackexchange.com/questions/295525/how-is-findmnt-able-to-list-bind-mounts)指示这是一个绑定挂载。
+
+你可以把绑定挂载条目放在 `/etc/fstab`，仅仅在选项中包含`bind`（或`rbind`等）以及其它一些你期待的选项。“设备”是存在的树。文件系统栏可以填`none` 或 `bind`（它被忽略，但使用文件系统类型会导致混淆）。例如：
+```
+/some/where /readonly/view none bind,ro
+```
+如果在`/some/where`下有挂载点，它们的类容在`/some/where`下不可见。作为替代，你可以使用`rbind`而非`bind`，它会复制`/some/where`下的挂载点。例如，如果`/some/where/mnt`是一个挂载点，那么
+```
+mount --rbind /some/where /else/where
+```
+与下面的命令等价：
+```
+mount --bind /some/where /else/where
+mount --bind /some/where/mnt /else/where/mnt
+```
+另外，Linux允许挂载点被声明为`shared`, `slave`, `private` 或 `unbindable`。这影响了在绑定挂载点下绑定挂载操作是否复制挂载点。更多信息，请参阅[内核文档](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt)。
+
+Linux也提供了方式来移动挂载点：这里`--bind` 拷贝, `--move` 移动挂载点。
+
+可以在绑定挂载的两个目录上给定不同的挂载选项。但是，有一个意外：发起绑定挂载和设定挂载选项不能是原子的。它们必须是两个顺序操作。（老版内核不允许这样）。例如，下面的命令创建了一个只读视图，但有一个小的时间窗口`/else/where`是可读写的。
+```
+mount --bind /some/where /else/where
+mount -o remount,ro,bind /else/where
+```
+#### 我的绑定挂载无法工作
+如果你的系统不支持FUSE。达到同样效果的一个传统技巧是运行一个 NFS 服务器，让他导出你想暴露的文件（允许对 `localhost` 访问），并将其挂载到听一台机器上。这种方式有一个重要的内存和性能负担，因此五一绑定挂载是有优势的（大多数UNIX变体上都有FUSE）。
+### B.3 用例
 
 ## Referecen
 - [Namespaces in operation](https://lwn.net/Articles/531114/)
