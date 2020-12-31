@@ -164,8 +164,204 @@ uts:[4026532338]
 ```
     int unshare(int flags);
 ```
+`unshare()` 系统调用提供了与 `clone()`相似的功能，但是作用于调用进程上：它新创建了由 `flags` 参数中的 `CLONE_NEW*` 位所指定的名字空间，并使调用方称为名字空间的一员。（就像clone()，unshare()提供了名字空间以外的功能，我们这里将忽略它们）。`unshare()`的主要功能是隔离名字空间（以及其它）副作用，而无需创建一个新的进程或线程（就像clone()所做的）。
+
+把clone()系统调用的其它功能放在一边，以下调用形式
+```
+    clone(..., CLONE_NEWXXX, ....);
+```
+在名字空间术语上，与下面调用大致相同：
+```
+if (fork() == 0)
+    unshare(CLONE_NEWXXX);      /* Executed in the child process */
+```
+`unshare()` 系统调用的一个主要用途是实现 `unshare` 命令，它允许用户在另一个与 `shell` 不同的名字空间执行命令。这个命令的一般形式如下：
+```
+unshare [options] program [arguments]
+```
+`options` 是命令行标记，它执行了在以 `arguments` 为参数执行 `program` 之前 `unshare` 的名字空间。
+
+`unshare` 命令的实现的关键步骤是想直接的：
+```
+/* Code to initialize 'flags' according to command-line options omitted */
+
+unshare(flags);
+
+/* Now execute 'program' with 'arguments'; 'optind' is the index
+of the next command-line argument after options */
+
+execvp(argv[optind], &argv[optind]);
+```
+`unshare` 命令的一个简单实现（`unshare.c`）可在[这里](https://lwn.net/Articles/531826/)找到。
+
+在下面的 `shell` 会话中，我们使用我们的 `unshare.c` 程序来在一个单独的挂载名字空间执行一个 `shell`。正如我们在上周的文章里提到的，挂载名字空间隔离了一组进程看到的文件系统挂载点，允许在不同挂载名字空间的进程看到不同层级的文件系统。
+```
+# echo $$                             # Show PID of shell
+8490
+# cat /proc/8490/mounts | grep mq     # Show one of the mounts in namespace
+mqueue /dev/mqueue mqueue rw,seclabel,relatime 0 0
+# readlink /proc/8490/ns/mnt          # Show mount namespace ID 
+mnt:[4026531840]
+# ./unshare -m /bin/bash              # Start new shell in separate mount namespace
+# readlink /proc/$$/ns/mnt            # Show mount namespace ID 
+mnt:[4026532325]
+```
+比较两个readlink 命令的输出可以看到两个shells 位于不同的挂载名字空间。在一个名字空间里更改挂载点，在别的名字空间检验该改变是否可见，这提供了位于两个进程位于两个不同名字空间的另一种展示方法。
+```
+# umount /dev/mqueue                  # Remove a mount point in this shell
+# cat /proc/$$/mounts | grep mq       # Verify that mount point is gone
+# cat /proc/8490/mounts | grep mq     # Is it still present in the other namespace?
+mqueue /dev/mqueue mqueue rw,seclabel,relatime 0 0
+```
+可以从上面两个命令输出看到，/dev/mqueue 挂载点已经在一个挂载名字空间里被移除了，但在另一个名字空间里依然存在。
 ### 2.5 总结评论（Concluding remarks）
+在本文中我们给出了名字空间API的基本概览，以及它们是如何使用的。在下面的文章中，我们将深入探讨一些别的名字空间，特别地，PID 以及用户名字空间；用户名字空间打开了一定范围的可能性--它使得应用可以使用之前只能被特权应用使用的一些内核接口。
 ## Part 3: PID namespaces
+随着上两篇名字空间的文章，让我们转过头来看看 PID 名字空间。由 PID 名字空间隔离的全局资源是进程ID数字空间。这意味这在不同 PID 名字空间的进车该可以拥有相同的金册个ID，PID 名字空间用于实现在不同主机系统键迁移的容器，在不同的容器内部进程可以保持相同的进程ID。
+
+就像传统Linux（或UNIX）上的进程，在PID名字空间里的进程ID是独一无二的，从PID 1起其顺序递增。同样地，像传统Linux系统，PID 1--初始化进程--时特别的：它是该名字空间创建的第一个进程，并且它在改名字空间执行一定的管理任务。
+### 3.1  首次调查（First investigations）
+一个新的PID名字空间通过调用[clone()](http://man7.org/linux/man-pages/man2/clone.2.html) 传递 `CLONE_NEWPID` 标记的方式创建。我们就展示一个简单的示例应用，它使用clone()创建一个新的PID名字空间，并利用该应用标出了PID名字空间的一些基本概念。这个应用（pidns_init_sleep.c）的完整代码可在[这里](https://lwn.net/Articles/532741/)找到。正如本系列之前的文章，为了简化目的，在讨论文章本体时，我们略过了错误处理代码（但这些错误处理代码在实例应用的完整版本中存在）。
+
+主程序利用clone()创建了一个PID名字空间，并在打印了创建的子进程的进程ID：
+```
+        child_pid = clone(childFunc,
+                child_stack + STACK_SIZE,   /* Points to start of downwardly growing stack */
+                CLONE_NEWPID | SIGCHLD, argv[1]);
+
+printf("PID returned by clone(): %ld\n", (long) child_pid);
+```
+新的子进程在childFunc()中开始执行，它接受了clone调用的最后一个参数（argv[1]）作为其参数。该参数的目的在售后将变得清晰起来。
+
+childFunc()函数打印了进程ID以及clone()创建的子进程的父进程ID，并以执行标准 `sleep` 程序结束：
+```
+    printf("childFunc(): PID = %ld\n", (long) getpid());
+    printf("ChildFunc(): PPID = %ld\n", (long) getppid()); 
+    ...
+    execlp("sleep", "sleep", "1000", (char *) NULL); 
+```
+执行`sleep`的主要好处在于它给我们提供了一个简单的方式来将子进程与父进程区别开来。
+
+当我们执行这个应用时，头行输出如下：
+```
+    $ su         # Need privilege to create a PID namespace
+    Password: 
+    # ./pidns_init_sleep /proc2
+    PID returned by clone(): 27656
+    childFunc(): PID  = 1
+    childFunc(): PPID = 0
+    Mounting procfs at /proc2
+```
+pidns_init_sleep 的头两行输出显式了子进程在两个不同PID名字空间的进程ID：clone() 调用者所在的名字空间以及子进程所在的名字空间。换句话说，子进程拥有两个进程ID：在父进程名字空间是27656 ，在有clone()嗲用创建的名字空间是1。
+
+下一行显示了子进程的父进程ID，在子进程驻留的PID名字空间上下文中（由getppid()返回的值）。父进程PID是0，演示了PID名字空间的一个小小借口。正如我们将详细讨论的，PID 名字空间形成了一个层级：一个进程仅能看到在其PID 名字空间以及其下嵌套名字空间里的进程，因为由clone()创建的子进程的父进程在一个不同的PID名字空间，子进程看不到父进程；因此，getppid()报告其父进程为0.
+
+对pidns_init_sleep最后一行输出的解释，我们将返回到我们讨论childFunc()函数的实现时跳过的一部分代码。
+### 3.2  /proc/PID 和 PID 名字空间（/proc/PID and PID namespaces）
+Linux系统上的每个进程都有一个 `/proc/PID`--它容纳了描述该进程的伪文件。这个模式被直接用于 PID 名字空间模型。在一个PID 名字空间里，`/proc/PID` 目录仅仅显示在该 PID 名字空间或其子名字空间里的进程信息。
+
+但是，为了使一个PID名字空间对应的`/proc/PID` 目录可见，proc文件系统（简称"procfs"）需要从PID名字空间内部挂载。从一个运行在PID名字空间内部的shell （可能通过system()库函数），我们可以使用mount 命令做到这一点，就像下面这个格式：
+```
+    # mount -t proc proc /mount_point
+```
+另外， 一个procfs可以通过mount()系统调用挂载，就像我们已经在我们的应用里的childFunc()函数里所做的那样：
+```
+    mkdir(mount_point, 0555);       /* Create directory for mount point */
+    mount("proc", mount_point, "proc", 0, NULL);
+    printf("Mounting procfs at %s\n", mount_point);
+```
+当pidns_init_sleep被运行时，变量mount_point被一个从命令行传来的字符串参数初始化。
+
+在我们的例子中，shell运行`pidns_init_sleep`，我们还将 `procfs` 挂载于`/proc2`。在实际使用中，通过使用我们将稍后谈到的方法之一，procfs （如果必要）通常被挂载到通常的地方，`/proc`。但是，在我们的演示中把 `procfs` 挂载到 `/proc2` 提供了一种避免给系统中的其它进程带来问题的一种更简单方法：因为这些进程与我们的测试程序位于同一挂载名字空间，改变挂载于 `/proc` 的文件系统将是系统的其它进程混淆--根PID名字空间里的 1/proc/PID` 将变得不可见。
+
+因此，在我们的shell 会话中，挂载于 `/proc` 的procfs将使得PID子目录对来自父PID名字空间的进程可见；挂载于 `/proc2 ` 的procfs将使得PID子目录对来自子PID名字空间的进程可见。在传递中，值得注意的是，虽然子 PID 名字空间里的进程可以看到由 `/proc` 挂载点暴露出来的PID 目录，这些PID对于子PID名字空间里的进程毫无意义，因为这些进程将基于其所处的PID名字空间上下文来解释这些进程ID。
+
+如果我们向让各种工具如 `ps` 在子PID名字空间正常工作，那么将 procfs文件系统挂载于传统的/proc就是必须的--这些工具依赖位于 `/proc` 下的信息。有两种方式可以达到这个目的而不影响父PID 名字空间的 `/proc` 挂载点。首先，如果子进程使用 `CLONE_NEWNS` 标记创建，则其位于一个与系统中的其它部分不一样的挂载名字空间。在这种情况下，在 `/proc` 下挂载新的procfs不会引起任何问题。另一种方式下，不使用 `CLONE_NEWNS` 标记，子进程可以使用 `chroot()` 来更改其根目录并在 `/proc` 下挂载procfs.
+
+让我们回到运行 `pidns_init_sleep` 的shell会话。我们停止该程序，在父名字空间的上下文中来检查父进程和子进程的一些细节：
+```
+    ^Z                          Stop the program, placing in background
+    [1]+  Stopped                 ./pidns_init_sleep /proc2
+    # ps -C sleep -C pidns_init_sleep -o "pid ppid stat cmd"
+      PID  PPID STAT CMD
+    27655 27090 T    ./pidns_init_sleep /proc2
+    27656 27655 S    sleep 600
+```
+上面输出的最后一行中的 "PPID" 值 (27655) 显示执行 `sleep` 的进程的父进程就是执行 `pidns_init_sleep` 的进程。
+
+通过使用readlink来显示/proc/PID/ns/pid符号链接（[上星期文章解释过](https://lwn.net/Articles/531381/#proc_pid_ns)）的（不同）内容，我们可以看到两个进程位于不同的PID名字间：
+```
+    # readlink /proc/27655/ns/pid
+    pid:[4026531836]
+    # readlink /proc/27656/ns/pid
+    pid:[4026532412]
+```
+在这个点，从那个名字空间的视角， 我们也可以使用新挂载的 procfs 来获取新PID名字空间里的进程的信息。作为开始，我们可以使用下面的命令来获取该名字空间下的进程ID列表：
+```
+    # ls -d /proc2/[1-9]*
+    /proc2/1
+```
+如你所见，PID名字空间下只有一个进程，其进程ID（在该名字空间下）为1。我们也可以使用/proc/PID/status文件作为获取之前shell会话看到进程的同样的信息的一部分的另一种方法。
+```
+    # cat /proc2/1/status | egrep '^(Name|PP*id)'
+    Name:   sleep
+    Pid:    1
+    PPid:   0
+```
+该文件中 PPid 字段为0，与getppid() 报告子进程的父进程ID为0的事实相符。
+### 3.3  嵌套PID名字空间（Nested PID namespaces）
+正如前面提到的，PID名字空间是层级化嵌套于父子关系中。在一个PID 名字空间里，可能看到所有其它进程位于同一名字空间，所有进程皆为子名字空间的成员。这里，“看到”指能通过系统调用对特定PID进行操作（例如，利用kill()对进程发信号）。子PID 名字空间里的进车该看不到（仅仅）存在于父PID名字空间（或更远的祖先名字空间）里的进程。
+
+从一个进程驻留的PID名字空间开始知道根PID名字空间，对PID名字空间层级上每一层，该进程都有一个PID。调用getpid()总是返回该进程驻留的PID名字空间里的进程ID。
+
+我们可以使用这个[程序](https://lwn.net/Articles/532745/)（multi_pidns.c）来显示在每一个其可见的名字空间里它拥有不同的进程ID。为了简化，我们仅仅解释该程序做些什么，而不会细究程序代码细节。
+
+该进程递归地在嵌套PID名字空间里创建一系列子进程，命令行参数指定了程序执行时多少个子进程和PID名字空间将会被创建。
+```
+    # ./multi_pidns 5
+```
+除了创建新的子进程，每个递归步骤在唯一挂载点挂载了 procfs 文件系统，在递归结束点，最后的子进程执行 sleep 程序，上面的命令行产生下面的输出：
+```
+    Mounting procfs at /proc4
+    Mounting procfs at /proc3
+    Mounting procfs at /proc2
+    Mounting procfs at /proc1
+    Mounting procfs at /proc0
+    Final child sleeping
+```
+在每个procfs里查看PID，我们看到每个接续procfs 拥有更少的进程ID，这反映一个事实--每个PID名字空间仅仅显示该名字空间及其后继名字空间里的成员的进程ID。
+```
+    ^Z                           Stop the program, placing in background
+    [1]+  Stopped            ./multi_pidns 5
+    # ls -d /proc4/[1-9]*        Topmost PID namespace created by program
+    /proc4/1  /proc4/2  /proc4/3  /proc4/4  /proc4/5
+    # ls -d /proc3/[1-9]*
+    /proc3/1  /proc3/2  /proc3/3  /proc3/4
+    # ls -d /proc2/[1-9]*
+    /proc2/1  /proc2/2  /proc2/3
+    # ls -d /proc1/[1-9]*
+    /proc1/1  /proc1/2
+    # ls -d /proc0/[1-9]*        Bottommost PID namespace
+    /proc0/1
+```
+一个合适的 grep 命令行允许我们在每个该进程可见的PID名字空间里递归尾端（例如，深度嵌套名字空间里执行sleep 程序的进程）的进程ID。
+```
+    # grep -H 'Name:.*sleep' /proc?/[1-9]*/status
+    /proc0/1/status:Name:       sleep
+    /proc1/2/status:Name:       sleep
+    /proc2/3/status:Name:       sleep
+    /proc3/4/status:Name:       sleep
+    /proc4/5/status:Name:       sleep
+```
+换句话说，在嵌套最深的PID名字空间（/proc0），执行sleep 的进程拥有进程ID 1，在最上面的PID名字空间（/proc4），该进程拥有进程ID 5。
+
+如果你运行本文里的测试程序，值得注意的是它们留下挂载点和挂载目录。程序结束后，下面的shell 命令足够帮助我们清理它们：
+```
+    # umount /proc?
+    # rmdir /proc?
+```
+### 3.4  总结评论（Concluding remarks）
+在本文中，我们看到了PID 名字空间操作的一些细节。在下一篇文章，我们将讨论PID名字空间里的 init 进程，以及PID 名字空间API的一些细节。
 ## Part 4: more on PID namespaces
 ## Part 5: user namespaces
 ## Part 6: more on user namespaces
