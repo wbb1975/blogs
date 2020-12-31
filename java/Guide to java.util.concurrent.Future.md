@@ -148,7 +148,62 @@ future1 is not done and future2 is not done
 
 关于ExecutorService的更多信息，阅读聚焦与这个主题的这篇[文章](https://www.baeldung.com/java-executor-service-tutorial)。
 ## 5. ForkJoinTask概述
+[ForkJoinTask](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinTask.html)是一个抽象类，它实现了Future接口，并可利用[ForkJoinPool](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html)中为数不多的线程运行许多任务。
+
+在本节中，我们将快速讨论ForkJoinPool的主要特征。关于这个主题的更深入的指南，查阅我们的[Java Fork/Join 框架指南](https://www.baeldung.com/java-fork-join)。
+
+然后ForkJoinTask 的主要特征是它通常会产生一个子任务作为所需工作的一部分以完成主要任务。它通过调用[fork()](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinTask.html#fork--) 产生新任务，它通过[join()](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinTask.html#join--)收集结果，然后是类名。
+
+由两个抽象类实现了ForkJoinTask：[RecursiveTask](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/RecursiveTask.html)，它当任务结束时返回一个值；[RecursiveAction](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/RecursiveAction.html)，它不返回任何东西。正如其名字暗示的，这些类可被用于递归任务，比如文件系统导航或复杂的算数运算。
+
+让我们扩展以前的例子，创建一个类，给定一个整数，它将计算该整数约数的平方和。因此，如果我们传递4给我们的计算器，我们将得到下面的和4² + 3² + 2² + 1²，结果为30.
+
+首先，我们需要黄建一个 RecursiveTask 的实体类，实现它的compute() 方法，这是我们撰写我们的业务逻辑的地方：
+```
+public class FactorialSquareCalculator extends RecursiveTask<Integer> {
+ 
+    private Integer n;
+
+    public FactorialSquareCalculator(Integer n) {
+        this.n = n;
+    }
+
+    @Override
+    protected Integer compute() {
+        if (n <= 1) {
+            return n;
+        }
+
+        FactorialSquareCalculator calculator 
+          = new FactorialSquareCalculator(n - 1);
+
+        calculator.fork();
+
+        return n * n + calculator.join();
+    }
+}
+```
+注意到我们是通过在compute()里创建一个新的FactorialSquareCalculator实例来实现递归的，通过调用fork()，一个非堵塞方法，我们请求ForkJoinPool初始化该子任务的执行。
+
+join() 方法将返回该计算的结果，并添加我们当前正访问的数字的平方。
+
+现在我们只需要创建一个ForkJoinPool来处理执行和线程管理：
+```
+ForkJoinPool forkJoinPool = new ForkJoinPool();
+
+FactorialSquareCalculator calculator = new FactorialSquareCalculator(10);
+
+forkJoinPool.execute(calculator);
+```
 ## 6. 结论
+在本文中，我们对Future 接口有了一个综合视图，走访了它的所有方法。我们也体会了利用线程池的为例来实现多道平行处理。ForkJoinTask 的主要方法，ork() 和 join()也被简单地提到了。
+
+我们还有许多其它伟大的事关Java中并行和异步操作的文章，下面是3篇与Future接口紧密相关的（其中一些已经在本文中提到了）：
+- [Guide to CompletableFuture](https://www.baeldung.com/java-completablefuture)：一个Java 8中引入带有许多额外特性的Future 的实现
+- [Guide to the Fork/Join Framework in Java](https://www.baeldung.com/java-fork-join) ：比我们在第5节谈到的更多关于ForkJoinTask的信息
+- [Guide to the Java ExecutorService](https://www.baeldung.com/java-executor-service-tutorial)：专注于ExecutorService 接口
+
+本文源代码可以[GitHub repository](https://github.com/eugenp/tutorials/tree/master/core-java-modules/core-java-concurrency-basic)中看到。
 
 ## Reference
 - [Guide to java.util.concurrent.Future](https://www.baeldung.com/java-future)
