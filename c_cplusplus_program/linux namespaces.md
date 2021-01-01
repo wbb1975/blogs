@@ -363,6 +363,64 @@ Linux系统上的每个进程都有一个 `/proc/PID`--它容纳了描述该进�
 ### 3.4  总结评论（Concluding remarks）
 在本文中，我们看到了PID 名字空间操作的一些细节。在下一篇文章，我们将讨论PID名字空间里的 init 进程，以及PID 名字空间API的一些细节。
 ## Part 4: more on PID namespaces
+在本文中，我们将继续上周对PID名字空间的[讨论](https://lwn.net/Articles/532271/)（扩展我们的名字空间[系列](https://lwn.net/Articles/531114/#series_index)）。PID 名字空间的一个主要用途是实现一揽子进程（一个容器）向一个自包含的Linux系统一样运作。传统系统的一个关键部分--一个PID名字空间容器也一样--是 `init` 进程。因此，我们将探讨`init` 进程的特殊角色，并指出它与传统`init` 进程不一样的几处地方。另外， 我们也将讨论应用于PID名字空间时名字空间API的一些其它细节。
+### 4.1 PID名字空间 init 进程
+一个PID名字空间里创建的第一个进程在该名字空间的进程ID是1。该进程承担与传统Linux系统 init 进程相似的角色。特别地，init 进程可以为PID名字空间整体执行必要的初始化工作（例如，启动其它作为名字空间标准已部分的进程），并成为该名字空间内孤儿进程的父进程。
+
+为了解释PID名字空间的运作，我们将利用一些特别构造的示例应用。第一个应用，[ns_child_exec.c](https://lwn.net/Articles/533492/)，具有下面的命令行语法：
+```
+    ns_child_exec [options] command [arguments]
+```
+`ns_child_exec` 使用了 `clone()` 系统调用创建子进程；子进程接下来结合可选参数执行给定的命令。`options` 的主要目的指定作为clone()系统调用被创建的一部分新名字空间。例如，-p 选项使得子进程在一个新的PID名字空间里创建，如下例所示：
+```
+    $ su                  # Need privilege to create a PID namespace
+    Password:
+    # ./ns_child_exec -p sh -c 'echo $$'
+    1
+```
+该命令行在一个新的PID名字空间创建了一个子进程来执行一个 `shell echo` 命令，它将显示shell的进程ID。 shell 拥有进程ID 1，因此当 shell 运行时，PID名字空间一直存在，shell 就是该PID名字空间的init 进程。
+
+我们的下一个示例应用，[simple_init.c](https://lwn.net/Articles/533493/)，是一个我们将作为一个PID名字空间 init 进程执行的应用。
+
+`simple_init` 将执行init的两个主要功能。其一是“系统初始化”，大多数 init 系统是更复杂的应用，它们会通过一个表格驱动的方式来初始化系统。我们的（简化得多）`simple_init` 应用提供一个简单的 shell 来允许用户手动执行任何需要初始化名字空间的 shell 命令；这种方式也允许我们自由地执行 shell 命令在名字空间里做实验。`simple_init` 执行的其它功能是使用 `waitpid()` 收割终止进程的状态。
+
+因此，例如，我们可以使用 `ns_child_exec` 应用与 `simple_init` 一起构造一个新的PID名字空间并在其中运行一个init 进程：
+```
+    # ./ns_child_exec -p ./simple_init
+    init$
+```
+init$ 提示符指示 simple_init 已准备好以读入并执行一个shell命令。
+
+现在，我们使用我们到现在已经提供的两个应用，以及另一个简单应用 [orphan.c](https://lwn.net/Articles/533494/)一起，来演示在一个PID名字空间里如果一个进程称为一个孤儿进程，它将会被PID名字空间 init 进程收割，而非系统范围的  init 进程。
+
+一个孤儿进程执行fork()来创建一个子进程，父进程接下来退出，留下子进程继续运行；在父进程退出时，子进程成为孤儿。子进程执行一个循环直至它成为一个孤儿（例如，getppid() 返回 1）；一旦子进程成为孤儿进程，它将会终止。父进程及子进程都将打印消息，因此我们可以看到两个进程何时结束以及子进程何时称为孤儿进程。
+
+为了看到 simple_init 收割孤儿子进程的细节，我们将打开程序的 -v 选项，这将导致它输出关于它创建的子进程以及它收割子进程的信息：
+```
+    # ./ns_child_exec -p ./simple_init -v
+            init: my PID is 1
+    init$ ./orphan
+            init: created child 2
+    Parent (PID=2) created child with PID 3
+    Parent (PID=2; PPID=1) terminating
+            init: SIGCHLD handler: PID 2 terminated
+    init$                   # simple_init prompt interleaved with output from child
+    Child  (PID=3) now an orphan (parent PID=1)
+    Child  (PID=3) terminating
+            init: SIGCHLD handler: PID 3 terminated
+```
+在上面的输出中，带缩进以init:为前缀的消息是在详细输出模式下的 simple_init 打印的。其它所有的消息（没有init$提示符）由 orphan 程序产生。从输出我们可以看到子进程（PID 3）在父进程（PID 2）终止时成为孤儿进程。在那个点，子进程被PID名字空间init 进程收养，它将会在子进程终止时收割它。
+### 4.2 信号与 init 进程
+传统Linux系统 init 进程关于信号是区别处理的。可被递送到 init 进程的唯一信号是已经建立了信号处理函数的信号；所有其它的将会被忽略。这阻止了 init 进程--它的存在对于系统的稳定运行是至关重要的--被甚至被超级用户意外杀死。
+
+PID名字空间为名字空间特定的 init 进程实现了类似的行为。名字空间的其它进程（甚至特权进程）只能发送那些 init 进程已经建立了信号处理函数的信号。这防止了名字空间的成员不经意杀死在名字空间了承担重要作用的进程。注意，然而，（像传统 init 进程）内核认可在所有常见场景（比如，硬件异常，终端产生的信号如SIGTTOU，定时器过期等）下对PID名字空间 init 进程产生信号。
+
+信号也（受[常规权限检查](http://man7.org/linux/man-pages/man2/kill.2.html#DESCRIPTION)）可从祖先PID名字空间里的进程发送给该PID名字空间的 init 进程。再次强调，只有被 init 进程注册了信号处理函数的信号才能被递送，但有两个意外：SIGKILL 和 SIGSTOP。当祖先PID名字空间的一个进程发送这两个信号给 init 进程时，它们被强制发送（不能被捕获）。SIGSTOP 信号通知停止init 进程；SIGKILL 终止它。因为 init  进程对于PID名字空间至关重要，如果init进程被SIGKILL 终止（或它由于其他原因终止），内核将会对名字空间里的所有其它进程发送SIGKILL 信号以终止它们。
+
+通常，当init 进程终止时一个PID名字空间将会被销毁。但是这里也有一个罕见场景：只要那个名字空间里的进程的/proc/PID/ns/pid文件被绑定挂载或保持打开，则该名字空间就不会被销毁。但是，不可能在该名字空间里（通过setns() + fork()）创建新的名字空间：init 进程的缺乏会在fork() 调用时被检测到，它将会失败并返回一个ENOMEM异常（一个传统错误用于指出PID不能被分配）。换句话说，PID名字空间依然存在，但没什么用处。
+### 4.3 挂载一个procfs 文件系统（再出发）
+#### unshare() and setns()
+### 4.4 总结评论（Concluding remarks）
 ## Part 5: user namespaces
 ## Part 6: more on user namespaces
 ## Part 7: network namespaces
