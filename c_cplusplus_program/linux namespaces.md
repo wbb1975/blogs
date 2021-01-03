@@ -417,10 +417,75 @@ PID名字空间为名字空间特定的 init 进程实现了类似的行为。�
 
 信号也（受[常规权限检查](http://man7.org/linux/man-pages/man2/kill.2.html#DESCRIPTION)）可从祖先PID名字空间里的进程发送给该PID名字空间的 init 进程。再次强调，只有被 init 进程注册了信号处理函数的信号才能被递送，但有两个意外：SIGKILL 和 SIGSTOP。当祖先PID名字空间的一个进程发送这两个信号给 init 进程时，它们被强制发送（不能被捕获）。SIGSTOP 信号通知停止init 进程；SIGKILL 终止它。因为 init  进程对于PID名字空间至关重要，如果init进程被SIGKILL 终止（或它由于其他原因终止），内核将会对名字空间里的所有其它进程发送SIGKILL 信号以终止它们。
 
-通常，当init 进程终止时一个PID名字空间将会被销毁。但是这里也有一个罕见场景：只要那个名字空间里的进程的/proc/PID/ns/pid文件被绑定挂载或保持打开，则该名字空间就不会被销毁。但是，不可能在该名字空间里（通过setns() + fork()）创建新的名字空间：init 进程的缺乏会在fork() 调用时被检测到，它将会失败并返回一个ENOMEM异常（一个传统错误用于指出PID不能被分配）。换句话说，PID名字空间依然存在，但没什么用处。
-### 4.3 挂载一个procfs 文件系统（再出发）
+通常，当init 进程终止时一个PID名字空间将会被销毁。但是这里也有一个罕见场景：只要那个名字空间里的进程的/proc/PID/ns/pid文件被绑定挂载或保持打开，则该名字空间就不会被销毁。但是，不可能在该名字空间里（通过setns() + fork()）创建新的名字空间：init 进程的缺乏会在fork() 调用时被检测到，它将会失败并返回一个`ENOMEM`异常（一个传统错误用于指出PID不能被分配）。换句话说，PID名字空间依然存在，但没什么用处。
+### 4.3 挂载一个 procfs 文件系统（再出发）
+在这个系列的之前文章中，PID 名字空间的 /proc 文件系统（procfs）被挂载在不同的地方而非传统的 /proc。这允许我们使用shell命令查看每个新的PID 名字空间对应的/proc/PID目录的内容，同时可以使用 ps 命令来查看在根PID 名字空间可见的进程。
+
+但是，诸如 ps 之类的工具依赖于挂载在 /proc 下的procfs的内容来获取他们所需的信息。因此如果我们期待 ps 在一个PID名字空间里正常工作，我们需要挂载该名字空间的procfs。因为simple_init 命令允许我们执行shell命令，我们可以从命令行使用 mount 命令执行此类任务：
+```
+    # ./ns_child_exec -p -m ./simple_init
+    init$ mount -t proc proc /proc
+    init$ ps a
+      PID TTY      STAT   TIME COMMAND
+        1 pts/8    S      0:00 ./simple_init
+        3 pts/8    R+     0:00 ps a
+```
+`ps a` 列出了所有可通过 `/proc` 访问的进程。在本例中，我们仅仅能看到两个进程，这反映了一个事实--在该名字空间里仅仅由两个进程运行。
+
+当运行上面的 `ns_child_exec` 时，我们开启了应用的 `-m` 选项。它把创建的子进程（例如，运行`simple_init`的进程）放到一个单独的挂载名字空间里。结果，`mount` 命令不影响名字空间外部的进程看到的 `/proc` 挂载（内容）。
 #### unshare() and setns()
+在[本系列的第二篇文章](https://lwn.net/Articles/531381/)中，我们描述了作为名字空间API的两个系统调用：unshare() 和 setns()。从Linux 3.8开始，这两个API可用于PID 名字空间，但在应用于这些名字空间时有其自由的风格。
+
+调用[unshare()](http://man7.org/linux/man-pages/man2/unshare.2.html)时指定 `CLONE_NEWPID` 可以创建一个新的PID名字空间，但并不会将调用方置于新的名字空间。反之，调用者创建的任何子进程都会被置于新的名字空间；第一个子进程将会成为该名字空间的 init 进程。
+
+[setns()](http://man7.org/linux/man-pages/man2/setns.2.html)系统调用现在支持PID名字空间：
+```
+setns(fd, 0);   /* Second argument can be CLONE_NEWPID to force a
+                       check that 'fd' refers to a PID namespace */
+```
+`fd` 参数是一个文件描述符用于识别一个PID名字空间，该名字空间是调用方PID名字空间的后裔；该文件问描述可以通过打开目标名字空间里对应进程的 `/proc/PID/ns/pid` 获得。和 `unshare()`一样，`setns()` 并不会移动调用方到那个PID名字空间；相反，接下来由调用方创建的子进程将被放置于该名字空间。
+
+我们可以使用一个本系列第二篇文章里的 [ns_exec.c](https://lwn.net/Articles/531271/)的加强版来演示某些将 `setns()` 用于PID名字空间的令人惊奇特征，直至我们理解（背后）到底发生了什么。新版本[ns_run.c](https://lwn.net/Articles/533495/)拥有下面的语法：
+```
+    ns_run [-f] [-n /proc/PID/ns/FILE]... command [arguments]
+```
+该程序使用setns()加入由 `-n` 选项 `/proc/PID/ns` 指定的文件的名字空间。它然后使用可选参数 `arguments` 执行 `command` 命令。如果-f选项指定，它将使用fork()创建子进程来执行命令。
+
+假设我们在一个终端窗口，我们以常规方式带详细输出选项在一个新的PID名字空间启动 `simple_init` ，当它收割子进程时会通知到我们：
+```
+    # ./ns_child_exec -p ./simple_init -v
+            init: my PID is 1
+    init$ 
+```
+接下来我们切换到第二个终端窗口，那里我们使用 `ns_run` 来执行我们的孤儿进程。这将会有在由 `simple_init` 控制的PID名字空间创建两个进程的效果：
+```
+    # ps -C sleep -C simple_init
+      PID TTY          TIME CMD
+     9147 pts/8    00:00:00 simple_init
+     # ./ns_run -f -n /proc/9147/ns/pid ./orphan
+     Parent (PID=2) created child with PID 3
+     Parent (PID=2; PPID=0) terminating
+     # 
+     Child  (PID=3) now an orphan (parent PID=1)
+     Child  (PID=3) terminating
+```
+看看当孤儿进程执行时创建的“父进程（PID 2）”的输出，我们可以看到其父进程ID为 0。这反映了一个事实，开启孤儿进程（`ns_run`）的进程雨薇一个不同的名字空间--其成员对父进程不可见。正如前文提到的，这种情况下 `getppid()` 返回0.
+
+下图显示了孤儿“父”进程终止前的各种各样进程的关系。牵头指明了父子进程的关系。
+
+![父子进程的关系](images/pidns_orphan_1.png)
+
+回到运行 simple_init 的窗口，我们可以看到下面的输出：
+```
+    init: SIGCHLD handler: PID 3 terminated
+```
+由孤儿进程创建的“子”进程（PID 3）由simple_init收割，但“父”进程（PID 2）不是。这是因为“父”进程由另一个不同名字空间的父进程（ns_run）收割。下图显示了孤儿“父”进程终止后“子”进程终止前的进程关系。
+
+![父子进程的关系](images/pidns_orphan_2.png)
+
+值得强调的是setns() 和 unshare() 特殊对待PID名字空间。对于其它类型的名字空间，这两个系统调用确实改变了调用方的名字空间。而不改变调用方的PID名字空间的原因在于称为另一个PID名字空间的成员涉及到进程本身的PID更改，因为getpid()仅仅汇报相对该进程驻留的PID名字空间的PID。许多用户空间的程序和库依赖一个假设：一个进程的PID（由getpid()报告）是不变的（事实上，GNU C的getpid()包装函数[缓存](http://thread.gmane.org/gmane.linux.kernel/209103/focus=209130)了PID）；如果一个进程PID改变，这些程序将会被破坏。换一种方式：一个进程的PID名字空间成员关系是当进程被创建时就确定了的，（不像其它类型的成员关系）之后绝不能改变。
 ### 4.4 总结评论（Concluding remarks）
+本文中我们查看了PID名字空间 `init` 进程的特殊角色，展示了如何挂载一个PID名字空间的 `procfs` 从而它可被用于一些工具如 `ps`，也查看了`unshare()` 和 `setns()` 用于PID名字空间时的一些特质。这结束了我们关于PID名字空间的讨论，接下来我们将转向用户名字空间。
 ## Part 5: user namespaces
 ## Part 6: more on user namespaces
 ## Part 7: network namespaces
