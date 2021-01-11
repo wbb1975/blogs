@@ -8,7 +8,7 @@
 
 `logger` 是打印消息的上下文。这是应用主要交互的类，用来创建日志消息。
 
-`Appenders` 将日志消息纸放到它们的最终目的地。一个 `Logger`可以拥有多个 `Appenders`。我们通常认为 `Appender` 附加到文本文件上，但 `Logback` 可以做到更多。
+`Appenders` 将日志消息发送到它们的最终目的地。一个 `Logger`可以拥有多个 `Appenders`。我们通常认为 `Appender` 附加到文本文件上，但 `Logback` 可以做到更多。
 
 `Layout` 准备消息用于输出。`Logback` 支持创建自定义类来格式化消息，也支持对现有类的健壮的配置选项。
 ## 3. 安装
@@ -28,7 +28,7 @@
     <scope>test</scope>
 </dependency>
 ```
-Maven 中央存储库拥有[`Logback Core`的最新版本](https://search.maven.org/classic/#search%7Cgav%7C1%7Cg%3A%22ch.qos.logback%22%20AND%20a%3A%22logback-core%22)和[slf4j-api的最新版本](https://search.maven.org/classic/#search%7Cgav%7C1%7Cg%3A%22org.slf4j%22%20AND%20a%3A%22slf4j-api%22)。
+Maven 中央存储库拥有[`Logback Core`的最新版本](https://search.maven.org/classic/#search%7Cgav%7C1%7Cg%3A%22ch.qos.logback%22%20AND%20a%3A%22logback-core%22)和 [slf4j-api的最新版本](https://search.maven.org/classic/#search%7Cgav%7C1%7Cg%3A%22org.slf4j%22%20AND%20a%3A%22slf4j-api%22)。
 ### 3.2 类路径（Classpath）
 `Logback`也要求 [logback-classic.jar](https://search.maven.org/classic/#search%7Cga%7C1%7Clogback-classic)在其运行类路径上。
 
@@ -100,13 +100,13 @@ logger.info("Example log from {}", Example.class.getSimpleName()
 - 一个 logger当其名字和“.”是一个后继 logger 名字的前缀时，它就是后者的祖先（ancestor）。
 - 一个 logger如果在它及其子logger之间没有额外级别，它就是一个父亲级别，
 
-例如，下面的`Example`类位于`com.baeldung.logback`包中，由另外一个类`ExampleAppender`位于`com.baeldung.logback.appenders`包中。
+例如，下面的`Example`类位于`com.baeldung.logback`包中，而另外一个类`ExampleAppender`位于`com.baeldung.logback.appenders`包中。
 - ExampleAppender的logger属于Example logger的儿子。
-- 所有的loggers都是预定义的根logger的子孙。
+- 所有的loggers都是预定义根logger的子孙。
 
 一个`logger`拥有一个日志级别，可以通过配置文件或`Logger.setLevel()`方法设定。代码中的级别设定将覆盖配置文件中的设定。
 
-可能的日志级别按顺序为：`TRACE`, `DEBUG`, `INFO`, `WARN` 和 `ERROR`。每个级别有一个对应的方法，我们使用它来记录独影级别的消息。
+可能的日志级别按顺序为：`TRACE`, `DEBUG`, `INFO`, `WARN` 和 `ERROR`。每个级别有一个对应的方法，我们使用它来记录对应级别的消息。
 
 如果一个logger没有显式设定日志级别，它会从离其最近的祖先中继承。根logger缺省级别为DEBUG，下面我们将看到如何改变它。
 ### 5.2 使用上下文
@@ -130,7 +130,7 @@ childlogger.debug("DEBUG < INFO");
 20:31:29.586 [main] WARN com.baeldung.logback - This message is logged because WARN > INFO.
 20:31:29.594 [main] INFO com.baeldung.logback.tests - INFO == INFO
 ```
-我们从检索一个名为`com.baeldung.logback的logger`开始，将其转型为一个`ch.qos.logback.classic.Logger`。一个`Logback`上下文在下面的语句中需要设置日志级别，`SLF4J`的抽象logger没有实现`setLevel()`。
+我们从检索一个名为`com.baeldung.logback`的 logger 开始，将其转型为一个`ch.qos.logback.classic.Logger`。一个 `Logback` 上下文在下面的语句中需要设置日志级别，`SLF4J`的抽象 logger 没有实现`setLevel()`。
 
 我们把上下文的日志级别设置为`INFO`，接下来我们创建了另一个logger名为`com.baeldung.logback.tests`。
 
@@ -157,13 +157,13 @@ logger.error("This is logged.");
 20:44:44.243 [main] DEBUG com.baeldung.logback - This message is logged because DEBUG == DEBUG.
 20:44:44.243 [main] ERROR com.baeldung.logback - This is logged.
 ```
-总结一下，我们以一个Logger 上下文开始，并打印了一条DEBUG消息。
+总结一下，我们以一个 Logger 上下文开始，并打印了一条 `DEBUG` 消息。
 
-然后我们使用根logger的静态定义名字检索它并将其日志级别设置为ERROR。
+然后我们使用根 logger 的静态定义名字检索它并将其日志级别设置为 `ERROR`。
 
-然后最后我们演示了Logback过滤了所有级别低于ERROR的消息。
+然后最后我们演示了 Logback 过滤了所有级别低于 `ERROR` 的消息。
 ### 5.3 参数化消息
-不想上面的简单代码片段中的消息，大多数有用的日志消息需要添加字符串。这意味着内存分配，序列化对象，拼接字符串，以及潜在地在售后做垃圾清理。
+不像上面的简单代码片段中的消息，大多数有用的日志消息需要添加字符串。这意味着内存分配，序列化对象，拼接字符串，以及潜在地在稍后做垃圾清理。
 
 考虑下面的消息：
 `log.debug("Current count is " + count);`
@@ -201,7 +201,7 @@ java.lang.ArithmeticException: / by zero
 
 同时，当一个`Exception`作为`logging`方法的最后一个参数被传递时，`Logback` 将为我们打印堆栈轨迹。
 ## 6. 详细配置
-在上面的例子中，我们使用一个近11行的配置文件来将日志信息打印到终端上。这是Logback的默认行为；如果他不能找到一个配置文件，它将创建一个`ConsoleAppender`并将它附加到根logger上。
+在上面的例子中，我们使用一个近11行的配置文件来将日志信息打印到终端上。这是 Logback 的默认行为；如果它不能找到一个配置文件，它将创建一个`ConsoleAppender`并将它附加到根 logger 上。
 ### 6.1 定位配置信息
 一个配置文件可被放置于类路径下，并命名为ogback.xml 或 logback-test.xml。
 
@@ -239,7 +239,7 @@ Logback 配置文件可能变得很复杂，因此有几个内建的机制帮助
   ...
 </configuration>
 ```
-当Logback处理配制时将把状态信息打印到终端上：
+当Logback处理配置时将把状态信息打印到终端上：
 ```
 23:54:23,040 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback-test.xml] 
   at [file:/Users/egoebelbecker/ideaProjects/logback-guide/out/test/resources/logback-test.xml]
@@ -263,7 +263,7 @@ Logback 配置文件可能变得很复杂，因此有几个内建的机制帮助
     ...
 </configuration>
 ```
-**StatusListener 拦截状态消息并在陪U制过程及运行过程中打印它们**。
+**StatusListener 拦截状态消息并在配置过程及运行过程中打印它们**。
 
 从所有配置文件中的输出都被打印，它对定位类路径下的“流氓”配置文件是很有帮助的。
 ### 6.4 自动重载配置文件
@@ -466,7 +466,7 @@ Layouts 格式化日志消息。就像Logback的其余部分，Layouts 是可扩
 
 因此我们能看到像下面的消息：
 `21:32:10.311 [main] DEBUG com.baeldung.logback.LogbackTests - Logging message: This is a String`
-在[这里](https://logback.qos.ch/manual/layouts.html#conversionWord可以找到转换付以及格式修饰符的完整列表)。
+在[这里](https://logback.qos.ch/manual/layouts.html#conversionWord)可以找到转换付以及格式修饰符的完整列表。
 ## 9. 结论
 在这个扩展教程里，我们讲述了在一个应用里使用Logback 的基础知识。
 
