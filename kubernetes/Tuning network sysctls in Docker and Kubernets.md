@@ -17,7 +17,77 @@ Docker 和 Kubernetes 用于容纳各种各样的应用--对网络栈的需求�
 
 改变这个行为为从父名字空间继承设置的[讨论和建议已经在一个单行pull请求中设计，但由于兼容性的源被拒绝了](https://lore.kernel.org/patchwork/patch/649250/)。
 ### 在 Docker 容器上设置sysctls 
+Docker 允许在创建容器时配置大多数名字空间化的 sysctls 。设置上面提到的`tw_reuse`是相当直接的，在 `docker run` 中添加 `--sysctl` 选项：
+```
+docker run \
+  --sysctl net.core.somaxconn=1024 \
+  --sysctl net.ipv4.tw_reuse=1 \
+  someimage
+```
+类似地，比较新的 Docker 支持在docker-compose 和 swarm 模式下的[Compose文件形式的sysctls](https://docs.docker.com/compose/compose-file/#sysctls)。
+```
+sysctls:
+  net.core.somaxconn: 1024
+  net.ipv4.tw_reuse: 1
+```
 ### 在Kubernetes pod上设置sysctls
+Kubernetes 集群在利用特权调优 sysctls 时有更多限制，尤其在企业级环境中使用时。
+#### 老旧形式：特权初始化容器（init containers）
+在 Kubernetes 1.11前，没有方法设置sysctls ，除了在pod启动时运行 `sysctl -w` 命令。这对非root用户（non-root）是不允许的。一种常见做法是使用特权root `initContainer`：
+```
+[...]
+initContainers:
+- name: init-sysctl
+    image: busybox
+    command:
+    - sysctl
+    - -w
+    - net.core.somaxconn=1024
+    - net.ipv4.tw_reuse=1
+    securityContext:
+      privileged: true
+      runAsUser: 0
+      runAsNonRoot: False
+[...]
+```
+**这不再是推荐的方式**，并且当特权或root容器不被允许时或会失败。它允许设置任意 sysctls，也包括非名字空间化的 sysctls。 在企业级环境中，这可能会被通过pod安全策略禁止。
+#### 安全和非安全 sysctls
+Kubernetes 1.11 引入了安全和非安全 sysctls 的概念，它们可在pod  spec中配置：
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sysctl-example
+spec:
+  securityContext:
+    sysctls:
+    - name: net.core.somaxconn
+      value: "1024"
+    - name: net.ipv4.tw_reuse
+      value: "1"
+  [...]
+```
+> **提示**：sysctl 值期待是字符串，因此在YAML中数字必须被用引号包裹。
+
+这并不需要特权 root 容器，但只有极少sysctls 允许通过这种方式修改，除非集群操作员添加更多。在本文开头提到的安全sysctls 默认是允许的：
+- kernel.shm_rmid_forced
+- net.ipv4.ip_local_port_range
+- net.ipv4.tcp_syncookies
+- net.ipv4.ping_group_id
+
+允许更深入的sysctls（就像在例子中提到的）需要[在kubelet配置和在pod安全策略上开启](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#enabling-unsafe-sysctls)。阅读你的 Kubernetes 分发版或安装文档去搜素如何添加。一个允许上面的sysctls的pod安全策略例子（不是很完整）如下：
+```
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: sysctl-psp
+spec:
+  allowedUnsafeSysctls:
+  - net.core.somaxconn
+  - net.ipv4.tw_reuse
+[...]
+```
+* 是允许的，sysctls 的使用可以通过特定策略被限定在给定的用户组或Kubernetes 名字空间。只有名字空间化的 sysctls 才能以这种方式配置。
 
 ## Reference
 - [Tuning network sysctls in Docker and Kubernetes](https://medium.com/daimler-tss-tech/tuning-network-sysctls-in-docker-and-kubernetes-766e05da4ff2)
