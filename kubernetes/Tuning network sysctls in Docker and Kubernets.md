@@ -7,7 +7,7 @@ Docker 和 Kubernetes 用于容纳各种各样的应用--对网络栈的需求�
 
 好消息是：你通常不需要关心这些，因为默认设置已经足够，在平均用例下工作得很好。
 ## 在容器化的世界里配置网络 sysctls 
-坏消息是为网络 sysctls 设置默认值通常不可能，并且通常设置 sysctls 并非易事。许多Kubernetes 调优指南犯了这个错误（它们建议在 /etc/sysctl.d 中设置）。奇怪地是，很少有人注意到--也许是默认设置在大多数情况下工作得很好。
+坏消息是为网络 sysctls 设置默认值通常不可能，并且通常设置 sysctls 并非易事。许多Kubernetes 调优指南犯了这个错误（它们建议在 /etc/sysctl.d 中设置）。奇怪的是，很少有人注意到--也许是默认设置在大多数情况下工作得很好。
 
 **设置内核范围的设置可以像期待的那样工作**--它们效果一样无论应用是否是一个容器。这些是通常你并不想允许一个容器设置的，因为（如果设置）系统行为可能依据某个容器是否启动（以及顺序）而改变。
 
@@ -15,7 +15,7 @@ Docker 和 Kubernetes 用于容纳各种各样的应用--对网络栈的需求�
 
 ![linux network namespace inheritance](images/Inheritance.png)
 
-改变这个行为为从父名字空间继承设置的[讨论和建议已经在一个单行pull请求中设计，但由于兼容性的源被拒绝了](https://lore.kernel.org/patchwork/patch/649250/)。
+改变这个行为为从父名字空间继承设置的[讨论和建议已经在一个单行pull请求中设计，但由于兼容性的原因被拒绝了](https://lore.kernel.org/patchwork/patch/649250/)。
 ### 在 Docker 容器上设置sysctls 
 Docker 允许在创建容器时配置大多数名字空间化的 sysctls 。设置上面提到的`tw_reuse`是相当直接的，在 `docker run` 中添加 `--sysctl` 选项：
 ```
@@ -75,7 +75,42 @@ spec:
 - net.ipv4.tcp_syncookies
 - net.ipv4.ping_group_id
 
-允许更深入的sysctls（就像在例子中提到的）需要[在kubelet配置和在pod安全策略上开启](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#enabling-unsafe-sysctls)。阅读你的 Kubernetes 分发版或安装文档去搜素如何添加。一个允许上面的sysctls的pod安全策略例子（不是很完整）如下：
+允许更深入的 sysctls（就像在例子中提到的）需要[在kubelet配置和在pod安全策略上开启它们](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#enabling-unsafe-sysctls)。阅读你的 Kubernetes 分发版或安装文档去搜素如何添加。
+
+默认kubectl配置：
+```
+root@ip-10-107-93-108 ~]# cat /etc/systemd/system/kubelet.service
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/kubernetes/kubernetes
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStartPre=/sbin/iptables -P FORWARD ACCEPT -w 5
+ExecStart=/usr/bin/kubelet --cloud-provider aws \
+--config /etc/kubernetes/kubelet/kubelet-config.json \
+--kubeconfig /var/lib/kubelet/kubeconfig \
+--container-runtime docker \
+--network-plugin cni $KUBELET_ARGS $KUBELET_EXTRA_ARGS
+
+Restart=on-failure
+RestartForceExitStatus=SIGPIPE
+RestartSec=5
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+```
+如需启用 非安全的 sysctl 参数，请你在每个节点上分别设置 kubelet 命令行参数，例如：
+```
+    kubelet --allowed-unsafe-sysctls 'kernel.msg*,net.core.somaxconn' ...
+```
+**只有有命名空间的 sysctl 参数可以通过该方式启用**。
+
+**没有命名空间的 sysctl 参数称为节点级别的 sysctl 参数。如果需要对其进行设置，则必须在每个节点的操作系统上手动地去配置它们，或者通过在 DaemonSet 中运行特权模式容器来配置**。
+
+一个允许上面的 sysctls 的pod安全策略例子（不是很完整）如下：
 ```
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
@@ -87,7 +122,7 @@ spec:
   - net.ipv4.tw_reuse
 [...]
 ```
-* 是允许的，sysctls 的使用可以通过特定策略被限定在给定的用户组或Kubernetes 名字空间。只有名字空间化的 sysctls 才能以这种方式配置。
+“*”是允许的，sysctls 的使用可以通过特定策略被限定在给定的用户组或Kubernetes 名字空间。只有名字空间化的 sysctls 才能以这种方式配置。
 
 ## Reference
 - [Tuning network sysctls in Docker and Kubernetes](https://medium.com/daimler-tss-tech/tuning-network-sysctls-in-docker-and-kubernetes-766e05da4ff2)
