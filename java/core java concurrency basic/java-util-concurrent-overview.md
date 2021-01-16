@@ -278,9 +278,23 @@ for (int i = 0; i < 10; i++) {
 
 在[这里](https://www.baeldung.com/java-blocking-queue)可以看到工作示例的更多细节。
 ### 2.10 延时队列（DelayQueue）
+DelayQueue 是一个无限大小的堵塞队列，其内元素只有其过期时间到达后才可以被访问（即用户定义时延）。因此，最顶端元素（头）拥有最大时延，并会被厚厚取出。
+
+更多关于它的信息以及工作示例可以在[这里](https://www.baeldung.com/java-delay-queue)找到。
 ### 2.11 锁（Locks）
+并不奇怪，锁是一种除当前执行线程防止其它线程访问一段代码的工具。
+
+锁和同步块的主要区别是同步块完全包含在方法内部；但是，我们能够在单独的方法里利用锁的API lock() 和 unlock() 操作。
+
+更多关于它的信息以及工作示例可以在[这里](https://www.baeldung.com/java-concurrent-locks)找到。
 ### 2.12 移相器（Phaser）
+移相器是一个比 CyclicBarrier 和 CountDownLatch 更灵活的解决方案--用来充作一个可复用的屏障，一个动态数目的线程在其上等待直至能够继续执行。我们能够协调程序执行的多个阶段，对每个阶段服用一个 Phaser 实例。
+
+更多关于它的信息以及工作示例可以在[这里](https://www.baeldung.com/java-phaser)找到。
 ## 3. 结论
+在这个高度概括介绍性文章中，我们专注于 java.util.concurrent 包里的不同工具。
+
+和往常一样，完整源代码可在[GitHub](https://github.com/eugenp/tutorials/tree/master/core-java-modules/core-java-concurrency-basic)上得到。
 
 ## Reference
 - [java.util.concurrent概览](https://www.baeldung.com/java-util-concurrent)
