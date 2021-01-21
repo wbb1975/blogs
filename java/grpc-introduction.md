@@ -123,6 +123,55 @@ protoc --plugin=protoc-gen-grpc-java=$PATH_TO_PLUGIN -I=$SRC_DIR
 ```
 [os-maven-plugin](https://search.maven.org/classic/#search%7Cgav%7C1%7Cg%3A%22kr.motd.maven%22%20AND%20a%3A%22os-maven-plugin%22)扩展/插件产生各种各样平台的项目属性文件，比如${os.detected.classifier}。
 ### 5.3 使用 Gradle 插件
+```
+plugins {
+    id 'java'
+    id "com.google.protobuf" version "0.8.8"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+   compile group: 'io.grpc', name: 'grpc-all', version: '1.19.0'
+   compile "com.google.protobuf:protobuf-java:3.6.1"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.7.0"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.19.0"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+```
+现在运行 `./gradlew clean build` 以产生 grpc 文件。你可以看到文件在路径 `build/generated/source/proto/main/grpc` 下。
+
+**注意**：
+- 你也可以选择从 `group: ‘io.grpc’` 中添加必须的依赖：
+  + compile group: 'io.grpc', name: 'grpc-protobuf', version: '1.19.0'
+  + compile group: 'io.grpc', name: 'grpc-stub', version: '1.19.0'
+  + compile group: 'io.grpc', name: 'grpc-netty-shaded', version: '1.19.0'
+  + compile group: 'io.grpc', name: 'grpc-netty', version: '1.19.0'
+- 默认地 protobuf 插件将从系统环境变量搜寻 `protoc` 可执行文件。我建议你利用 maven 的预编译 `protoc` 发布文件，你也可以提供（本地 protoc）路径。更多细节请阅读 https://github.com/google/protobuf-gradle-plugin。
 ## 6. 创建服务端
 无论你使用那种代码生成方法，下面这些关键文件都会被生成：
 - HelloRequest.java - 包含 HelloRequest 类型定义
@@ -211,6 +260,36 @@ public class GrpcClient {
 在本指南中，我们看到了我们可以使用 gRPC 来缓解开发两个服务件通信的难题，专注于定义服务，让 gRPC 帮我们处理那些模板代码。
 
 和往常一样，源代码可以在[GitHub](https://github.com/eugenp/tutorials/tree/master/grpc)上找到。
+## Appendix
+1. 同步 grpc C++ 服务器和异步 grpc java 客户端用于双向流式RPC（bidirectional streaming RPC）
+**在服务器端使用同步API，而在客户端使用异步API并不会导致任何问题**。在 Android 客户端中使用异步API不会损害性能。
+2. 并发连接（Connection concurrency）
+   HTTP/2 连接典型地一次在一个连接上有一个限制即[最大并发流的限制数目（活动HTTP请求）](https://httpwg.github.io/specs/rfc7540.html#rfc.section.5.1.2)。默认地大部分服务器设置该限制为100个并发流（concurrent streams）。
+
+   一个 `gRPC channel` 使用一个 `HTTP/2` 连接，并发调用在该连接上多路复用。当活动调用的数目达到连接流限制时，多余的调用在客户端排队等待。在它们被发送前，这些排队的调用需要等待活动调用完成。高负载应用，或长时间运行的流式 gRPC 调用，可能看到这种由于这种限制导致的性能问题。
+
+   一些对这种问题的临时解决方案：
+   + 对很高负载的应用创建创建单独的 `gRPC channels`。
+   + 使用 `gRPC channels` 池，例如，创建一个 `gRPC channels` 列表。每次当一个 `gRPC channel` 需要时就从这个列表中随机选择一个。使用随机选择的方式可将调用均分到多个连接。
+
+   > **重要**：在服务器上增加并发流限制的最大值是解决这个问题的另一种方式，它利用[MaxStreamsPerConnection](https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.server.kestrel.core.http2limits.maxstreamsperconnection#Microsoft_AspNetCore_Server_Kestrel_Core_Http2Limits_MaxStreamsPerConnection)配置。但该方式不被推荐。在单个 `HTTP/2` 连接上的太多流可能引入新的性能问题：在往连接写时的流的线程竞争；连接丢包导致在TCP层面的所有调用堵塞。
+3. 负载均衡
+   某些负载均衡器不能有效地与 gRPC 一起工作。L4（传输层）负载均衡器在连接级别工作，并通过端点均分TCP连接。这种方式对于利用 HTTP/1.1 的负载均衡API调用工作很好。利用 HTTP/1.1 的并发调用被发送到不同的端点，从而允许调用跨端点负载均衡。
+
+   因为 L4 负载均衡在连接层级工作，它们不能与gRPC很好的工作。gRPC 使用 HTTP/2，它在一个TCP连接上多路复用多个调用。通过该连接的所有gRPC调用最后发往同一个端点。
+
+   由两种有效的 gRPC 负载均衡方式：
+   + 客户端负载均衡
+   + L7 （应用）代理负载均衡
+
+   > **注意**：只有gRPC调用能在端点间负载均衡。一旦一个gRPC流式调用建立，所有发往该流的消息都最终发往一个端点。
+4. 客户端负载均衡
 
 ## Reference
 - [Introduction to gRPC](https://www.baeldung.com/grpc-introduction)
+- [Generate java code from .proto file using gradle](https://medium.com/@DivyaJaisawal/generate-java-code-from-proto-file-using-gradle-1fb9fe64e046)
+- [Config Gradle to generate Java code from Protobuf](https://dev.to/techschoolguru/config-gradle-to-generate-java-code-from-protobuf-1cla)
+- [protobuf gradle-plugin](https://github.com/google/protobuf-gradle-plugin)
+- [Performance best practices with gRPC](https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-5.0)
+- [gRPC学习笔记](https://skyao.io/learning-grpc/)
+- [The complete gRPC course](https://www.youtube.com/playlist?list=PLy_6D98if3UJd5hxWNfAqKMr15HZqFnqf)
