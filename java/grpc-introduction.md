@@ -291,5 +291,6 @@ public class GrpcClient {
 - [Config Gradle to generate Java code from Protobuf](https://dev.to/techschoolguru/config-gradle-to-generate-java-code-from-protobuf-1cla)
 - [protobuf gradle-plugin](https://github.com/google/protobuf-gradle-plugin)
 - [Performance best practices with gRPC](https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-5.0)
-- [gRPC学习笔记](https://skyao.io/learning-grpc/)
+- [gRPC学习笔记](https://www.bookstack.cn/read/learning-grpc/README.md)
 - [The complete gRPC course](https://www.youtube.com/playlist?list=PLy_6D98if3UJd5hxWNfAqKMr15HZqFnqf)
+- [C++ Performance Notes](https://grpc.github.io/grpc/cpp/md_doc_cpp_perf_notes.html)
