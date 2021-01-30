@@ -158,6 +158,9 @@ mosquitto_pub --capath /etc/ssl/certs/
 
 ## Reference
 - [写给入门人员的 SSL 和 SSL 证书详解](http://www.steves-internet-guide.com/ssl-certificates-explained/)
+- [如何在CentOS 8 上设置及配置一个证书颁发机构](https://www.digitalocean.com/community/tutorials/how-to-set-up-and-configure-a-certificate-authority-ca-on-centos-8)
+- [SSL 证书验证](https://curl.se/docs/sslcerts.html)
+- [附录 A. SSL/TLS 证书配置](https://access.redhat.com/documentation/zh-cn/red_hat_openstack_platform/12/html/director_installation_and_usage/appe-ssltls_certificate_configuration)
 - [RFC 5280](https://tools.ietf.org/html/rfc5280#page-25)
 - [OpenSSL Guide](https://www.digitalocean.com/community/tutorials/openssl-essentials-working-with-ssl-certificates-private-keys-and-csrs)
 - [Structure of a certificate](https://en.wikipedia.org/wiki/X.509#Structure_of_a_certificate) – Wiki
