@@ -77,9 +77,9 @@
 1. 倒开[ACM console](https://console.aws.amazon.com/acm/home)，如果这是你第一次使用ACM，查找**AWS Certificate Manager**头，并选择**Get started**按钮。
 2. 选择**Import a certificate**
 3. 加入你在前面步骤创建的证书文件
-   + 用一个文本编辑器如Notepad 打开`cert-file.pem`。拷贝从`–BEGIN CERTIFICATE–` 开始到`–END CERTIFICATE–`间的所有行。将它们脸贴到**Certificate body**文本框。
-   + 打开`withoutpw-privatekey.pem`。拷贝从`–BEGIN RSA PRIVATE KEY–` 开始到`–END RSA PRIVATE KEY–`间的所有行。将它们脸贴到**Certificate private key**文本框。
-   + 对于**Certificate chain**，拷贝和脸贴来自文件`ca-chain.pem`的从`–BEGIN CERTIFICATE–` 开始到`CERTIFICATE–`间的所有行
+   + 用一个文本编辑器如Notepad 打开`cert-file.pem`。拷贝从`–BEGIN CERTIFICATE–` 开始到`–END CERTIFICATE–`间的所有行。将它们粘贴到**Certificate body**文本框。
+   + 打开`withoutpw-privatekey.pem`。拷贝从`–BEGIN RSA PRIVATE KEY–` 开始到`–END RSA PRIVATE KEY–`间的所有行。将它们粘贴到**Certificate private key**文本框。
+   + 对于**Certificate chain**，拷贝和粘贴来自文件`ca-chain.pem`的从`–BEGIN CERTIFICATE–` 开始到`CERTIFICATE–`间的所有行
 
    ![PEM格式文件](images/Import-PFX-AWS-Certificate-Manager-Figure7.png)
    
