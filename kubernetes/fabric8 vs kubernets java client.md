@@ -159,4 +159,5 @@ Fabric8 Kubernetes 客户端：
 
 ## Reference
 - [Fabric8 和官方 Kubernetes Java 客户端的区别](https://itnext.io/difference-between-fabric8-and-official-kubernetes-java-client-3e0a994fd4af?gi=2835455667bd)
+- [Client Libraries](https://kubernetes.io/docs/reference/using-api/client-libraries/)
 
