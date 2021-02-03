@@ -110,10 +110,69 @@ EC2 Auto Scaling 组是区域性结构。它们可以跨可用区，但不跨 AW
 
 当提到有状态实例时，我们指的是包含数据且数据仅位于此实例上的实例。通常，终止有状态实例意味着实例上的数据（或状态信息）丢失。您可能需要考虑使用生命周期挂钩在有状态实例终止之前复制数据，或者启用实例保护功能以防止 Amazon EC2 Auto Scaling 终止实例。
 ## 替代受损的实例（Replacing Impaired Instances）
+**问：Amazon EC2 Auto Scaling 如何替换受损实例？**
 
+如果受损实例未通过运行状况检查，Amazon EC2 Auto Scaling 会自动将其终止并替换为新实例。如果您使用的是 Elastic Load Balancing 负载均衡器，那么 Amazon EC2 Auto Scaling 会将受损实例平稳地与负载均衡器分离，然后预置新实例并将其附加到负载均衡器。这些操作全部自动完成，因此在需要替换实例时无需您手动操作。
+
+**问：如何控制 Amazon EC2 Auto Scaling 在缩减实例时终止哪些实例，以及如何保护实例上的数据？**
+
+对于每个 Amazon EC2 Auto Scaling 组，您可以控制 Amazon EC2 Auto Scaling 何时向组中添加实例（称为扩展）或从组中删除实例（称为缩减）。您可以通过附加和分离实例手动扩展组的大小，或者使用扩展策略自动执行该过程。当您设置 Amazon EC2 Auto Scaling 自动缩减时，必须确定 Amazon EC2 Auto Scaling 应首先终止哪些实例。您可以使用终止策略进行此项配置。在缩减时，您也可以使用实例保护防止 Amazon EC2 Auto Scaling 选择终止特定的实例。如果实例上有数据，并且您需要永久保留此数据（即使实例被缩减），那么您可以使用 S3、RDS 或 DynamoDB 等服务来确保数据在实例以外进行了存储。
+
+**问：在检测到运行状况不佳的服务器后，Amazon EC2 Auto Scaling 启动处于可用状态的新实例所需的完成时间是多久？**
+
+完成时间在几分钟之内。大多数替换可在 5 分钟内完成，平均时间远低于 5 分钟。这取决于多种因素，包括启动实例的 AMI 所需的时间。
+
+**问：如果 Elastic Load Balancing (ELB) 确定某个实例运行状况不佳并且已脱机，那么之前发送到此故障实例的请求是否会排队并重新路由到组内的其他实例？**
+
+当 ELB 发现实例的运行状况不佳时，它将停止向其路由请求。不过，在发现实例的运行状况不佳之前，向该实例发送的一些请求将失败。
+
+**问：如果没有使用 Elastic Load Balancing (ELB)，那么如果出现故障，如何将用户定向到组中的其他服务器？**
+
+您可以集成 Route53（Amazon EC2 Auto Scaling 目前不支持 Route53，但许多客户都在使用）。您也可以使用自己的反向代理；对于内部微服务，可以使用服务发现解决方案。
 
 ## 安全
+**问：如何控制对 Amazon EC2 Auto Scaling 资源的访问？**
+
+Amazon EC2 Auto Scaling 与 [AWS Identity and Access Management](https://aws.amazon.com/iam/) (IAM) 集成，后者使您能够执行以下操作：
+- 在您组织的 AWS 账户下创建用户和组
+- 为您 AWS 账户下的每个用户分配唯一的安全凭证
+- 控制每个用户使用 AWS 资源执行任务的权限
+- 允许其他 AWS 账户中的用户共享您的 AWS 资源
+- 为您的 AWS 账户创建角色，并定义可以担任这些角色的用户或服务
+- 使用企业的现有标识授予使用 AWS 资源执行任务的权限
+
+例如，您可以创建 IAM 策略，向 Managers 组授予仅使用 DescribeAutoScalingGroups、DescribeLaunchConfigurations、DescribeScalingActivities 和 DescribePolicies API 操作的权限。随后，Managers 组中的用户可以对任何 Amazon EC2 Auto Scaling 组和启动配置使用这些操作。借助 Amazon EC2 Auto Scaling 资源级权限，您可以限制对特定 EC2 Auto Scaling 组或启动配置的访问。
+
+有关更多信息，请参阅《Amazon EC2 Auto Scaling 用户指南》的[控制对 Auto Scaling 资源的访问部分](http://docs.aws.amazon.com/autoscaling/latest/userguide/control-access-using-iam.html)。
+
+**问：可以使用 Amazon EC2 Auto Scaling 在 Windows 实例上定义默认管理员密码吗？**
+
+您可以使用密钥名称参数创建启动配置，将密钥对与您的实例关联起来。然后，您可以在 EC2 中使用 GetPasswordData。这也可以通过 AWS 管理控制台完成。
+
+**问：创建 Amazon EC2 Auto Scaling 组时，是否会在 EC2 实例上自动安装 CloudWatch 代理？**
+
+如果您的 AMI 包含 CloudWatch 代理，那么在您创建 EC2 Auto Scaling 组时，它会自动安装在 EC2 实例上。对于现有的 Amazon Linux AMI，您需要安装 CloudWatch 代理（建议通过 yum 进行安装）。
 ## 成本优化
+**问：我是否可以创建单个 ASG 来跨不同购买选项扩展实例？**
+
+可以。您可以在一个 Auto Scaling 组中跨不同的 EC2 实例类型、可用区以及按需、预留和 Spot 购买选项配置和自动扩展 EC2 容量。您可以根据需要定义按需和 Spot 容量之间的比例，选择您的应用程序使用哪些实例类型，以及指定 EC2 Auto Scaling 应该如何在每个购买模式之间分配 ASG 容量。
+
+**问：我是否可以使用 ASG 仅启动和管理 Spot 实例，或者仅启动和管理按需实例和 RI？**
+
+可以。您可以对 ASG 进行配置，指定将所有容量仅分配给 Spot 实例，或仅分配给按需实例和 RI。
+
+**问：我是否可以为按需实例和 RI 分配基本容量，并在 Spot 实例上扩展我的 ASG？**
+
+可以。在设置 ASG 以结合使用多种采购模式时，您可以指定按需实例要占用的组的基本容量。随着 ASG 的缩减或扩展，EC2 Auto Scaling 可确保为按需实例分配基本容量，超过的部分可以仅分配给 Spot 实例，或混合分配给按需实例或 Spot 实例（指定各自所占的百分比）。
+
+**问：我是否可以修改 ASG 的配置，以更新与组合使用采购模型和指定多个实例类型相关的不同属性？**
+
+可以。与其他 ASG 参数类似，客户可以更新现有 ASG 以修改与组合使用采购模式或指定不同实例类型相关的一个或所有参数，包括实例类型、按需实例的优先级顺序、按需实例和 Spot 实例之间的比例分摊，以及分配策略。
+
+**问：问：我是否可以在 ASG 中为按需实例使用 RI 折扣？**
+
+可以。例如，如果您的 C4 实例有 RI 折扣且 EC2 Auto Scaling 启动了 C4，那么您将收到适用于按需实例的 RI 定价。
+
 **问：我是否可以在 Auto Scaling 组中指定不同大小（CPU 核心、内存）的实例？**
 
 可以。您可以指定区域中可用的任何实例类型。此外，您还可以为每个实例类型指定一个可选权重，该权重定义每个实例贡献给应用程序性能的容量单位。
@@ -121,7 +180,7 @@ EC2 Auto Scaling 组是区域性结构。它们可以跨可用区，但不跨 AW
 **问：如果我想使用的实例类型在可用区中不可用，该怎么办？**
 
 如果指定的实例类型在某个可用区中都不可用，Auto Scaling 会重新定位与 Auto Scaling 组关联的其他可用区中的启动。Auto Scaling 将始终致力于让您的计算在多个可用区之间保持平衡，如果所有实例类型在某个可用区中都不可用，它将重新定位。
-## 价格
+## 定价
 问：使用 Amazon EC2 Auto Scaling 的成本如何？
 
 Amazon EC2 Auto Scaling 为 EC2 实例的编排管理不带有额外的费用。Amazon EC2 Auto Scaling 动态伸缩的能力是由 Amazon CloudWatch 赋予的，也不带有额外费用。Amazon EC2 和 Amazon CloudWatch 服务的费用已经包含这个，它们是单独计费的。

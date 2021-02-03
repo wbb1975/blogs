@@ -362,7 +362,7 @@ Linux系统上的每个进程都有一个 `/proc/PID`--它容纳了描述该进�
 ```
 ### 3.4  总结评论（Concluding remarks）
 在本文中，我们看到了PID 名字空间操作的一些细节。在下一篇文章，我们将讨论PID名字空间里的 init 进程，以及PID 名字空间API的一些细节。
-## Part 4: more on PID namespaces
+## Part 4: 更多关于PID namespaces
 在本文中，我们将继续上周对PID名字空间的[讨论](https://lwn.net/Articles/532271/)（扩展我们的名字空间[系列](https://lwn.net/Articles/531114/#series_index)）。PID 名字空间的一个主要用途是实现一揽子进程（一个容器）向一个自包含的Linux系统一样运作。传统系统的一个关键部分--一个PID名字空间容器也一样--是 `init` 进程。因此，我们将探讨`init` 进程的特殊角色，并指出它与传统`init` 进程不一样的几处地方。另外， 我们也将讨论应用于PID名字空间时名字空间API的一些其它细节。
 ### 4.1 PID名字空间 init 进程
 一个PID名字空间里创建的第一个进程在该名字空间的进程ID是1。该进程承担与传统Linux系统 init 进程相似的角色。特别地，init 进程可以为PID名字空间整体执行必要的初始化工作（例如，启动其它作为名字空间标准已部分的进程），并成为该名字空间内孤儿进程的父进程。
@@ -486,9 +486,29 @@ setns(fd, 0);   /* Second argument can be CLONE_NEWPID to force a
 值得强调的是setns() 和 unshare() 特殊对待PID名字空间。对于其它类型的名字空间，这两个系统调用确实改变了调用方的名字空间。而不改变调用方的PID名字空间的原因在于称为另一个PID名字空间的成员涉及到进程本身的PID更改，因为getpid()仅仅汇报相对该进程驻留的PID名字空间的PID。许多用户空间的程序和库依赖一个假设：一个进程的PID（由getpid()报告）是不变的（事实上，GNU C的getpid()包装函数[缓存](http://thread.gmane.org/gmane.linux.kernel/209103/focus=209130)了PID）；如果一个进程PID改变，这些程序将会被破坏。换一种方式：一个进程的PID名字空间成员关系是当进程被创建时就确定了的，（不像其它类型的成员关系）之后绝不能改变。
 ### 4.4 总结评论（Concluding remarks）
 本文中我们查看了PID名字空间 `init` 进程的特殊角色，展示了如何挂载一个PID名字空间的 `procfs` 从而它可被用于一些工具如 `ps`，也查看了`unshare()` 和 `setns()` 用于PID名字空间时的一些特质。这结束了我们关于PID名字空间的讨论，接下来我们将转向用户名字空间。
-## Part 5: user namespaces
-## Part 6: more on user namespaces
-## Part 7: network namespaces
+## Part 5: 用户名字空间
+继续我们的名字空间[序列](https://lwn.net/Articles/531114/#series_index)，本文将近距离了解用户名字空间。该特性的主要实现大体上完成于  Linux 3.8 （剩下的工作包括 XFS https://lwn.net/Articles/538816/和许多其它文件系统的修改；后者在 3.9 中合并进来）。用户名字空间允许每名字空间内的用户和组 ID 的映射。这意味着一个进程在一个名字空间里的用户和组 ID 可能与名字空间外是不同的。最值得注意的是，一个进程在名字空间外可能拥有非0用户 ID，但在同一时间其在名字空间里用户 ID 为0；换句话说，一个进程在名字空间外只能进行非特权操作，但在名字空间里它却有根用户（root）特权。
+### 5.1 创建用户名字空间
+当调用 clone() 或 unshare() 时指定 CLONE_NEWUSER 标记即可创建用户名字空间。从 Linux 3.8 开始（这不像创建其它类型名字空间的标记），创建名字空间不需（root）特权。在我们下面的例子中，所有的用户空间都使用非特权用户 ID 1000 创建。
+
+为了开始研究用户名字空间，我们将使用一个小程序， [demo_userns.c](https://lwn.net/Articles/539941/)，它在一个新的用户名字空间创建了一个子进程。子进程仅仅打印了其有效用户 ID 和组 ID和它的[能力](http://man7.org/linux/man-pages/man7/capabilities.7.html)，用一个非特权用户运行该程序将产生下面的输出：
+```
+    $ id -u          # Display effective user ID of shell process
+    1000
+    $ id -g          # Effective group ID of shell
+    1000
+    $ ./demo_userns 
+    eUID = 65534;  eGID = 65534;  capabilities: =ep
+```
+这个程序的输出展示了一些有趣的细节。其中之一是指派给子进程的能力。字符串 "=ep" （由库函数 cap_to_text() 产生，它将能力集转换为字符串表示）指示子进程拥有被允许且有效的全部能力集，虽然该程序是由一个非特权用户运行的。当一个用户名字空间被创建时，该用户名字空间的首进程被授予该名字空间里的全部能力集。这允许在其它进程在该名字空间被创建之前，首金城可以在名字空间里执行任何需要的初始化。
+
+第二个有趣的点在于子进程的用户和组 ID。正如上述一个进程的用户和组 ID 在名字空间内外可能是不同的。但是，需要在名字空间里的用户 ID 与名字空间外的用户 ID 有一个映射；组 ID 也应如此。如此当一个用户名字空间里的进程执行某中操作可能影响更广的系统（例如给名字空间歪的进程发送信号或访问一个文件）时，系统可以执行合适的权限检查。
+
+返回用户和组 ID 的系统调用，例如 getuid() and getgid()，总是返回调用进程驻留的用户名字空间里的凭证（credentials ）。如果一个用户 ID 没有映射，那么返回用户 ID 的系统调用将返回文件 `/proc/sys/kernel/overflowuid` 中的值。它在标准系统上的值默认为 `65534`。最初，一个用户名字空间没有用户 ID 映射，因此该名字空间里的所有用户 ID 都映射到这个值。同样的，一个新的用户名字空间没有组 ID 的映射，所有没有组映射的组 ID 都会被映射到 `/proc/sys/kernel/overflowgid`（它有与 `overflowuid` 一样的默认映射）。
+### 5.2 映射用户和组 ID
+### 5.3 创建用户名字空间
+## Part 6: 更多关于用户名字空间
+## Part 7: 网络名字空间
 ## Mount namespaces and shared subtrees
 ## Mount namespaces, mount propagation, and unbindable mounts
 ## Append A namespaces(7)
