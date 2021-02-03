@@ -385,9 +385,9 @@ if (client.isAdaptable(OpenShiftClient.class)) {
   + [Syndesis](https://syndesis.io/)
 - 专有平台:
   + [vCommander](https://www.embotics.com/hybrid-cloud-management-platform)
-### 8.4 Kubernetes Operators in Java Written using Fabric8 Kubernetes Client
+### 8.4 [Kubernetes Operators in Java Written using Fabric8 Kubernetes Client](https://github.com/fabric8io/kubernetes-client/blob/master/doc/KubernetesOperatorsInJavaWrittenUsingFabric8.md)
 ### 8.5 Kubernetes and Red Hat OpenShift Compatibility Matrix
-### 8.6 Kubernetes 客户端备忘单
+### 8.6 [Kubernetes 客户端备忘单](https://github.com/fabric8io/kubernetes-client/blob/master/doc/CHEATSHEET.md)
 ### 8.7 Kubectl Java 对等工具
 下面的表格提供了 `kubectl` 和 Kubernetes Java 客户端的映射。大多数映射很直接且线性操作。但是，某些可能需要稍微多一点的代码来去的同样的结果。
 
@@ -444,3 +444,4 @@ kubectl auth can-i create deployment.apps|[CanIEquivalent.java](https://github.c
 - [fabric8io/kubernetes-client](https://github.com/fabric8io/kubernetes-client)
 - [Kubenretes Java Client](https://github.com/kubernetes-client/java)
 - [fabric8/kubernetes-client JavaDoc](https://www.javadoc.io/doc/io.fabric8/kubernetes-client)
+- [Fabric8 Kubernetes Java Client Cheat Sheet](https://github.com/fabric8io/kubernetes-client/blob/master/doc/CHEATSHEET.md)
