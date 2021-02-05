@@ -510,6 +510,13 @@ setns(fd, 0);   /* Second argument can be CLONE_NEWPID to force a
 
 关于用户名字空间的创建的最后一个注意点是名字空间可以嵌套；即每个用户名字空间（并非最初的用户名字空间）拥有一个父用户名字空间，且可以拥有 0 个或多个子用户名字空间。父用户名字空间是通过 clone() 或 unshare() 传递 CLONE_NEWUSER 标记来创建用户名字空间的进程所在的 用户名字空间。在用户名字空间之间的父-子进程关系的重要性将在本文的稍后部分变得更清晰。
 ### 5.2 映射用户和组 ID
+通常创建一个用户名字空间后的第一步是定义在该名字空间创建的进程的用户和组ID的映射。这通过在用户名字空间里对应进程的 `/proc/PID/uid_map` 和 `/proc/PID/gid_map` 文件里添加映射信息来实现。（最初这两个文件是空的）这些信息包含一行或多行，每一行包含由空白分割的多行。
+```
+ID-inside-ns   ID-outside-ns   length
+```
+`ID-inside-ns` 和 `length` 一起定义了名字空间里的 ID 范围，它们将被映射到名字空间之外同样长度的 ID 的范围。`ID-outside-ns` 值指定了外不反胃的起始点。`ID-outside-ns` 如何解释取决于打开 `/proc/PID/uid_map`（`/proc/PID/gid_map`）的进程与进程 PID 是否在同一用户名字空间：
+- 如果两个进程位于同一名字空间，那么 `ID-outside-ns` 被解释为一个在进程 PID 的父用户进程名字空间里的用户 ID（组 ID ）。这里的常见例子是一个进程写自己的映射文件（`/proc/self/uid_map` 或 `/proc/self/gid_ma`p）。
+- 如果两个进程位于不同的名字空间，那么 `ID-outside-ns` 被解释为一个在打开 `/proc/PID/uid_map`（`/proc/PID/gid_map`）文件的进程的用户名字空间里的用户 ID（组 ID ）。该进程在定义相对于自己的用户名字空间的映射。
 ### 5.3 创建用户名字空间
 ## Part 6: 更多关于用户名字空间
 ## Part 7: 网络名字空间

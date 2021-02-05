@@ -197,9 +197,9 @@ public class FooList implements io.kubernetes.client.common.KubernetesListObject
    + 使用一般kubernetes API，示例[见此](https://github.com/kubernetes-client/java/blob/6fa3525189d9e50d9b07016155642ddf59990905/examples/src/main/java/io/kubernetes/client/examples/GenericClientExample.java#L56)
 ## 7. 常见问题
 ### ApiException: 在集群中运行代码时被禁止（Forbidden while running code in cluster）
-很可能你的 Pod 没有正确的 RBAC 权限。默认地大部分 Pods 金科相当有限地访问 Kubernetes API server。你需要确保 Pod 的 ServiceAccount 有正确的 RBAC 权限。
+很可能你的 Pod 没有正确的 RBAC 权限。默认地大部分 Pods 仅能相当有限地访问 Kubernetes API server。你需要确保 Pod 的 ServiceAccount 有正确的 RBAC 权限。
 
-更多细节，请查看[](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#service-account-permissions)
+更多细节，请查看[服务账号权限](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#service-account-permissions)
 
 ## Reference
 - [Kubernetes Java Client](https://github.com/kubernetes-client/java)
