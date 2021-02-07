@@ -1695,7 +1695,642 @@ contexts:
 
 更多信息可以参考 `authorization.v1beta1` API 对象和 [webhook.go](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/plugin/pkg/authorizer/webhook/webhook.go)。
 ## 4. 证书签名请求（Certificate Signing Requests）
+**FEATURE STATE: Kubernetes v1.19 [stable]**
+
+证书 API 支持 [X.509](https://www.itu.int/rec/T-REC-X.509) 的自动化配置，它为 Kubernetes API 的客户端提供一个编程接口，用于从证书颁发机构（CA）请求并获取 X.509 证书。
+
+CertificateSigningRequest（CSR）资源用来向指定的签名者申请证书签名，在最终签名之前，申请可能被批准，也可能被拒绝。
+### 4.1 请求签名流程
+`CertificateSigningRequest` 资源类型允许客户使用它申请发放 X.509 证书。`CertificateSigningRequest` 对象在 `spec.request` 中包含一个 PEM 编码的 `PKCS#10` 签名请求。 `CertificateSigningRequest` 使用 `spec.signerName` 字段标示签名者（请求的接收方）。注意，`spec.signerName` 在 `certificates.k8s.io/v1` 之后的 API 版本是必填项。
+
+创建完成的 `CertificateSigningRequest`，要先通过批准，然后才能签名。根据所选的签名者，`CertificateSigningRequest` 可能会被控制器自动批准。否则，就必须人工批准，人工批准可以使用 REST API（或 go 客户端），也可以执行 `kubectl certificate approve` 命令。同样，`CertificateSigningRequest` 也可能被驳回，这就相当于通知了指定的签名者，这个证书不能签名。
+
+对于已批准的证书，下一步是签名。对应的签名控制器首先验证签名条件是否满足，然后才创建证书。签名控制器然后更新 CertificateSigningRequest，将新证书保存到现有CertificateSigningRequest 对象的 `status.certificate` 字段中。此时，字段 `status.certificate` 要么为空，要么包含一个用 PEM 编码的 `X.509` 证书。直到签名完成前，CertificateSigningRequest 的字段 `status.certificate` 都为空。
+
+一旦 `status.certificate` 字段完成填充，请求既算完成，客户端现在可以从 CertificateSigningRequest 资源中获取已签名的证书的 PEM 数据。当然如果不满足签名条件，签名者可以拒签。
+
+为了减少集群中遗留的过时的 CertificateSigningRequest 资源的数量，一个垃圾收集控制器将会周期性地运行。此垃圾收集器会清除在一段时间内没有改变过状态的 CertificateSigningRequests：
+- 已批准的请求：1小时后自动删除
+- 已拒绝的请求：1小时后自动删除
+- 挂起的请求：1小时后自动删除
+### 4.2 签名者
+所有签名者都应该提供自己工作方式的信息，以便客户端可以预期到他们的 CSR 将发生什么。此类信息包括：
+1. **信任分发**：信任（CA 证书包）是如何分发的。
+2. **许可的主体**：当一个受限制的主体（subject）发送请求时，相应的限制和应对手段。
+3. **许可的 x509 扩展**：包括 `IP subjectAltNames`、`DNS subjectAltNames`、`Email subjectAltNames`、`URI subjectAltNames` 等，请求一个受限制的扩展项时的应对手段。
+4. **许可的密钥用途/扩展的密钥用途**：当用途和签名者在 CSR 中指定的用途不同时， 相应的限制和应对手段。
+5. **过期时间/证书有效期**：过期时间由签名者确定、由管理员配置，还是由 CSR 对象指定等， 以及过期时间与签名者在 CSR 中指定过期时间不同时的应对手段。
+6. **允许/不允许 CA 位**：当 CSR 包含一个签名者并不允许的 CA 证书的请求时，相应的应对手段。
+
+一般来说，当 CSR 被批准通过，且证书被签名后，`status.certificate` 字段 将包含一个 PEM 编码的 X.509 证书。 有些签名者在 `status.certificate` 字段中存储多个证书。在这种情况下，签名者的说明文档应当指明附加证书的含义。例如，这是要在 `TLS` 握手时提供的证书和中继证书。
+
+PKCS#10 签名请求格式不允许设置证书的过期时间或者生命期。因此，证书的过期 时间或者生命期必须通过类似 CSR 对象的注解字段这种形式来设置。 尽管让签名者使用过期日期从理论上来讲也是可行的，目前还不存在哪个实现这样做了。（内置的签名者都是用相同的 `ClusterSigningDuration` 配置选项，而该选项中将生命期的默认值设为 1 年，且可通过 `kube-controller-manager` 的命令行选项 `--cluster-signing-duration` 来更改。）
+#### Kubernetes 签名者
+Kubernetes提供了内置的签名者，每个签名者都有一个众所周知的 signerName:
+- `kubernetes.io/kube-apiserver-client`：签名的证书将被 API 服务器视为客户证书。`kube-controller-manager` 不会自动批准它。
+  + 信任分发：签名的证书将被 API 服务器视为客户端证书。CA 证书包不通过任何其他方式分发。
+  + 许可的主体：没有主体限制，但审核人和签名者可以选择不批准或不签署。某些主体，比如集群管理员级别的用户或组因部署和安装方式不同而不同，所以批准和签署之前需要进行额外仔细审查。用来限制 `system:masters` 的 CertificateSubjectRestriction 准入插件默认处于启用状态，但它通常不是集群中唯一的集群管理员主体。
+  + 许可的 x509 扩展：允许 `subjectAltName` 和 `key usage` 扩展，弃用其他扩展。
+  + 许可的密钥用途：必须包含 ["client auth"]，但不能包含 ["digital signature", "key encipherment", "client auth"] 之外的键。
+  + 过期时间/证书有效期：通过 `kube-controller-manager` 中 `--cluster-signing-duration` 标志来设置，由其中的签名者实施。
+  + 允许/不允许 CA 位：不允许。
+- `kubernetes.io/kube-apiserver-client-kubelet`: 签名的证书将被 `kube-apiserver` 视为客户证书。`kube-controller-manager` 可以自动批准它。
+  + 信任分发：签名的证书将被 API 服务器视为客户端证书。CA 证书包不通过任何其他方式分发。
+  + 许可的主体：组织名必须是 ["system:nodes"]，用户名以 "system:node:" 开头
+  + 许可的 x509 扩展：允许 key usage 扩展，禁用 subjectAltName 扩展，并删除其他扩展。
+  + 许可的密钥用途：必须是 ["key encipherment", "digital signature", "client auth"]
+  + 过期时间/证书有效期：通过 `kube-controller-manager` 中签名者的实现所对应的标志 `--cluster-signing-duration` 来设置。
+  + 允许/不允许 CA 位：不允许。
+- `kubernetes.io/kubelet-serving`: 签名服务证书，该服务证书被 API 服务器视为有效的 kubelet 服务证书， 但没有其他保证。`kube-controller-manager` 不会自动批准它。
+  + 信任分发：签名的证书必须被 kube-apiserver 认可，可有效的中止 kubelet 连接。CA 证书包不通过任何其他方式分发。
+  + 许可的主体：组织名必须是 ["system:nodes"]，用户名以 "system:node:" 开头
+  + 许可的 x509 扩展：允许 key usage、DNSName/IPAddress subjectAltName 等扩展， 禁止 EmailAddress、URI subjectAltName 等扩展，并丢弃其他扩展。 至少有一个 DNS 或 IP 的 SubjectAltName 存在。
+  + 许可的密钥用途：必须是 ["key encipherment", "digital signature", "client auth"]
+  + 过期日期/证书生命期：通过 `kube-controller-manager` 中签名者的实现所对应的标志 `--cluster-signing-duration` 来设置。
+  + 允许/不允许 CA 位：不允许。
+- `kubernetes.io/legacy-unknown`: 不保证信任。Kubernetes 的一些第三方发行版可能会使用它签署的客户端证书。 稳定版的 CertificateSigningRequest API（`certificates.k8s.io/v1` 以及之后的版本）不允许将 signerName 设置为 `kubernetes.io/legacy-unknown`。 `kube-controller-manager` 不会自动批准这类请求。
+  + 信任分发：没有。这个签名者在 Kubernetes 集群中没有标准的信任或分发。
+  + 许可的主体：全部。
+  + 许可的 x509 扩展：允许 subjectAltName 和 key usage 等扩展，并弃用其他扩展。
+  + 许可的密钥用途：全部。
+  + 过期日期/证书生命期：通过 kube-controller-manager 中签名者的实现所对应的标志 --cluster-signing-duration 来设置。
+  + 允许/不允许 CA 位 - 不允许。
+
+> **注意**：所有这些故障仅在 `kube-controller-manager` 日志中报告。
+
+对于这些签名者，信任的分发发生在带外（out of band）。上述信任之外的任何信任都是完全巧合的。例如，一些发行版可能会将 `kubernetes.io/legacy-unknown` 作为 `kube-apiserver` 的客户端证书，但这个做法并不标准。这些用途都没有以任何方式涉及到 ServiceAccount 中的 Secrets `.data[ca.crt]`。 此 CA 证书包只保证使用默认的服务（`kubernetes.default.svc`）来验证到 API 服务器的连接。
+### 4.3 鉴权
+授权创建 CertificateSigningRequest 和检索 CertificateSigningRequest:
+- verbs（动词）: create、get、list、watch, group（组）：certificates.k8s.io， resources：certificatesigningrequests
+  
+例如：[access/certificate-signing-request/clusterrole-create.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/zh/examples/access/certificate-signing-request/clusterrole-create.yaml)
+
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+name: csr-creator
+rules:
+- apiGroups:
+- certificates.k8s.io
+resources:
+- certificatesigningrequests
+verbs:
+- create
+- get
+- list
+- watch
+```
+  
+授权批准 CertificateSigningRequest：
+- verbs（动词）: get、list、watch， group（组）：certificates.k8s.io， resources（资源）：certificatesigningrequests
+- verbs（动词）: update， group（组）：certificates.k8s.io， resources（资源）：certificatesigningrequests/approval
+- verbs（动词）：approve， group（组）：certificates.k8s.io， resources（资源）：signers， resourceName：<signerNameDomain>/<signerNamePath> 或 <signerNameDomain>/*
+
+例如：[access/certificate-signing-request/clusterrole-approve.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/zh/examples/access/certificate-signing-request/clusterrole-approve.yaml)
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csr-approver
+rules:
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/approval
+  verbs:
+  - update
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceNames:
+  - example.com/my-signer-name # example.com/* can be used to authorize for all signers in the 'example.com' domain
+  verbs:
+  - approve
+```
+
+授权签名 CertificateSigningRequest：
+- verbs（动词）：get、list、watch， group（组）：certificates.k8s.io， resources（资源）：certificatesigningrequests
+- verbs（动词）：update， group（组）：certificates.k8s.io， resources（资源）：certificatesigningrequests/status
+- verbs（动词）：sign， group（组）：certificates.k8s.io， resources（资源）：signers， resourceName：<signerNameDomain>/<signerNamePath> 或 <signerNameDomain>/*
+
+[access/certificate-signing-request/clusterrole-sign.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/zh/examples/access/certificate-signing-request/clusterrole-sign.yaml)
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csr-signer
+rules:
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/status
+  verbs:
+  - update
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceName:
+  - example.com/my-signer-name # example.com/* can be used to authorize for all signers in the 'example.com' domain
+  verbs:
+  - sign
+```
+### 4.4 普通用户
+为了让普通用户能够通过认证并调用 API，需要执行几个步骤。 首先，该用户必须拥有 Kubernetes 集群签发的证书， 然后将该证书作为 API 调用的 Certificate 头或通过 kubectl 提供。
+#### 4.4.1 创建私钥
+下面的脚本展示了如何生成 PKI 私钥和 CSR。设置 CSR 的 `CN` 和 `O` 属性很重要。`CN` 是用户名，`O` 是该用户归属的组。 你可以参考 [RBAC](https://kubernetes.io/zh/docs/reference/access-authn-authz/rbac/) 了解标准组的信息。
+```
+openssl genrsa -out john.key 2048
+openssl req -new -key john.key -out john.csr
+```
+#### 4.4.2 创建 CertificateSigningRequest
+创建一个 CertificateSigningRequest，并通过 kubectl 将其提交到 Kubernetes 集群。 下面是生成 CertificateSigningRequest 的脚本。
+```
+cat <<EOF | kubectl apply -f -
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: john
+spec:
+  groups:
+  - system:authenticated
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBNQTBHQTFVRUF3d0dZVzVuWld4aE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJDZ0tDQVFFQTByczhJTHRHdTYxakx2dHhWTTJSVlRWMDNHWlJTWWw0dWluVWo4RElaWjBOCnR2MUZtRVFSd3VoaUZsOFEzcWl0Qm0wMUFSMkNJVXBGd2ZzSjZ4MXF3ckJzVkhZbGlBNVhwRVpZM3ExcGswSDQKM3Z3aGJlK1o2MVNrVHF5SVBYUUwrTWM5T1Nsbm0xb0R2N0NtSkZNMUlMRVI3QTVGZnZKOEdFRjJ6dHBoaUlFMwpub1dtdHNZb3JuT2wzc2lHQ2ZGZzR4Zmd4eW8ybmlneFNVekl1bXNnVm9PM2ttT0x1RVF6cXpkakJ3TFJXbWlECklmMXBMWnoyalVnald4UkhCM1gyWnVVV1d1T09PZnpXM01LaE8ybHEvZi9DdS8wYk83c0x0MCt3U2ZMSU91TFcKcW90blZtRmxMMytqTy82WDNDKzBERHk5aUtwbXJjVDBnWGZLemE1dHJRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBR05WdmVIOGR4ZzNvK21VeVRkbmFjVmQ1N24zSkExdnZEU1JWREkyQTZ1eXN3ZFp1L1BVCkkwZXpZWFV0RVNnSk1IRmQycVVNMjNuNVJsSXJ3R0xuUXFISUh5VStWWHhsdnZsRnpNOVpEWllSTmU3QlJvYXgKQVlEdUI5STZXT3FYbkFvczFqRmxNUG5NbFpqdU5kSGxpT1BjTU1oNndLaTZzZFhpVStHYTJ2RUVLY01jSVUyRgpvU2djUWdMYTk0aEpacGk3ZnNMdm1OQUxoT045UHdNMGM1dVJVejV4T0dGMUtCbWRSeEgvbUNOS2JKYjFRQm1HCkkwYitEUEdaTktXTU0xMzhIQXdoV0tkNjVoVHdYOWl4V3ZHMkh4TG1WQzg0L1BHT0tWQW9FNkpsYWFHdTlQVmkKdjlOSjVaZlZrcXdCd0hKbzZXdk9xVlA3SVFjZmg3d0drWm89Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+  signerName: kubernetes.io/kube-apiserver-client
+  usages:
+  - client auth
+EOF
+```
+需要注意的几点:
+- `usage` 字段必须是 'client auth'
+- `request` 字段是 CSR 文件内容的 base64 编码值。要得到该值，可以执行命令 `cat john.csr | base64 | tr -d "\n"`。
+#### 4.4.3 批准证书签名请求
+使用 kubectl 创建 CSR 并批准。
+
+获取 CSR 列表：
+```
+kubectl get csr
+```
+
+批准 CSR：
+```
+kubectl certificate approve john
+```
+#### 4.4.4 取得证书
+从 CSR 取得证书：
+```
+kubectl get csr/john -o yaml
+```
+证书的内容使用 base64 编码，存放在字段 status.certificate。
+#### 4.4.5 创建角色和角色绑定
+创建了证书之后，为了让这个用户能访问 Kubernetes 集群资源，现在就要创建 `Role` 和 `RoleBinding` 了。
+
+下面是为这个新用户创建 Role 的示例脚本：
+```
+kubectl create role developer --verb=create --verb=get --verb=list --verb=update --verb=delete --resource=pods
+```
+下面是为这个新用户创建 RoleBinding 的示例命令：
+```
+kubectl create rolebinding developer-binding-john --role=developer --user=john
+```
+#### 4.4.5 添加到 kubeconfig
+最后一步是将这个用户添加到 kubeconfig 文件。 我们假设私钥和证书文件存放在 “/home/vagrant/work/” 目录中。
+
+首先，我们需要添加新的凭据：
+```
+kubectl config set-credentials john --client-key=/home/vagrant/work/john.key --client-certificate=/home/vagrant/work/john.crt --embed-certs=true
+```
+然后，你需要添加上下文：
+```
+kubectl config set-context john --cluster=kubernetes --user=john
+```
+来测试一下，把上下文切换为 john：
+```
+kubectl config use-context john
+```
+### 4.5 批准和驳回
+#### 4.5.1 控制平面的自动化批准
+`kube-controller-manager` 内建了一个证书批准者，其 signerName 为 `kubernetes.io/kube-apiserver-client-kubelet`，该批准者将 CSR 上用于节点凭据的各种权限委托给权威认证机构。 `kube-controller-manager` 将 SubjectAccessReview 资源发送（POST）到 API 服务器，以便检验批准证书的授权。
+#### 4.5.2 使用 kubectl 批准或驳回
+Kubernetes 管理员（拥有足够的权限）可以手工批准（或驳回）CertificateSigningRequests，此操作使用 `kubectl certificate approve` 和 `kubectl certificate deny` 命令实现。
+
+使用 kubectl 批准一个 CSR：
+```
+kubectl certificate approve <certificate-signing-request-name>
+```
+同样地，驳回一个 CSR：
+```
+kubectl certificate deny <certificate-signing-request-name>
+```
+#### 4.5.3 使用 Kubernetes API 批准或驳回
+REST API 的用户可以通过向待批准的 CSR 的 approval 子资源提交更新请求来批准 CSR。例如，你可以编写一个 operator 来监视特定类型的 CSR，然后发送一个更新来批准它。
+
+当你发出批准或驳回的指令时，根据你期望的状态来选择设置 `Approved` 或 `Denied`。
+
+批准（`Approved`） 的 CSR：
+```
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+...
+status:
+  conditions:
+  - lastUpdateTime: "2020-02-08T11:37:35Z"
+    lastTransitionTime: "2020-02-08T11:37:35Z"
+    message: Approved by my custom approver controller
+    reason: ApprovedByMyPolicy # You can set this to any string
+    type: Approved
+```
+驳回（Denied）的 CRS：
+```
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+...
+status:
+  conditions:
+  - lastUpdateTime: "2020-02-08T11:37:35Z"
+    lastTransitionTime: "2020-02-08T11:37:35Z"
+    message: Denied by my custom approver controller
+    reason: DeniedByMyPolicy # You can set this to any string
+    type: Denied
+```
+`status.conditions.reason` 字段通常设置为一个首字母大写的对机器友好的原因码; 这是一个命名约定，但你也可以随你的个人喜好设置。如果你想添加一个仅供人类使用的注释，那就用 `status.conditions.message` 字段。
+### 4.6 签名
+#### 4.6.1 控制平面签名者
+Kubernetes 控制平面实现了每一个 [Kubernetes 签名者](https://kubernetes.io/zh/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers)，每个签名者的实现都是 `kube-controller-manager` 的一部分。
+
+> **说明**：在Kubernetes v1.18 之前，`kube-controller-manager` 签名所有标记为 `approved` 的 CSR。
+#### 4.6.2 基于 API 的签名者
+REST API 的用户可以通过向待签名的 CSR 的 `status` 子资源提交更新请求来对 CSR 进行签名。
+
+作为这个请求的一部分， `status.certificate` 字段应设置为已签名的证书。 此字段可包含一个或多个 PEM 编码的证书。
+
+所有的 PEM 块必须具备 "CERTIFICATE" 标签，且不包含文件头，且编码的数据必须是 [RFC5280 第 4 节](https://tools.ietf.org/html/rfc5280#section-4.1)中描述的 BER 编码的 ASN.1 证书结构。
+```
+-----BEGIN CERTIFICATE-----
+MIIDgjCCAmqgAwIBAgIUC1N1EJ4Qnsd322BhDPRwmg3b/oAwDQYJKoZIhvcNAQEL
+BQAwXDELMAkGA1UEBhMCeHgxCjAIBgNVBAgMAXgxCjAIBgNVBAcMAXgxCjAIBgNV
+BAoMAXgxCjAIBgNVBAsMAXgxCzAJBgNVBAMMAmNhMRAwDgYJKoZIhvcNAQkBFgF4
+MB4XDTIwMDcwNjIyMDcwMFoXDTI1MDcwNTIyMDcwMFowNzEVMBMGA1UEChMMc3lz
+dGVtOm5vZGVzMR4wHAYDVQQDExVzeXN0ZW06bm9kZToxMjcuMC4wLjEwggEiMA0G
+CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDne5X2eQ1JcLZkKvhzCR4Hxl9+ZmU3
++e1zfOywLdoQxrPi+o4hVsUH3q0y52BMa7u1yehHDRSaq9u62cmi5ekgXhXHzGmm
+kmW5n0itRECv3SFsSm2DSghRKf0mm6iTYHWDHzUXKdm9lPPWoSOxoR5oqOsm3JEh
+Q7Et13wrvTJqBMJo1GTwQuF+HYOku0NF/DLqbZIcpI08yQKyrBgYz2uO51/oNp8a
+sTCsV4OUfyHhx2BBLUo4g4SptHFySTBwlpRWBnSjZPOhmN74JcpTLB4J5f4iEeA7
+2QytZfADckG4wVkhH3C2EJUmRtFIBVirwDn39GXkSGlnvnMgF3uLZ6zNAgMBAAGj
+YTBfMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDAjAMBgNVHRMB
+Af8EAjAAMB0GA1UdDgQWBBTREl2hW54lkQBDeVCcd2f2VSlB1DALBgNVHREEBDAC
+ggAwDQYJKoZIhvcNAQELBQADggEBABpZjuIKTq8pCaX8dMEGPWtAykgLsTcD2jYr
+L0/TCrqmuaaliUa42jQTt2OVsVP/L8ofFunj/KjpQU0bvKJPLMRKtmxbhXuQCQi1
+qCRkp8o93mHvEz3mTUN+D1cfQ2fpsBENLnpS0F4G/JyY2Vrh19/X8+mImMEK5eOy
+o0BMby7byUj98WmcUvNCiXbC6F45QTmkwEhMqWns0JZQY+/XeDhEcg+lJvz9Eyo2
+aGgPsye1o3DpyXnyfJWAWMhOz7cikS5X2adesbgI86PhEHBXPIJ1v13ZdfCExmdd
+M1fLPhLyR54fGaY+7/X8P9AZzPefAkwizeXwe9ii6/a08vWoiE4=
+-----END CERTIFICATE-----
+```
+非 PEM 内容可能会出现在证书 PEM 块前后的位置，且未经验证，以允许使用 RFC7468 第5.2节 中描述的解释性文本。
+
+当使用 JSON 或 YAML 格式时，此字段是 `base-64` 编码。包含上述示例证书的 CertificateSigningRequest 如下所示：
+```
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+...
+status:
+  certificate: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JS..."
+```
 ## 5. 服务账号（Service accounts）
+### 5.1 为 Pod 配置服务账户
+服务账户为 Pod 中运行的进程提供了一个标识。
+> **说明**： 本文是服务账户的用户使用介绍，描述服务账号在集群中如何起作用。你的集群管理员可能已经对你的集群做了定制，因此导致本文中所讲述的内容可能并不适用。
+
+当你（自然人）访问集群时（例如，使用 kubectl），API 服务器将你的身份验证为 特定的用户帐户（当前这通常是 `admin`，除非你的集群管理员已经定制了你的集群配置）。Pod 内的容器中的进程也可以与 api 服务器接触。当它们进行身份验证时，它们被验证为特定的服务帐户（例如，`default`）。
+#### 5.1.1 准备开始
+你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+- [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+- [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+
+要获知版本信息，请输入 kubectl version.
+#### 5.1.2 使用默认的服务账户访问 API 服务器
+当你创建 Pod 时，如果没有指定服务账户，Pod 会被指定给命名空间中的 `default` 服务账户。如果你查看 Pod 的原始 `JSON` 或 `YAML`（例如：`kubectl get pods/podname -o yaml`），你可以看到 `spec.serviceAccountName` 字段已经被自动设置了。
+
+你可以使用自动挂载给 Pod 的服务账户凭据访问 API，[访问集群](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod)中有相关描述。服务账户的 API 许可取决于你所使用的[鉴权插件和策略](https://kubernetes.io/zh/docs/reference/access-authn-authz/authorization/#authorization-modules)。
+
+在 1.6 以上版本中，你可以通过在服务账户上设置 `automountServiceAccountToken: false` 来实现不给服务账号自动挂载 API 凭据：
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: build-robot
+automountServiceAccountToken: false
+...
+```
+在 1.6 以上版本中，你也可以选择不给特定 Pod 自动挂载 API 凭据：
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  serviceAccountName: build-robot
+  automountServiceAccountToken: false
+  ...
+```
+如果 Pod 和服务账户都指定了 `automountServiceAccountToken` 值，则 Pod 的 `spec` 优先于服务帐户。
+#### 5.1.3 使用多个服务账户
+每个命名空间都有一个名为 `default` 的服务账户资源。你可以用下面的命令查询这个服务账户以及命名空间中的其他 `ServiceAccount` 资源：
+```
+kubectl get serviceAccounts
+```
+输出类似于：
+```
+NAME      SECRETS    AGE
+default   1          1d
+```
+你可以像这样来创建额外的 ServiceAccount 对象：
+```
+kubectl create -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: build-robot
+EOF
+```
+ServiceAccount 对象的名字必须是一个有效的 [DNS 子域名](https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/names#dns-subdomain-names).
+
+如果你查询服务帐户对象的完整信息，如下所示：
+```
+kubectl get serviceaccounts/build-robot -o yaml
+```
+输出类似于：
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: 2015-06-16T00:12:59Z
+  name: build-robot
+  namespace: default
+  resourceVersion: "272500"
+  uid: 721ab723-13bc-11e5-aec2-42010af0021e
+secrets:
+- name: build-robot-token-bvbk5
+```
+那么你就能看到系统已经自动创建了一个令牌并且被服务账户所引用。
+
+你可以使用授权插件来[设置服务账户的访问许可](https://kubernetes.io/zh/docs/reference/access-authn-authz/rbac/#service-account-permissions)。
+
+要使用非默认的服务账户，只需简单的将 Pod 的 spec.serviceAccountName 字段设置为你想用的服务账户名称。
+
+Pod 被创建时服务账户必须存在，否则会被拒绝。
+
+你不能更新已经创建好的 Pod 的服务账户。
+
+你可以清除服务账户，如下所示：
+```
+kubectl delete serviceaccount/build-robot
+```
+#### 5.1.4 手动创建服务账户 API 令牌
+假设我们有一个上面提到的名为 "build-robot" 的服务账户，然后我们手动创建一个新的 Secret。
+```
+kubectl create -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: build-robot-secret
+  annotations:
+    kubernetes.io/service-account.name: build-robot
+type: kubernetes.io/service-account-token
+EOF
+secret/build-robot-secret created
+```
+现在，你可以确认新构建的 Secret 中填充了 "build-robot" 服务帐户的 API 令牌。
+
+令牌控制器将清理不存在的服务帐户的所有令牌。
+```
+kubectl describe secrets/build-robot-secret
+```
+输出类似于：
+```
+Name:           build-robot-secret
+Namespace:      default
+Labels:         <none>
+Annotations:    kubernetes.io/service-account.name=build-robot
+                kubernetes.io/service-account.uid=da68f9c6-9d26-11e7-b84e-002dc52800da
+
+Type:   kubernetes.io/service-account-token
+
+Data
+====
+ca.crt:         1338 bytes
+namespace:      7 bytes
+token:          ...
+```
+> **说明**： 这里省略了 token 的内容。
+#### 5.1.5 为服务账户添加 ImagePullSecrets
+**创建 ImagePullSecret**
+- 创建一个 ImagePullSecret，如同[为 Pod 设置 ImagePullSecret](https://kubernetes.io/zh/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod)所述。
+  ```
+  kubectl create secret docker-registry myregistrykey --docker-server=DUMMY_SERVER \
+          --docker-username=DUMMY_USERNAME --docker-password=DUMMY_DOCKER_PASSWORD \
+          --docker-email=DUMMY_DOCKER_EMAIL
+  ```
+- 确认创建成功：
+  ```
+  kubectl get secrets myregistrykey
+  ```
+  输出类似于：
+  ```
+  NAME             TYPE                              DATA    AGE
+  myregistrykey    kubernetes.io/.dockerconfigjson   1       1d
+  ```
+**将镜像拉取 Secret 添加到服务账号**
+接着修改命名空间的 default 服务帐户，以将该 Secret 用作 imagePullSecret。
+```
+kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "myregistrykey"}]}'
+```
+你也可以使用 kubectl edit，或者如下所示手动编辑 YAML 清单：
+```
+kubectl get serviceaccounts default -o yaml > ./sa.yaml
+```
+sa.yaml 文件的内容类似于：
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: 2015-08-07T22:02:39Z
+  name: default
+  namespace: default
+  resourceVersion: "243024"
+  uid: 052fb0f4-3d50-11e5-b066-42010af0d7b6
+secrets:
+- name: default-token-uudge
+```
+使用你常用的编辑器（例如 vi），打开 `sa.yaml` 文件，删除带有键名 `resourceVersion` 的行，添加带有 `imagePullSecrets:` 的行，最后保存文件。
+
+所得到的 `sa.yaml` 文件类似于：
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: 2015-08-07T22:02:39Z
+  name: default
+  namespace: default
+  uid: 052fb0f4-3d50-11e5-b066-42010af0d7b6
+secrets:
+- name: default-token-uudge
+imagePullSecrets:
+- name: myregistrykey
+```
+最后，用新的更新的 sa.yaml 文件替换服务账号。
+```
+kubectl replace serviceaccount default -f ./sa.yaml
+```
+**验证镜像拉取 Secret 已经被添加到 Pod 规约**
+现在，在当前命名空间中创建的每个使用默认服务账号的新 Pod，新 Pod 都会自动设置其 `.spec.imagePullSecrets` 字段：
+```
+kubectl run nginx --image=nginx --restart=Never
+kubectl get pod nginx -o=jsonpath='{.spec.imagePullSecrets[0].name}{"\n"}'
+```
+输出为：
+```
+myregistrykey
+```
+#### 5.1.6 服务帐户令牌卷投射
+**FEATURE STATE: Kubernetes v1.20 [stable]**
+
+> **说明**：为了启用令牌请求投射，你必须为 kube-apiserver 设置以下命令行参数：
+> - `--service-account-issuer`
+> - `--service-account-key-file`
+> - `--service-account-signing-key-file`
+> - `--api-audiences`
+
+kubelet 还可以将服务帐户令牌投影到 Pod 中。你可以指定令牌的所需属性，例如受众和有效持续时间。这些属性在默认服务帐户令牌上无法配置。当删除 Pod 或 `ServiceAccount` 时，服务帐户令牌也将对 API 无效。
+
+使用名为 `ServiceAccountToken` 的 `ProjectedVolume` 类型在 `PodSpec` 上配置此功能。要向 Pod 提供具有 "vault" 用户以及两个小时有效期的令牌，可以在 `PodSpec` 中配置以下内容：
+
+[pods/pod-projected-svc-token.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/zh/examples/pods/pod-projected-svc-token.yaml)
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    volumeMounts:
+    - mountPath: /var/run/secrets/tokens
+      name: vault-token
+  serviceAccountName: build-robot
+  volumes:
+  - name: vault-token
+    projected:
+      sources:
+      - serviceAccountToken:
+          path: vault-token
+          expirationSeconds: 7200
+          audience: vault
+```
+创建 Pod：
+```
+kubectl create -f https://k8s.io/examples/pods/pod-projected-svc-token.yaml
+```
+kubelet 组件会替 Pod 请求令牌并将其保存起来，通过将令牌存储到一个可配置的 路径使之在 Pod 内可用，并在令牌快要到期的时候刷新它。kubelet 会在令牌存在期达到其 TTL 的 80% 的时候或者令牌生命期超过 24 小时 的时候主动轮换它。
+
+应用程序负责在令牌被轮换时重新加载其内容。对于大多数使用场景而言，周期性地（例如，每隔 5 分钟）重新加载就足够了。
+#### 5.1.7 发现服务账号分发者
+**FEATURE STATE: Kubernetes v1.20 [beta]**
+
+通过启用 ServiceAccountIssuerDiscovery [特性门控](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/feature-gates)，并按[前文所述](https://kubernetes.io/zh/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection)启用服务账号令牌投射， 可以启用发现服务账号分发者（Service Account Issuer Discovery）这一功能特性。
+> **说明**：分发者的 URL 必须遵从 OIDC 发现规范。 这意味着 URL 必须使用 https 模式，并且必须在 `{service-account-issuer}/.well-known/openid-configuration` 路径提供 OpenID 提供者（Provider）配置。
+> 如果 URL 没有遵从这一规范，`ServiceAccountIssuerDiscovery` 末端就不会被注册，即使该特性已经被启用。
+
+发现服务账号分发者这一功能使得用户能够用联邦的方式结合使用 Kubernetes 集群（Identity Provider，标识提供者）与外部系统（relying parties，依赖方）所分发的服务账号令牌。
+
+当此功能被启用时，Kubernetes API 服务器会在 `/.well-known/openid-configuration` 提供一个 OpenID 提供者配置文档，并在 `/openid/v1/jwks` 处提供与之关联的 `JSON Web Key Set（JWKS）`。 这里的 OpenID 提供者配置有时候也被称作 发现文档（Discovery Document）。
+
+特性被启用时，集群也会配置名为 `system:service-account-issuer-discovery` 的默认 `RBAC ClusterRole`，但默认情况下不提供角色绑定对象。举例而言，管理员可以根据其安全性需要以及期望集成的外部系统选择是否将该角色绑定到 `system:authenticated` 或 `system:unauthenticated`。
+
+> **说明**：对 `/.well-known/openid-configuration` 和 `/openid/v1/jwks` 路径请求的响应 被设计为与 OIDC 兼容，但不是完全与其一致。返回的文档仅包含对 Kubernetes 服务账号令牌进行验证所必须的参数。
+
+JWKS 响应包含依赖方可以用来验证 Kubernetes 服务账号令牌的公钥数据。依赖方先会查询 OpenID 提供者配置，之后使用返回响应中的 `jwks_uri` 来查找 JWKS。
+
+在很多场合，Kubernetes API 服务器都不会暴露在公网上，不过对于缓存并向外提供 API 服务器响应数据的公开末端而言，用户或者服务提供商可以选择将其暴露在公网上。在这种环境中，可能会重载 OpenID 提供者配置中的 `jwks_uri`，使之指向公网上可用的末端地址，而不是 API 服务器的地址。 这时需要向 API 服务器传递 `--service-account-jwks-uri` 参数。与分发者 URL 类似，此 JWKS URI 也需要使用 https 模式。
+### 5.2 管理 Service Accounts
+这是一篇针对服务账号的集群管理员指南。你应该熟悉[配置 Kubernetes 服务账号](https://kubernetes.io/zh/docs/tasks/configure-pod-container/configure-service-account/)。
+
+对鉴权和用户账号的支持已在规划中，当前并不完备。为了更好地描述服务账号，有时这些不完善的特性也会被提及。
+#### 5.2.1 用户账号与服务账号
+Kubernetes 区分用户账号和服务账号的概念，主要基于以下原因：
+- 用户账号是针对人而言的。 服务账号是针对运行在 Pod 中的进程而言的。
+- 用户账号是全局性的。其名称跨集群中名字空间唯一的。服务账号是名字空间作用域的。
+- 通常情况下，集群的用户账号可能会从企业数据库进行同步，其创建需要特殊权限，并且涉及到复杂的业务流程。服务账号创建有意做得更轻量，允许集群用户为了具体的任务创建服务账号以遵从权限最小化原则。
+- 对人员和服务账号审计所考虑的因素可能不同。
+- 针对复杂系统的配置包可能包含系统组件相关的各种服务账号的定义。因为服务账号 的创建约束不多并且有名字空间域的名称，这种配置是很轻量的。
+#### 5.2.2 服务账号的自动化
+三个独立组件协作完成服务账号相关的自动化：
+- ServiceAccount 准入控制器
+- Token 控制器
+- ServiceAccount 控制器
+##### 5.2.2.1 ServiceAccount 准入控制器
+对 Pod 的改动通过一个被称为[准入控制器](https://kubernetes.io/zh/docs/reference/access-authn-authz/admission-controllers/)的插件来实现。它是 API 服务器的一部分。当 Pod 被创建或更新时，它会同步地修改 Pod。如果该插件处于激活状态（在大多数发行版中都是默认激活的），当 Pod 被创建 或更新时它会进行以下操作：
+1. 如果该 Pod 没有设置 `serviceAccountName`，将其 `serviceAccountName` 设为 `default`。
+3. 保证 Pod 所引用的 `serviceAccountName` 确实存在，否则拒绝该 Pod。
+3. 如果 Pod 不包含 `imagePullSecrets` 设置，将 `serviceAccountName` 所引用的服务账号中的 `imagePullSecrets` 信息添加到 Pod 中。
+4. 如果服务账号的 `automountServiceAccountToken` 或 Pod 的 `automountServiceAccountToken` 都为设置为 `false`，则为 Pod 创建一个 `volume`，在其中包含用来访问 API 的令牌。
+5. 如果前一步中为服务账号令牌创建了卷，则为 Pod 中的每个容器添加一个 `volumeSource`，挂载在其 `/var/run/secrets/kubernetes.io/serviceaccount` 目录下。
+
+当 `BoundServiceAccountTokenVolume` 特性门控被启用时，你可以将服务账号卷迁移到投射卷。服务账号令牌会在 `1` 小时后或者 Pod 被删除之后过期。更多信息可参阅[投射卷](https://kubernetes.io/zh/docs/tasks/configure-pod-container/configure-projected-volume-storage/)。
+##### 5.2.2.2 Token 控制器
+TokenController 作为 `kube-controller-manager` 的一部分运行，以异步的形式工作。其职责包括：
+- 监测 ServiceAccount 的创建并创建相应的服务账号令牌 Secret 以允许访问 API。
+- 监测 ServiceAccount 的删除并删除所有相应的服务账号令牌 Secret。
+- 监测服务账号令牌 Secret 的添加，保证相应的 ServiceAccount 存在，如有需要，向 Secret 中添加令牌。
+- 监测服务账号令牌 Secret 的删除，如有需要，从相应的 ServiceAccount 中移除引用。
+
+你必须通过 `--service-account-private-key-file` 标志为 `kube-controller-manager` 的令牌控制器传入一个服务账号私钥文件。该私钥用于为所生成的服务账号令牌签名。同样地，你需要通过 `--service-account-key-file` 标志将对应的公钥通知给 `kube-apiserver`。公钥用于在身份认证过程中校验令牌。
+
+**创建额外的 API 令牌**
+控制器中有专门的循环来保证每个 ServiceAccount 都存在对应的包含 API 令牌的 Secret。当需要为 `ServiceAccount` 创建额外的 API 令牌时，可以创建一个类型为 `kubernetes.io/service-account-token` 的 `Secret`，并在其注解中引用对应的 `ServiceAccount`。控制器会生成令牌并更新该 Secret：
+
+下面是这种 Secret 的一个示例配置：
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecretname
+  annotations:
+    kubernetes.io/service-account.name: myserviceaccount
+type: kubernetes.io/service-account-token
+```
+
+```
+kubectl create -f ./secret.json
+kubectl describe secret mysecretname
+```
+
+**删除/废止服务账号令牌 Secret**
+```
+kubectl delete secret mysecretname
+```
+##### 5.2.2.3 服务账号控制器
+服务账号控制器管理各名字空间下的 `ServiceAccount` 对象，并且保证每个活跃的 名字空间下存在一个名为 "default" 的 `ServiceAccount`。
 
 ## Reference
 - [访问 API](https://kubernetes.io/zh/docs/reference/access-authn-authz/) 
