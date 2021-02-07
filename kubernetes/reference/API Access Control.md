@@ -1428,10 +1428,274 @@ subjects:
 
 在你完成到 RBAC 的迁移后，应该调整集群的访问控制，确保相关的策略满足你的信息安全需求。
 ### 3.2 基于属性的访问控制（Attribute Based Access Control）
+基于属性的访问控制（Attribute-based access control - ABAC）定义了访问控制范例，其中通过使用将属性组合在一起的策略来向用户授予访问权限。
+#### 3.2.1 策略文件格式
+基于 `ABAC` 模式，可以这样指定策略文件 `--authorization-policy-file=SOME_FILENAME`。
+
+此文件格式是 [JSON Lines](https://jsonlines.org/)，不应存在封闭的列表或映射，每行一个映射。
+
+每一行都是一个策略对象，策略对象是具有以下属性的映射：
+- 版本控制属性：
+  + `apiVersion`，字符串类型：有效值为 `abac.authorization.kubernetes.io/v1beta1`，允许对策略格式进行版本控制和转换。
+  + `kind`，字符串类型：有效值为 `Policy`，允许对策略格式进行版本控制和转换。
+- `spec` 配置为具有以下映射的属性：
+  + 主体匹配属性：
+    + `user`，字符串类型；来自 `--token-auth-file` 的用户字符串，如果你指定 `user`，它必须与验证用户的用户名匹配。
+    + `group`，字符串类型；如果指定 `group`，它必须与经过身份验证的用户的一个组匹配，`system:authenticated` 匹配所有经过身份验证的请求。`system:unauthenticated` 匹配所有未经过身份验证的请求。
+- 资源匹配属性：
+  + `apiGroup`，字符串类型；一个 API 组。
+     + 例：`extensions`
+     + 通配符：`*` 匹配所有 API 组。
+  + `namespace`，字符串类型；一个命名空间。
+     + 例如：`kube-system`
+     + 通配符：`*` 匹配所有资源请求。
+  + `resource`，字符串类型；资源类型。
+     + 例：`pods`
+     + 通配符：`*` 匹配所有资源请求。
+- 非资源匹配属性：
+  + `nonResourcePath`，字符串类型；非资源请求路径。
+     + 例如：`/version或 /apis`
+     + 通配符：
+       + `*` 匹配所有非资源请求。
+       + `/foo/*` 匹配 `/foo/` 的所有子路径。
+- `readonly`，键入布尔值，如果为 `true`，则表示该策略仅适用于 `get`、`list` 和 `watch` 操作。
+
+> **说明**：属性未设置等效于属性被设置为对应类型的零值( 例如空字符串、0、false)，然而，出于可读性考虑，应尽量选择不设置这类属性。
+> 
+> 在将来，策略可能以 JSON 格式表示，并通过 REST 界面进行管理。
+#### 3.2.2 鉴权算法
+请求具有与策略对象的属性对应的属性。
+
+当接收到请求时，确定属性。未知属性设置为其类型的零值（例如：空字符串，0，false）。
+
+设置为 "*" 的属性将匹配相应属性的任何值。
+
+检查属性的元组，以匹配策略文件中的每个策略。如果至少有一行匹配请求属性，则请求被鉴权（但仍可能无法通过稍后的合法性检查）。
+
+要允许任何经过身份验证的用户执行某些操作，请将策略组属性设置为 "system:authenticated"。
+
+要允许任何未经身份验证的用户执行某些操作，请将策略组属性设置为 "system:authentication"。
+
+要允许用户执行任何操作，请使用 apiGroup，命名空间，资源和 nonResourcePath 属性设置为 "*" 的策略。
+
+要允许用户执行任何操作，请使用设置为 "*" 的 apiGroup，namespace，resource 和 nonResourcePath 属性编写策略。
+#### 3.2.3 Kubectl
+Kubectl 使用 `api-server` 的 `/api` 和 `/apis` 端点来发现服务资源类型，并使用位于 `/openapi/v2` 的模式信息来验证通过创建/更新操作发送到 API 的对象。
+
+当使用 ABAC 鉴权时，这些特殊资源必须显式地通过策略中的 `nonResourcePath` 属性暴露出来（参见下面的[示例](https://kubernetes.io/zh/docs/reference/access-authn-authz/abac/#examples)）：
+- `/api`，`/api/*`，`/apis` 和 `/apis/*` 用于 API 版本协商。
+- `/version` 通过 `kubectl version` 检索服务器版本。
+- `/swaggerapi/*` 用于创建 / 更新操作。
+
+要检查涉及到特定 kubectl 操作的 HTTP 调用，您可以调整详细程度：`kubectl --v=8 version`
+#### 3.2.4 例子
+1. Alice 可以对所有资源做任何事情：
+   ```
+   {"apiVersion": "abac.authorization.kubernetes.io/v1beta1", "kind": "Policy", "spec": {"user": "alice", "namespace": "*", "resource": "*", "apiGroup": "*"}}
+   ```
+2. Kubelet 可以读取任何 pod：
+   ```
+   {"apiVersion": "abac.authorization.kubernetes.io/v1beta1", "kind": "Policy", "spec": {"user": "kubelet", "namespace": "*", "resource": "pods", "readonly": true}}
+   ```
+3. Kubelet 可以读写事件：
+   ```
+   {"apiVersion": "abac.authorization.kubernetes.io/v1beta1", "kind": "Policy", "spec": {"user": "kubelet", "namespace": "*", "resource": "events"}}
+   ```
+4. Bob 可以在命名空间 projectCaribou 中读取 pod：
+   ```
+   {"apiVersion": "abac.authorization.kubernetes.io/v1beta1", "kind": "Policy", "spec": {"user": "bob", "namespace": "projectCaribou", "resource": "pods", "readonly": true}}
+   ```
+5. 任何人都可以对所有非资源路径进行只读请求：
+   ```
+   {"apiVersion": "abac.authorization.kubernetes.io/v1beta1", "kind": "Policy", "spec": {"group": "system:authenticated", "readonly": true, "nonResourcePath": "*"}}
+   {"apiVersion": "abac.authorization.kubernetes.io/v1beta1", "kind": "Policy", "spec": {"group": "system:unauthenticated", "readonly": true, "nonResourcePath": "*"}}
+   ```
+
+[完整文件示例](https://releases.k8s.io/master/pkg/auth/authorizer/abac/example_policy_file.jsonl)
+#### 3.2.5 服务帐户的快速说明
+- 服务帐户自动生成用户。用户名是根据命名约定生成的：
+  ```
+  system:serviceaccount:<namespace>:<serviceaccountname>
+  ```
+- 创建新的命名空间也会导致创建一个新的服务帐户：
+  ```
+  system:serviceaccount:<namespace>:default
+  ```
+- 例如，如果要将 API 的 kube-system 完整权限中的默认服务帐户授予，则可以将此行添加到策略文件中：
+  ```
+  {"apiVersion":"abac.authorization.kubernetes.io/v1beta1","kind":"Policy","spec":{"user":"system:serviceaccount:kube-system:default","namespace":"*","resource":"*","apiGroup":"*"}}
+  ```
+需要重新启动 apiserver 以获取新的策略行。
 ### 3.3 节点鉴权（Node Authorization）
+节点鉴权是一种特殊用途的鉴权模式，专门对 kubelet 发出的 API 请求进行鉴权。
+#### 3.3.1 概述
+节点鉴权器允许 kubelet 执行 API 操作。包括：
+- 读取操作：
+  + services
+  + endpoints
+  + nodes
+  + pods
+  + secrets、configmaps、pvcs 以及绑定到 kubelet 节点的与 pod 相关的持久卷
+- 写入操作：
+  + 节点和节点状态（启用 `NodeRestriction` 准入插件以限制 kubelet 只能修改自己的节点）
+  + Pod 和 Pod 状态 (启用 `NodeRestriction` 准入插件以限制 kubelet 只能修改绑定到自身的 Pod)
+  + 事件
+- 鉴权相关操作：
+  + 对于基于 TLS 的启动引导过程时使用的 certificationsigningrequests API 的读/写权限
+  + 为委派的身份验证/授权检查创建 tokenreviews 和 subjectaccessreviews 的能力
+
+在将来的版本中，节点鉴权器可能会添加或删除权限，以确保 kubelet 具有正确操作所需的最小权限集。
+
+为了获得节点鉴权器的授权，kubelet 必须使用一个凭证以表示它在 `system:nodes` 组中，用户名为 `system:node:<nodeName>`。 上述的组名和用户名格式要与[kubelet TLS 启动引导](https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/)过程中为每个 kubelet 创建的标识相匹配。
+
+要启用节点授权器，请使用 `--authorization-mode = Node` 启动 `apiserver`。
+
+要限制 kubelet 具有写入权限的 API 对象，请使用 `--enable-admission-plugins=...,NodeRestriction,...` 启动 `apiserver`，从而启用 [NodeRestriction](https://kubernetes.io/zh/docs/reference/access-authn-authz/admission-controllers#NodeRestriction) 准入插件。
+#### 3.3.2 迁移考虑因素
+##### 在 system:nodes 组之外的 Kubelet
+`system:nodes` 组之外的 kubelet 不会被 Node 鉴权模式授权，并且需要继续通过当前授权它们的机制来授权。节点准入插件不会限制来自这些 kubelet 的请求。
+##### 具有无差别用户名的 Kubelet
+在一些部署中，kubelet 具有 `system:nodes` 组的凭证，但是无法给出它们所关联的节点的标识，因为它们没有 `system:node:...` 格式的用户名。这些 kubelet 不会被 Node 授权模式授权，并且需要继续通过当前授权它们的任何机制来授权。
+
+因为默认的节点标识符实现不会把它当作节点身份标识，`NodeRestriction` 准入插件会忽略来自这些 kubelet 的请求。
+##### 相对于以前使用 RBAC 的版本的更新
+升级的 1.7 之前的使用 [RBAC](https://kubernetes.io/zh/docs/reference/access-authn-authz/rbac/) 的集群将继续按原样运行，因为 `system:nodes` 组绑定已经存在。
+
+如果集群管理员希望开始使用 Node 鉴权器和 `NodeRestriction` 准入插件来限制节点对 API 的访问，这一需求可以通过下列操作来完成且不会影响已部署的应用：
+1. 启用 Node 鉴权模式 (`--authorization-mode=Node,RBAC`) 和 `NodeRestriction` 准入插件
+2. 确保所有 kubelet 的凭据符合组/用户名要求
+3. 审核 apiserver 日志以确保 Node 鉴权器不会拒绝来自 kubelet 的请求（日志中没有持续的 `NODE DENY` 消息）
+4. 删除 `system:node` 集群角色绑定
+##### RBAC 节点权限
+在 1.6 版本中，当使用 RBAC 鉴权模式 时，`system:nodes` 集群角色会被自动绑定到 `system:node` 组。
+
+在 1.7 版本中，不再推荐将 `system:nodes` 组自动绑定到 `system:node` 角色，因为节点鉴权器通过对 secret 和 configmap 访问的额外限制完成了相同的任务。 如果同时启用了 Node 和 RBAC 授权模式，1.7 版本则不会创建 `system:nodes` 组到 `system:node` 角色的自动绑定。
+
+在 1.8 版本中，绑定将根本不会被创建。
+
+使用 RBAC 时，将继续创建 `system:node` 集群角色，以便与将其他用户或组绑定到该角色的部署方法兼容。
 ### 3.4 Webhook 鉴权（Webhook Authorization）
+WebHook 是一种 HTTP 回调：某些条件下触发的 HTTP POST 请求；通过 HTTP POST 发送的简单事件通知。一个基于 web 应用实现的 WebHook 会在特定事件发生时把消息发送给特定的 URL。
+
+具体来说，当在判断用户权限时，Webhook 模式会使 Kubernetes 查询外部的 REST 服务。
+#### 3.4.1 配置文件格式
+Webhook 模式需要一个 HTTP 配置文件，通过 `--authorization-webhook-config-file=SOME_FILENAME` 的参数声明。
+
+配置文件的格式使用 `kubeconfig`。在文件中，"users" 代表着 API 服务器的 `webhook`，而 "cluster" 代表着远程服务。
+
+使用 HTTPS 客户端认证的配置例子：
+```
+# Kubernetes API 版本
+apiVersion: v1
+# API 对象种类
+kind: Config
+# clusters 代表远程服务。
+clusters:
+  - name: name-of-remote-authz-service
+    cluster:
+      # 对远程服务进行身份认证的 CA。
+      certificate-authority: /path/to/ca.pem
+      # 远程服务的查询 URL。必须使用 'https'。
+      server: https://authz.example.com/authorize
+
+# users 代表 API 服务器的 webhook 配置
+users:
+  - name: name-of-api-server
+    user:
+      client-certificate: /path/to/cert.pem # webhook plugin 使用 cert
+      client-key: /path/to/key.pem          # cert 所对应的 key
+
+# kubeconfig 文件必须有 context。需要提供一个给 API 服务器。
+current-context: webhook
+contexts:
+- context:
+    cluster: name-of-remote-authz-service
+    user: name-of-api-server
+  name: webhook
+```
+#### 3.4.2 请求载荷
+在做认证决策时，API 服务器会 POST 一个 JSON 序列化的 `authorization.k8s.io/v1beta1 SubjectAccessReview` 对象来描述这个动作。这个对象包含了描述用户请求的字段，同时也包含了需要被访问资源或请求特征的具体信息。
+
+需要注意的是 webhook API 对象与其他 Kubernetes API 对象一样都同样都服从版本兼容规则。实施人员应该了解 beta 对象的更宽松的兼容性承诺，同时确认请求的 "apiVersion" 字段能被正确地反序列化。此外，API 服务器还必须启用 `authorization.k8s.io/v1beta1 API` 扩展组 (`--runtime-config=authorization.k8s.io/v1beta1=true`)。
+
+一个请求内容的例子：
+```
+{
+  "apiVersion": "authorization.k8s.io/v1beta1",
+  "kind": "SubjectAccessReview",
+  "spec": {
+    "resourceAttributes": {
+      "namespace": "kittensandponies",
+      "verb": "get",
+      "group": "unicorn.example.org",
+      "resource": "pods"
+    },
+    "user": "jane",
+    "group": [
+      "group1",
+      "group2"
+    ]
+  }
+}
+```
+期待远程服务填充请求的 status 字段并响应允许或禁止访问。响应主体的 spec 字段被忽略，可以省略。允许的响应将返回:
+```
+{
+  "apiVersion": "authorization.k8s.io/v1beta1",
+  "kind": "SubjectAccessReview",
+  "status": {
+    "allowed": true
+  }
+}
+```
+为了禁止访问，有两种方法。
+
+在大多数情况下，第一种方法是首选方法，它指示授权 webhook 不允许或对请求"无意见"，但是，如果配置了其他授权者，则可以给他们机会允许请求。如果没有其他授权者，或者没有一个授权者，则该请求被禁止。webhook 将返回:
+```
+{
+  "apiVersion": "authorization.k8s.io/v1beta1",
+  "kind": "SubjectAccessReview",
+  "status": {
+    "allowed": false,
+    "reason": "user does not have read access to the namespace"
+  }
+}
+```
+第二种方法立即拒绝其他配置的授权者进行短路评估。仅应由对集群的完整授权者配置有详细了解的 webhook 使用。webhook 将返回:
+```
+{
+  "apiVersion": "authorization.k8s.io/v1beta1",
+  "kind": "SubjectAccessReview",
+  "status": {
+    "allowed": false,
+    "denied": true,
+    "reason": "user does not have read access to the namespace"
+  }
+}
+```
+对于非资源的路径访问是这么发送的:
+```
+{
+  "apiVersion": "authorization.k8s.io/v1beta1",
+  "kind": "SubjectAccessReview",
+  "spec": {
+    "nonResourceAttributes": {
+      "path": "/debug",
+      "verb": "get"
+    },
+    "user": "jane",
+    "group": [
+      "group1",
+      "group2"
+    ]
+  }
+}
+```
+非资源类的路径包括：`/api`, `/apis`, `/metrics`, `/resetMetrics`, `/logs`, `/debug`, `/healthz`, `/swagger-ui/`, `/swaggerapi/`, `/ui`, 和 `/version`。客户端需要访问 `/api`, `/api/*`, `/apis`, `/apis/*`, 和 `/version` 以便能发现服务器上有什么资源和版本。对于其他非资源类的路径访问在没有 REST API 访问限制的情况下拒绝。
+
+更多信息可以参考 `authorization.v1beta1` API 对象和 [webhook.go](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/plugin/pkg/authorizer/webhook/webhook.go)。
 ## 4. 证书签名请求（Certificate Signing Requests）
 ## 5. 服务账号（Service accounts）
 
 ## Reference
-- [访问 API](https://kubernetes.io/zh/docs/reference/access-authn-authz/)
+- [访问 API](https://kubernetes.io/zh/docs/reference/access-authn-authz/) 
