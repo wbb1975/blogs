@@ -965,7 +965,7 @@ rules:
 ```
 
 **Role 示例**
-以下示例均为从 Role 或 CLusterRole 对象中截取出来，我们仅展示其 `rules` 部分。
+以下示例均为从 Role 或 ClusterRole 对象中截取出来，我们仅展示其 `rules` 部分。
 
 允许读取在核心 API 组下的 "Pods"：
 ```
@@ -1345,6 +1345,7 @@ subjects:
 
 按从最安全到最不安全的顺序，存在以下方法：
 1. 为特定应用的服务账户授予角色（最佳实践）
+   
    这要求应用在其 Pod 规约中指定 `serviceAccountName`，并额外创建服务账户（包括通过 API、应用程序清单、`kubectl create serviceaccount` 等）。
 
    例如，在名字空间 "my-namespace" 中授予服务账户 "my-sa" 只读权限：
