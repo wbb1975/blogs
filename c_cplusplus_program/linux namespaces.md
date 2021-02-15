@@ -517,7 +517,40 @@ ID-inside-ns   ID-outside-ns   length
 `ID-inside-ns` 和 `length` 一起定义了名字空间里的 ID 范围，它们将被映射到名字空间之外同样长度的 ID 的范围。`ID-outside-ns` 值指定了外不反胃的起始点。`ID-outside-ns` 如何解释取决于打开 `/proc/PID/uid_map`（`/proc/PID/gid_map`）的进程与进程 PID 是否在同一用户名字空间：
 - 如果两个进程位于同一名字空间，那么 `ID-outside-ns` 被解释为一个在进程 PID 的父用户进程名字空间里的用户 ID（组 ID ）。这里的常见例子是一个进程写自己的映射文件（`/proc/self/uid_map` 或 `/proc/self/gid_ma`p）。
 - 如果两个进程位于不同的名字空间，那么 `ID-outside-ns` 被解释为一个在打开 `/proc/PID/uid_map`（`/proc/PID/gid_map`）文件的进程的用户名字空间里的用户 ID（组 ID ）。该进程在定义相对于自己的用户名字空间的映射。
-### 5.3 创建用户名字空间
+
+假设我们再次运行我们的 `demo_userns` 应用，但这一次传递一个简单的命令行参数（任一字符串）。这将使得程序陷入循环，不断地每隔几秒钟打印凭证和能力信息：
+```
+$ ./demo_userns x
+eUID = 65534;  eGID = 65534;  capabilities: =ep
+eUID = 65534;  eGID = 65534;  capabilities: =ep
+```
+现在我们切换到另一个终端窗口--到一个运行在另一个名字空间（即运行 `demo_userns` 的进程的父用户名字空间）的shell进程，并为由 `demo_userns` 创建的新用户名字空间的子进程创建一个用户ID映射：
+```
+$ ps -C demo_userns -o 'pid uid comm'      # Determine PID of clone child
+    PID   UID COMMAND 
+    4712  1000 demo_userns                    # This is the parent
+    4713  1000 demo_userns                    # Child in a new user namespace
+$ echo '0 1000 1' > /proc/4713/uid_map
+```
+如果我们回到运行 `demo_userns` 的窗口，我们会看到：
+```
+eUID = 0;  eGID = 65534;  capabilities: =ep
+```
+换句话说，父用户名字空间（之前被映射成65534）里的用户 ID 1000在由 `demo_userns` 创建的用户名字空间中被映射成用户 ID 0。从这个点开始，新用户名字空间里针对这个用户 ID 的所有操作都将看到用户 ID 0，同时父名字空间的对应操作将看到给进程拥有用户 ID1000.
+
+我们也可以在新的用户名字空间里创建组的映射。切换到另一个终端窗口，我们创建一个一个组映射--从父名字空间里的组 ID 1000 映射到新的用户名字空间里的组 ID 0：
+```
+$ echo '0 1000 1' > /proc/4713/gid_map
+```
+切换回到运行 `demo_userns` 的窗口，我们可以看到该修改已经在打印出来的有效组ID反映出来了：
+```
+eUID = 0;  eGID = 0;  capabilities: =ep
+```
+### 5.3 编写映射文件的规则
+
+### 5.4 Capabilities, execve(), and user ID 0
+### 5.5 查看用户和组映射
+### 5.6 总结评论（Concluding remarks）
 ## Part 6: 更多关于用户名字空间
 ## Part 7: 网络名字空间
 ## Mount namespaces and shared subtrees
