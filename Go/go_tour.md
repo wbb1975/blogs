@@ -1797,7 +1797,7 @@ func main() {
 这里涉及的概念叫做 **互斥（mutual exclusion）**，我们通常使用 **互斥锁（Mutex）** 这一数据结构来提供这种机制。
 
 Go 标准库中提供了 [sync.Mutex](https://go-zh.org/pkg/sync/#Mutex) 互斥锁类型及其两个方法：
-``
+```
 Lock
 Unlock
 ```
