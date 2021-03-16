@@ -96,7 +96,108 @@ Transit Gateway 挂载同时是数据包的源和目的地。您可以将以下�
 172.31.0.0/16|tgw-attach-789 | tgw-connect-peer-123|VPN|传播|4
 172.31.0.0/16|tgw-attach-789 | vpn-5678|VPN|传播|5
 ## 3. 开始使用
+### 先决条件
+- 要演示使用中转网关的简单示例，请在同一个区域中创建两个 VPC。这些 VPC 不能具有重叠的 CIDR。在每个 VPC 中启动一个 EC2 实例。有关更多信息，请参阅 [Amazon VPC 用户指南](https://docs.aws.amazon.com/vpc/latest/userguide/) 中的[适用于 Amazon VPC 的 IPv4 入门](https://docs.aws.amazon.com/vpc/latest/userguide/getting-started-ipv4.html)。
+- 您不能具有完全相同的路由指向两个不同的 VPC。如果中转网关路由表中存在相同的路由，中转网关不会传播新挂载的 VPC 的 CIDR。
+- 验证您拥有使用中转网关所需的权限。有关更多信息，请参阅 [中转网关的身份验证和访问控制](https://docs.aws.amazon.com/zh_cn/vpc/latest/tgw/transit-gateway-authentication-access-control.html)。
+### 步骤 1：创建中转网关
+当您创建中转网关时，我们创建一个默认的中转网关路由表，并将其用作默认的关联路由表（the default association route table）和默认的传播路由表（the default propagation route table）。
+
+1. 通过以下网址打开 Amazon VPC 控制台：https://console.aws.amazon.com/vpc/。
+2. 在“区域”选择器中，选择您在创建 VPC 时使用的区域。
+3. 在导航窗格中，选择 **Transit Gateways (中转网关)**。
+4. 选择 **Create Transit Gateway (创建中转网关)**。
+5. （可选）对于 **Name tag (名称标签)**，键入中转网关的名称。这会创建将“名称”作为键以及将您指定的名称作为值的标签。
+6. （可选）对于 **Description (描述)**，键入中转网关的描述。
+7. 对于 **Amazon side ASN (Amazon 端 ASN)**，键入中转网关的私有自治系统编号 (ASN)。这应该是边界网关协议 (BGP) 会话的 AWS 端的 ASN。
+  对于 16 位 ASN，范围为 64512 到 65534。
+  对于 32 位 ASN，范围为 4200000000 到 4294967294。
+  如果您有多区域部署，我们建议您为每个中转网关使用唯一的 ASN。
+8. （可选）如果您需要禁用 DNS 支持，或者不想要默认的关联路由表或默认的传播路由表，则可以修改默认设置。
+9. 选择 **Create Transit Gateway (创建中转网关)**。
+10. 在您看到消息 **Create Transit Gateway request succeeded (创建中转网关请求成功)** 后，选择 **Close (关闭)**。中转网关的初始状态为 **pending**。
+### 步骤 2：将 VPC 挂载到中转网关（Attach your VPCs to your transit gateways）
+等到您在上一部分中创建的中转网关显示为可用后，继续创建挂载。为每个 VPC 创建连接。
+
+确认您已创建了两个 VPC，并在每个 VPC 中启动了一个 EC2 实例，如先决条件中所述。
+
+1. 通过以下网址打开 Amazon VPC 控制台：https://console.aws.amazon.com/vpc/。
+2. 在导航窗格中，选择 **Transit Gateway Attachments (中转网关挂载)**。
+3. 选择 **Create Transit Gateway Attachment (创建中转网关挂载)**。
+4. 对于 **Transit Gateway ID (中转网关 ID)**，选择要用于挂载的中转网关。
+5. 对于 **Attachment type (挂载类型)**，选择 VPC。
+6. （可选）对于 **Attachment name tag (挂载名称标签)**，输入挂载的名称。
+7. 选择是否启用 **DNS support (DNS 支持)**。对于此练习，请勿启用 **IPv6 support (IPv6 支持)**。
+8. 对于 **VPC ID**，选择要挂载到中转网关的 VPC。
+9. 对于 **Subnet IDs (子网 ID)**，为中转网关要用于路由流量的每个可用区域选择一个子网。您必须至少选择一个子网。您只能为每个可用区域选择一个子网。
+10. 选择 **Create attachment (创建挂载)**。
+
+每个挂载都始终与正好一个路由表关联。路由表可以与零到多个挂载关联。要确定要配置的路由，请决定中转网关的使用案例，然后配置路由。有关更多信息，请参阅 [示例](https://docs.aws.amazon.com/zh_cn/vpc/latest/tgw/TGW_Scenarios.html)。
+### 步骤 3：在中转网关与 VPC 之间添加路由
+路由表包含动态路由和静态路由，它们根据数据包的目的地 IP 地址决定关联 VPC 的下一个跃点。配置具有非本地路由目的地和中转网关挂载 ID 目标的路由。有关更多信息，请参阅 Amazon VPC 用户指南中的[中转网关的路由](https://docs.aws.amazon.com/vpc/latest/userguide/route-table-options.html#route-tables-tgw)。
+
+向 VPC 路由表中添加路由（To add a route to a VPC route table）：
+1. 通过以下网址打开 Amazon VPC 控制台：https://console.aws.amazon.com/vpc/。
+2. 在导航窗格中，选择路由表。
+3. 选择与 VPC 关联的路由表。
+4. 选择 **Routes (路由) 选项卡**，然后选择 **Edit routes (编辑路由)**。
+5. 选择 **Add route (添加路由)**。
+6. 在 **Destination (目的地)** 列中，输入目的地 IP 地址范围。对于 **Target（目标）**，请选择中转网关挂载 ID。
+7. 选择 **Save routes (保存路由)**，然后选择 **Close (关闭)**。
+### 步骤 4：测试中转网关
+您可以确认中转网关已成功创建，方法是：通过连接到每个 VPC 中的一个 EC2 实例，然后在它们之间发送数据，如 ping 命令。有关更多信息，请参阅[连接到您的 Linux 实例](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AccessingInstances.html)或[连接到您的 Windows 实例](https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/connecting_to_windows_instance.html)。
+### 步骤 5：删除中转网关
+当您不再需要中转网关时，可以将其删除。您不能删除具有资源挂载的中转网关。一旦中转网关被删除，您就停止对其产生费用。
+
+1. 通过以下网址打开 Amazon VPC 控制台：https://console.aws.amazon.com/vpc/。
+2. 在导航窗格中，选择 **Transit Gateway Attachments (中转网关挂载)**。
+3. 选择挂载，然后依次选择操作、删除。当系统提示进行确认时，选择 **Delete (删除)**。
+4. 在导航窗格中，选择 **Transit Gateways (中转网关)**。
+5. 选择中转网关，然后依次选择 **Actions (操作)** 和 **Delete (删除)**。当系统提示进行确认时，选择 **Delete**。
 ## 4. 示例
+以下是中转网关的常见使用案例。您的中转网关并不仅限于这些使用案例。
+### 4.1 示例：集中式路由器（Centralized router）
+您可以将中转网关配置为连接所有 VPC、AWS Direct Connect 和站点到站点 VPN 连接的集中路由器。在该方案中，所有连接与中转网关默认路由表相关联，并传播到中转网关默认路由表。因此，所有挂载都可以将数据包路由到彼此，而将中转网关用作简单第 3 层 IP 路由器。
+#### 概述
+下表展示了此方案配置的主要组成部分。在这种情况下，中转网关有三个 VPC 挂载和一个站点到站点 VPN 挂载（Site-to-Site VPN attachment）。来自 VPC A、VPC B 和 VPC C 并将其他 VPC 中的子网或 VPN 连接作为目的地的数据包，首先通过中转网关路由。
+
+![集中式路由器](images/transit-gateway-centralized.png)
+
+在该方案中，您为该方案创建以下实体：
+- 三个 VPC。有关创建 VPC 的信息，请参阅 Amazon Virtual Private Cloud 用户指南中的[创建 VPC](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-vpcs.html#Create-VPC)。
+- 中转网关。有关更多信息，请参阅[创建中转网关](https://docs.aws.amazon.com/zh_cn/vpc/latest/tgw/tgw-transit-gateways.html#create-tgw)。
+- 中转网关上有三个 VPC 挂载。有关更多信息，请参阅 创建 [VPC 的 Transit Gateway 挂载](https://docs.aws.amazon.com/zh_cn/vpc/latest/tgw/tgw-vpc-attachments.html#create-vpc-attachment)。
+- 中转网关上的站点到站点 VPN 挂载。有关更多信息，请参阅[创建 VPN 的中转网关挂载](https://docs.aws.amazon.com/zh_cn/vpc/latest/tgw/tgw-vpn-attachments.html#create-vpn-attachment)。确保您查看了 AWS 站点到站点 VPN 用户指南中的[客户网关设备的要求](https://docs.aws.amazon.com/vpn/latest/s2svpn/your-cgw.html#CGRequirements)。
+
+在创建 VPC 挂载时，每个 VPC 的 CIDR 块将传播到中转网关路由表。在 VPN 连接启动后，将建立 BGP 会话，站点到站点 VPN CIDR 传播到中转网关路由表，并将 VPC CIDR 添加到客户网关 BGP 表中。
+#### 路由选择
+每个 VPC 具有一个路由表，并且中转网关具有一个路由表。
+##### VPC 路由表
+每个 VPC 具有一个包含 2 个条目的路由表。第一个条目是 VPC 中本地 IPv4 路由的默认条目；此条目允许此 VPC 中的实例相互通信。第二个条目将所有其他 IPv4 子网流量路由到中转网关。下表显示了 VPC A 路由。
+
+目的地|目标
+--------|--------
+10.1.0.0/16|本地
+0.0.0.0/0|tgw-id
+##### 中转网关路由表
+下面是前一个图中显示的连接的默认路由表示例（启用了路由传播）。
+
+目的地|目标|路由类型
+--------|--------|--------
+10.1.0.0/16|VPC A 的连接|传播
+10.2.0.0/16|VPC B 的连接|传播
+10.3.0.0/16|VPC C 的连接|传播
+10.99.99.0/24|VPN 连接的连接|传播
+##### 客户网关 BGP 表
+客户网关 BGP 表包含以下 VPC IP CIDR。
++ 10.1.0.0/16
++ 10.2.0.0/16
++ 10.3.0.0/16
+### 4.2 示例：隔离 VPC
+### 4.3 示例：具有共享服务的隔离 VPC
+### 4.4 示例：对等中转网关
+### 4.5 示例：到互联网的集中出站路由
+### 4.6 示例：共享服务 VPC 中的设备
 ## 5. 使用中转网关
 ## 6. 监控中转网关
 ## 7. 身份验证和访问控制
