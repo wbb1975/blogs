@@ -104,18 +104,31 @@ Transit Gateway 挂载同时是数据包的源和目的地。您可以将以下�
 当您创建中转网关时，我们创建一个默认的中转网关路由表，并将其用作默认的关联路由表（the default association route table）和默认的传播路由表（the default propagation route table）。
 
 1. 通过以下网址打开 Amazon VPC 控制台：https://console.aws.amazon.com/vpc/。
-2. 在“区域”选择器中，选择您在创建 VPC 时使用的区域。
-3. 在导航窗格中，选择 **Transit Gateways (中转网关)**。
-4. 选择 **Create Transit Gateway (创建中转网关)**。
-5. （可选）对于 **Name tag (名称标签)**，键入中转网关的名称。这会创建将“名称”作为键以及将您指定的名称作为值的标签。
-6. （可选）对于 **Description (描述)**，键入中转网关的描述。
-7. 对于 **Amazon side ASN (Amazon 端 ASN)**，键入中转网关的私有自治系统编号 (ASN)。这应该是边界网关协议 (BGP) 会话的 AWS 端的 ASN。
+2. 在导航窗格中，选择 **Transit Gateways (中转网关)**。
+3. 选择 **Create Transit Gateway (创建中转网关)**。
+4. （可选）对于 **Name tag (名称标签)**，键入中转网关的名称。这会创建将“名称”作为键以及将您指定的名称作为值的标签。
+5. （可选）对于 **Description (描述)**，键入中转网关的描述。
+6. 对于 **Amazon side ASN (Amazon 端 ASN)**，键入中转网关的私有自治系统编号 (ASN)。这应该是边界网关协议 (BGP) 会话的 AWS 端的 ASN。
   对于 16 位 ASN，范围为 64512 到 65534。
   对于 32 位 ASN，范围为 4200000000 到 4294967294。
   如果您有多区域部署，我们建议您为每个中转网关使用唯一的 ASN。
-8. （可选）如果您需要禁用 DNS 支持，或者不想要默认的关联路由表或默认的传播路由表，则可以修改默认设置。
-9. 选择 **Create Transit Gateway (创建中转网关)**。
-10. 在您看到消息 **Create Transit Gateway request succeeded (创建中转网关请求成功)** 后，选择 **Close (关闭)**。中转网关的初始状态为 **pending**。
+7. 对于 **DNS support (DNS 支持)**，当从连接到中转网关的某个 VPC 中的实例进行查询时，如果您需要另一个 VPC 将公共 IPv4 DNS 主机名解析为私有 IPv4 地址，则选择 **enable (启用)**。
+8. 对于 **VPN ECMP support (VPN ECMP 支持)**，如果您在 VPN 隧道之间需要等价多路径 (ECMP) 路由支持，则选择 **enable (启用)**。如果连接公布相同的 CIDR，则流量在它们之间均等分配。
+
+   在选择该选项时，公布的 BGP ASN 和 BGP 属性（如 AS 路径和首选项社区）必须相同。
+   > **注意** 要使用 ECMP，必须创建使用动态路由的 VPN 连接。使用静态路由的 VPN 连接不支持 ECMP。
+9. 对于 **Default route table association (默认路由表关联)**，选择 **enable (启用)** 以自动将 Transit Gateway 挂载与中转网关的默认路由表关联。
+10. 对于 **Default route table propagation (默认路由表传播)**，选择 **enable (启用)** 以自动将 Transit Gateway 挂载传播到中转网关的默认路由表。
+11. （可选）要使用中转网关作为多播流量的路由器，请选择 **Multicast support (多播支持)**。
+12. 对于 **Auto accept shared attachments (自动接受共享的挂载)**，选择 **enable (启用)** 以自动接受跨账户挂载。
+13. （可选）对于 Transit Gateway CIDR blocks（中转网关 CIDR 块），请选择 Add CIDR（添加 CIDR），并为您的中转网关指定一个或多个 IPv4 或 IPv6 CIDR 块。
+
+   您可以为 IPv4 指定大小为 /24 或更大（例如 /23 或 /22）的 CIDR 块，或为 IPv6 指定大小为 /64 或更大（例如 /63 或 /62）的 CIDR 块。您可以关联任何公有或私有 IP 地址范围， 但 169.254.0.0/16 范围以及与您的 VPC 挂载和本地网络地址重叠的范围中的地址除外。
+14. 选择 **Create Transit Gateway (创建中转网关)**。
+15. 在您看到消息 **Create Transit Gateway request succeeded (创建中转网关请求成功)** 后，选择 **Close (关闭)**。
+
+**使用 AWS CLI 创建中转网关**
+使用 [create-transit-gateway](https://docs.aws.amazon.com/cli/latest/reference/ec2/create-transit-gateway.html) 命令。
 ### 步骤 2：将 VPC 挂载到中转网关（Attach your VPCs to your transit gateways）
 等到您在上一部分中创建的中转网关显示为可用后，继续创建挂载。为每个 VPC 创建连接。
 
