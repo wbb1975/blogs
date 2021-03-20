@@ -1880,29 +1880,28 @@ Go 语言中的处理错误的惯用法是将错误以函数或者方法的最�
 **将异常转化为错误**
 ```
 func IntFromInt64(x int64) (i int, err error) {
-	def func() {
+    def func() {
         if e: = recover(); e != nil {
-			err = fmt.Errorf("%v", e)
-		}
-	} ()
+            err = fmt.Errorf("%v", e)
+        }
+    } ()
 
-
-	i = ConvertInt64ToInt(x)
-	return i, nil
+    i = ConvertInt64ToInt(x)
+    return i, nil
 }
 ```
 **如何让程序变得更健壮**
 ```
 func LogPanic(function fuc(http.ResposneWriter, *http.Request)) function fuc(http.ResposneWriter, *http.Request) {
      return fuc(writer http.ResposneWriter, request *http.Request) {
-		 def func() {
+        def func() {
              if x := recover(); x != nil {
-				 log.Printf("{%v} caught paniic %v", request.RemoteAddr, x)
-			 }
-		 } ()
+                 log.Printf("{%v} caught paniic %v", request.RemoteAddr, x)
+             }
+        } ()
 
-		 return function(writer, request)
-	 }
+        return function(writer, request)
+    }
 }
 ```
 
