@@ -1867,13 +1867,13 @@ defer file.close()
 #### 5.1.2 panic 和 recover
 通过内置的 panic() 和 recover() 函数，Go 语言提供了一套异常处理机制。类似于其它语言（例如，C++， Java 和 Python）中所提供的异常机制，。这些函数也可以用于实现通用的异常处理机制，但是这样做在 Go 语言中是不好的风格。
 
-Go 语言将错误和异常区分对待。错误是可能出错的东西，程序需要以优雅的方式将其处理（例如，文件不能被打开）。而异常是指“不可能”发生的事情（例如，一个应该永远为 true 的条件在实际花凝却是为 false 的）。
+Go 语言将错误和异常区分对待。错误是可能出错的东西，程序需要以优雅的方式将其处理（例如，文件不能被打开）。而异常是指“不可能”发生的事情（例如，一个应该永远为 true 的条件在实际环境却是为 false 的）。
 
 Go 语言中的处理错误的惯用法是将错误以函数或者方法的最后一个返回值的形式将其返回，并总是在其调用的地方检查返回的错误值。
 
 对“不可能发生”的异常情况，我们可以调用内置的 panic() 函数。该函数可以串入任何想要的值（例如，一个字符串用于解释为什么那些不变的东西被破坏了）。在其它语言中，我们可能使用一个断言，但在 Go 语言中我们使用 panic()。当 panic() 被调用时，其功效就像其它语言（比如 Java）抛出一个异常一样。该异常被逐步展开，直至到达 main() 函数。当到达 main() 函数后不再有可以反悔的调用者，因此此时程序会终止。并将包含传入原始 panic() 函数中的调用栈信息输出到 os.Stderr。
 
-上面所描述的只是一个异常发生时正常情况下锁展开的。然而，如果其中有个延迟执行的函数或者方法包含一个对内置的 recover() 函数的调用，该异常展开过程就会被终止。这种情况下，我们就能够以我们想要的方式响应该异常。
+上面所描述的只是一个异常发生时正常情况下所展开的。然而，如果其中有个延迟执行的函数或者方法包含一个对内置的 recover() 函数的调用，该异常展开过程就会被终止。这种情况下，我们就能够以我们想要的方式响应该异常。
 
 绝大多数琴况下，Go 语言标准库使用 error 值而非异常。对于我们自己定义的包，最好别使用 panic()。或者，如果要使用 panic()，也要避免异常异常离开这个自定义包边界。可以通过使用 recover() 函数来捕获异常并返回一个相应的错误值，就像标准库中所做的那样。
 
@@ -1892,19 +1892,19 @@ func IntFromInt64(x int64) (i int, err error) {
 ```
 **如何让程序变得更健壮**
 ```
-func LogPanic(function fuc(http.ResposneWriter, *http.Request)) function fuc(http.ResposneWriter, *http.Request) {
-     return fuc(writer http.ResposneWriter, request *http.Request) {
+func LogPanic(function func(http.ResposneWriter, *http.Request)) function func(http.ResposneWriter, *http.Request) {
+     return func(writer http.ResposneWriter, request *http.Request) {
         def func() {
              if x := recover(); x != nil {
                  log.Printf("{%v} caught paniic %v", request.RemoteAddr, x)
              }
         } ()
 
-        return function(writer, request)
+        function(writer, request)
     }
 }
 ```
 
 ## Reference
-- [ A Tour of Go](https://tour.golang.org/welcome/1)
+- [A Tour of Go](https://tour.golang.org/welcome/1)
 - [Go 编程语言指南](https://tour.go-zh.org/welcome/1)
