@@ -361,6 +361,40 @@ func main() {
 ```
 在上面的程序中，函数 `divide()` 在第22行 `panic`，因为 `b` 是 `0`， 而且不可能用 `0` 来整除。函数 `sum()` 调用了一个延迟函数 `recovery()`，它常被用于从 `panic` 中恢复。在第17行，函数 `divide()` 从一个单独的 `goroutine` 中调用。我们在地18行的 `done` [通道](https://golangbot.com/channels) 上等待来确保 `divide()` 完成了执行。
 
+你认为这个应用会在终端输出什么呢？`panic` 会被恢复吗？回答是 `no`。`Panic` 不会被恢复。原因在于 `recovery` 函数运行在不同的 `goroutine` 里，而且在 `divide()` 发生的 `panic` 在不同的 `goroutine` 里。因此恢复是不可能发生的。
+
+运行这个程序会输出：
+```
+5 + 0 = 5  
+panic: runtime error: integer divide by zero
+
+goroutine 18 [running]:  
+main.divide(0x5, 0x0, 0xc0000a2000)  
+    /tmp/sandbox877118715/prog.go:22 +0x167
+created by main.sum  
+    /tmp/sandbox877118715/prog.go:17 +0x1a9
+```
+你可以从输出看到恢复没有发生。
+
+如果 `divide()` 函数在同一个 `goroutine` 里调用，我们将会从 `panic` 里恢复。
+
+如果第17行代码从
+```
+go divide(a, b, done)  
+```
+修改为
+```
+divide(a, b, done) 
+```
+因为 panic 在同一 `goroutine` 里发生，所以恢复将会发生。如果代有上面修改的程序运行，将会打印下买你的输出：
+```
+5 + 0 = 5  
+recovered: runtime error: integer divide by zero  
+normally returned from main  
+```
+
+到现在为止我们的教程就该结束了。
+
 ## Reference 
 - [Panic and Recover](https://golangbot.com/panic-and-recover/)
 - [Golang tutorial series](https://golangbot.com/learn-golang-series/)
