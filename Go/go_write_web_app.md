@@ -144,9 +144,158 @@ http://localhost:8080/monkeys
 Hi there, I love monkeys!
 ```
 ## 5. 利用 net/http 来服务 wiki 页面
+为了使用 `net/http` 包，它必须被导入：
+```
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+)
+```
+让我们创建一个处理器，`viewHandler` 会允许用户查看一个 `wiki` 页面，它将处理以 "/view/" 为前缀的地址。
+```
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/view/"):]
+    p, _ := loadPage(title)
+    fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
+}
+```
+再一次，请注意使用 `_` 来忽略来自 `loadPage` 的返回的错误值。这里这样做是为了简化，通常被认为是不好的实践。
 
+首先，这个函数从 `r.URL.Path`，即请求 `URL` 的路径部分里抽取出页面标题。路径被利用 [len("/view/"):] 再次切片从而移除请求路径的前导 "/view/" 部分。这是因为路径将不变地以 "/view/" 开始，它不是页面标题的一部分。
+
+接下来函数加载页面数据，用一个简单的 HTML 字符串格式化页面，并写入 `w`, 即 `http.ResponseWriter`。
+
+为了使用这个处理器，我们重写了 `main` 函数，利用 `viewHandler` 来初始化 `http` 以处理 `/view/` 下的任何请求。
+```
+func main() {
+    http.HandleFunc("/view/", viewHandler)
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+[点击这里以查看到目前为止我们所写的代码](https://golang.org/doc/articles/wiki/part2.go)
+
+让我们来差U那个捡一些页面数据（比如 test.txt），编译我们的代码，病史者服务我们的 wiki 页面。
+```
+$ go build wiki.go
+$ ./wiki
+```
+
+在你的编辑器中打开 test.txt，将字符串  "Hello world" （不带引号）存入它。
+
+（如果你在使用 Windows 你必须输入不带 the "./" 的 "wiki" 来运行程序。）
+
+当 Web 服务器运行时，访问 `http://localhost:8080/view/test` 将显示一个页面标题为 "test"，内容为 "Hello world"。
 ## 6. 编辑页面
+一个 `wiki` 不能没有任何编辑能力。让我们创建两个新的处理器：一个名为 `editHandler` 用于显示 “编辑页面”表单；另一个名为 `saveHandler` 通过表单保存输入的数据。
+
+首先，我们把它们加入到 main()：
+```
+func main() {
+    http.HandleFunc("/view/", viewHandler)
+    http.HandleFunc("/edit/", editHandler)
+    http.HandleFunc("/save/", saveHandler)
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+函数 `editHandler` 加载页面（或者，如果它不存在，创建一个空的 Page 结构体），并显示一个 `HTML` 表单：
+```
+func editHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/edit/"):]
+    p, err := loadPage(title)
+    if err != nil {
+        p = &Page{Title: title}
+    }
+    fmt.Fprintf(w, "<h1>Editing %s</h1>"+
+        "<form action=\"/save/%s\" method=\"POST\">"+
+        "<textarea name=\"body\">%s</textarea><br>"+
+        "<input type=\"submit\" value=\"Save\">"+
+        "</form>",
+        p.Title, p.Title, p.Body)
+}
+```
+这个函数将工作的得很好，但所有硬编码的 `HTML` 很丑陋。当然，我们有更好的方式。
 ## 7. html/template 包
+`html/template` 包是 Go 标准库的一部分。我们可以使用 `html/template` 来将 `HTML` 保存在一个单独的文件中。允许我们改变我们编辑的文件的布局而无需修改我们的 Go 代码。
+
+首先，我们需要将 `html/template` 加入到我们的导入列表。我们将不再使用 `fmt`，因此我们移除它：
+```
+import (
+	"html/template"
+	"io/ioutil"
+	"net/http"
+)
+```
+让我们创建一个包含 `HTML` 表单的模板文件。打开一个新的名为 `edit.html` 的文件，并加入下面的行：
+```
+<h1>Editing {{.Title}}</h1>
+
+<form action="/save/{{.Title}}" method="POST">
+<div><textarea name="body" rows="20" cols="80">{{printf "%s" .Body}}</textarea></div>
+<div><input type="submit" value="Save"></div>
+</form>
+```
+修改 `editHandler` 使用这个模板来替代硬编码的 `HTML`：
+```
+func editHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/edit/"):]
+    p, err := loadPage(title)
+    if err != nil {
+        p = &Page{Title: title}
+    }
+    t, _ := template.ParseFiles("edit.html")
+    t.Execute(w, p)
+}
+```
+函数 `template.ParseFiles` 将读入 `edit.html` 的内容并返回一个 `*template.Template`。
+
+方法 `t.Execute` 执行该模板，将产生的页面下写入到 `http.ResponseWriter`。点标识符 `.Title` 和 `.Body` 指 `p.Title` 和 `p.Body`。
+
+模板指令用两个大括号包围，`printf "%s" .Body` 指令是一个函数调用，它将 `.Body` 输出成一个字符串而非一个字节流，`fmt.Printf` 也一样。`html/template` 包帮助确保模板行动产生安全及正确的 HTML。例如，它自动转义任何大些符号（`>`），将其替换为 " &gt;"，以此确保用户数据不会破坏HTML表单。
+
+因为我们现在在用模板工作，让我们再为我们的 `viewHandler` 创建一个模板 `view.html`:
+```
+<h1>{{.Title}}</h1>
+
+<p>[<a href="/edit/{{.Title}}">edit</a>]</p>
+
+<div>{{printf "%s" .Body}}</div>
+```
+相应地修改 `viewHandler` ：
+```
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/view/"):]
+    p, _ := loadPage(title)
+    t, _ := template.ParseFiles("view.html")
+    t.Execute(w, p)
+}
+```
+注意我们在两个处理器中使用了几乎一样的模板，让我们通过将模板（处理）代码移到到一个函数来消除重复：
+```
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+    t, _ := template.ParseFiles(tmpl + ".html")
+    t.Execute(w, p)
+}
+```
+并修改处理器以利用新的函数：
+```
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/view/"):]
+    p, _ := loadPage(title)
+    renderTemplate(w, "view", p)
+}
+
+func editHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/edit/"):]
+    p, err := loadPage(title)
+    if err != nil {
+        p = &Page{Title: title}
+    }
+    renderTemplate(w, "edit", p)
+}
+```
+如果我们在 main里注掉我们还未实现的 save 处理器的注册，我们可以再一次构建并运行我们的应用。[点击这里以查看到目前为止我们所写的代码](https://golang.org/doc/articles/wiki/part3.go)。
 ## 8. 处理不存在的页面（Handling non-existent pages）
 ## 9. 保存页面
 ## 10. 错误处理
