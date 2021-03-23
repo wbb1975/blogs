@@ -297,8 +297,50 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 ```
 如果我们在 main里注掉我们还未实现的 save 处理器的注册，我们可以再一次构建并运行我们的应用。[点击这里以查看到目前为止我们所写的代码](https://golang.org/doc/articles/wiki/part3.go)。
 ## 8. 处理不存在的页面（Handling non-existent pages）
+如果你访问 `/view/APageThatDoesntExist` 会发生什么？你将看到一把包含 HTML 的页面。这是因为它忽略了 `loadPage` 返回的错误值并继续用控数据填充页面。取而代之，如果请求页面不存在，它应该将客户重定向到编辑页面，以此内容可以被创建。
+```
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/view/"):]
+    p, err := loadPage(title)
+    if err != nil {
+        http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+        return
+    }
+    renderTemplate(w, "view", p)
+}
+```
+函数 `http.Redirect` 添加了一个 HTTP 状态码 `http.StatusFound (302)` 和一个 `Location` 头到 HTTP Response。
 ## 9. 保存页面
+函数 `saveHandler` 将处理编辑页面的表单提交。在解除 `main` 中的注释之后，我们来实现这个处理器。
+```
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/save/"):]
+    body := r.FormValue("body")
+    p := &Page{Title: title, Body: []byte(body)}
+    p.save()
+    http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+```
+页面标题 （在URL中提供）及表单的唯一字段，`Body`，将被保存到一个新的 `Page`。`save()` 方法被调用以把数据写到一个文件，客户呗重定向到 `/view/` 页面。
+
+`FormValue` 返回的类型是 s`tring`，在它被保存到一个 `Page` 前我们必须将其转化为 `[]byte`。我们使用 `[]byte(body)` 来执行此转化。
 ## 10. 错误处理
+我们的程序中还有其它几处错误被忽略了。这是坏的实践，至少当错误发生时，程序可能导致一种不期望的行为。一个更好的方案是处理错误并把错误消息返回给用户。这种方式下如果发生了某些错误，程序仍然按照我们期待的方式工作，用户也可得到通知。
+
+首先，让我们在 `renderTemplate` 中处理错误：
+```
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+    t, err := template.ParseFiles(tmpl + ".html")
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    err = t.Execute(w, p)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
+}
+```
 ## 11. 模板缓存（Template caching）
 ## 12. 验证（Validation）
 ## 13. 函数字面量与闭包简介（Introducing Function Literals and Closures）
