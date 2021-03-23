@@ -341,6 +341,23 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
     }
 }
 ```
+函数 `http.Error` 发送一个特定的 `HTTP` 回复码（本例为 "Internal Server Error"）和错误消息。把它放进一个单独的函数的决定是一个权衡（paying off）。
+
+现在改正 `saveHandler`:
+```
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/save/"):]
+    body := r.FormValue("body")
+    p := &Page{Title: title, Body: []byte(body)}
+    err := p.save()
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+```
+在 `p.save()` 中发生的任何错误都将报告给用户。
 ## 11. 模板缓存（Template caching）
 ## 12. 验证（Validation）
 ## 13. 函数字面量与闭包简介（Introducing Function Literals and Closures）
