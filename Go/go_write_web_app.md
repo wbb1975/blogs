@@ -341,7 +341,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
     }
 }
 ```
-函数 `http.Error` 发送一个特定的 `HTTP` 回复码（本例为 "Internal Server Error"）和错误消息。把它放进一个单独的函数的决定是一个权衡（paying off）。
+函数 `http.Error` 发送一个特定的 `HTTP` 回复码（本例为 "Internal Server Error"）和错误消息。把它放进一个单独的函数的决定是还债（paying off）。
 
 现在改正 `saveHandler`:
 ```
@@ -359,10 +359,181 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 ```
 在 `p.save()` 中发生的任何错误都将报告给用户。
 ## 11. 模板缓存（Template caching）
+在我们的代码中有一处比较低效。每当一个页面要渲染时，`renderTemplate` 都会调用 `parseFiles`。一个更好的方法是在程序初始化时调用 `ParseFiles` 一次，将所有的模板解析进一个单独的 `*Template`。之后我们就可以使用 [ExecuteTemplate](https://golang.org/pkg/html/template/#Template.ExecuteTemplate) 来渲染一个特定的模板。
+
+首先，我们创建一个全局变量 `templates`，并使用 `ParseFiles` 初始化它：
+```
+var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
+```
+函数 `template.Must` 是一个方便的包装函数，当传递其一个 `non-nil` 的 `error` 值时它将 `panic`，否则返回一个不可更改的 `*Template`。在这里 `panic` 是合适的，如果模板不能被加载，唯一合理的事情就是退出程序。
+
+函数 `ParseFiles` 可以接收任意数量的字符串以代表不同的模板文件。将这些文件解析成以这些文件 `basename` 命名的模板。如果我们期待为我们的应用添加更多的模板，我们可以将它们加入到 `ParseFiles` 的参数里。
+
+接下来我们修改函数 `renderTemplate` 来调用 `templates.ExecuteTemplate` 方法并传递合适的模板名。
+```
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+    err := templates.ExecuteTemplate(w, tmpl+".html", p)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
+}
+```
+注意模板名即为模板文件名，因此我们必须添加 ".html" 到 `tmpl` 参数里。
 ## 12. 验证（Validation）
+你可能已经观察到，程序有一个严重的安全缺陷：一个用户可以提供一个服务器的任一路径以供读写。为了减轻这个，我们可以编写一个函数利用正则表达式来验证标题。
+
+首先，添加 "regexp" 到导入列表。然后我们可以创建一个全局变量来存储我们的验证表达式：
+```
+var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+```
+函数 `regexp.MustCompile` 将解析并编译正则表达式并返回一个 `regexp.Regexp`。`MustCompile` 与 `Compile` 的不同之处在于如果表达式编译失败 `MustCompile` 将 `panic`，而 `Compile` 在第二个返回值里填充 `error` 。
+
+现在，让我们编写一个函数利用 `validPath` 来验证路径并抽取标题。
+```
+func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
+    m := validPath.FindStringSubmatch(r.URL.Path)
+    if m == nil {
+        http.NotFound(w, r)
+        return "", errors.New("invalid Page Title")
+    }
+    return m[2], nil // The title is the second subexpression.
+}
+```
+如果标题有效，它将与一个 `nil error` 值一起返回。如果标题无效，函数将向 HTTP 连接写一个 "404 Not Found" error，并向处理器返回一个 error 值。为了创建一个新的 error，我们不得不到入 `errors` 包。
+
+让我们在每个处理器中加入 `getTitle` 调用：
+```
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+    title, err := getTitle(w, r)
+    if err != nil {
+        return
+    }
+    p, err := loadPage(title)
+    if err != nil {
+        http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+        return
+    }
+    renderTemplate(w, "view", p)
+}
+
+func editHandler(w http.ResponseWriter, r *http.Request) {
+    title, err := getTitle(w, r)
+    if err != nil {
+        return
+    }
+    p, err := loadPage(title)
+    if err != nil {
+        p = &Page{Title: title}
+    }
+    renderTemplate(w, "edit", p)
+}
+
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+    title, err := getTitle(w, r)
+    if err != nil {
+        return
+    }
+    body := r.FormValue("body")
+    p := &Page{Title: title, Body: []byte(body)}
+    err = p.save()
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+```
+
 ## 13. 函数字面量与闭包简介（Introducing Function Literals and Closures）
+在每个处理器中捕捉错误情况引入了许多重复代码。如果我们在一个函数里包装所有的处理器，它做所有的验证和错误检查如何？Go 的[函数字面量](https://golang.org/ref/spec#Function_literals)提供了强大的抽象功能，它可以在这里为我们提供帮助。
+
+首先，我们重写每个处理器定义让其接受一个标题参数：
+```
+func viewHandler(w http.ResponseWriter, r *http.Request, title string)
+func editHandler(w http.ResponseWriter, r *http.Request, title string)
+func saveHandler(w http.ResponseWriter, r *http.Request, title string)
+```
+现在让我们定义一个包装函数，它接受如上定义的函数并返回一个 http.HandlerFun 函数类型（适合传递给函数 http.HandleFunc）。
+```
+func makeHandler(fn func (http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Here we will extract the page title from the Request,
+		// and call the provided handler 'fn'
+	}
+}
+```
+因为它圈捕获了函数外所有定义的值，返回的函数被称为一个闭包，在本例中，变量 `fn` （`makeHandler` 的单个参数）被闭包捕获。变量 `fn` 将会是 `save`, `edit`, 或 `view` 处理器中的一个。
+
+现在我们从 `getTitle` 拿来代码兵用在这里（有一些小修改）：
+```
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        m := validPath.FindStringSubmatch(r.URL.Path)
+        if m == nil {
+            http.NotFound(w, r)
+            return
+        }
+        fn(w, r, m[2])
+    }
+}
+```
+`makeHandler` 返回的闭包是一个函数，它接受一个 `http.ResponseWriter` 和 `http.Request`（换句话说，`http.HandlerFunc`）闭包从请求路径里抽取标题，并用 `validPath` 正则表达式对象验证。如果标题无效，一个 error 就将会被 `http.NotFound` 函数写到 `ResponseWriter`，如果标题有效，闭包处理函数 `fn` 将会被调用，调用参数为 `ResponseWriter`, `Request`, 和标题。
+
+现在我们可以在 `main` 里在利用 `http` 包注册它们之前用 `makeHandler` 包装处理函数。
+```
+func main() {
+    http.HandleFunc("/view/", makeHandler(viewHandler))
+    http.HandleFunc("/edit/", makeHandler(editHandler))
+    http.HandleFunc("/save/", makeHandler(saveHandler))
+
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+最终，我们参处理器中移除了 `getTitle` 调用，使它们看起来更简单：
+```
+func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
+    p, err := loadPage(title)
+    if err != nil {
+        http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+        return
+    }
+    renderTemplate(w, "view", p)
+}
+
+func editHandler(w http.ResponseWriter, r *http.Request, title string) {
+    p, err := loadPage(title)
+    if err != nil {
+        p = &Page{Title: title}
+    }
+    renderTemplate(w, "edit", p)
+}
+
+func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
+    body := r.FormValue("body")
+    p := &Page{Title: title, Body: []byte(body)}
+    err := p.save()
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+```
 ## 14. 试一试！（Try it out!）
+[点击这里以查看到目前为止我们所写的代码](https://golang.org/doc/articles/wiki/final.go)
+
+重新编译代码，并运行应用：
+```
+$ go build wiki.go
+$ ./wiki
+```
+访问 http://localhost:8080/view/ANewPage 将呈现给你一个编辑页面，你就可以输入一些文本，点击  'Save'，将会被重定向到新创建的页面。
 ## 15. 其它任务
+以下是一些你可以自己追踪的一些小任务：
+- 将模板存储 在 `tmpl/` 页面数据存储在 `data/`
+- 创建一个处理器将根页面的请求重定向到 `/view/FrontPage`
+- 通过有效的 HTML 并添加 CSS 规则来打扮我们的页面模板
+- 通过将 `[PageName]` 转化为 `<a href="/view/PageName">PageName</a>` 来实现页面间链接（提示，你可以使用 `regexp.ReplaceAllFunc` 来实现它）
 
 ## Reference
 - [Writing Web Applications](https://golang.org/doc/articles/wiki/)
