@@ -227,7 +227,227 @@ func main() {
 }
 ```
 ## 4. 类型
-## 3. 常量
+下面是 Go 中可用的基础类型：
+- bool
+- 数字类型
+  + int8, int16, int32, int64, int
+  + uint8, uint16, uint32, uint64, uint
+  + float32, float64
+  + complex64, complex128
+  + byte
+  + rune
+- string
+### 4.1 bool
+bool 代表一个布尔值，它为 true 或 false。
+```
+package main
+
+import "fmt"
+
+func main() {  
+    a := true
+    b := false
+    fmt.Println("a:", a, "b:", b)
+    c := a && b
+    fmt.Println("c:", c)
+    d := a || b
+    fmt.Println("d:", d)
+}
+```
+### 4.2 有符号整型数
+类型|大小|范围|描述
+--------|--------|--------|--------
+int8|8位|-128 ~ 127|代表一个8位有符号整数
+int16|16位|-32768 ~ 32767|代表一个16位有符号整数
+int32|32位|-2147483648 ~ 2147483647|代表一个32位有符号整数
+int64|64位|-9223372036854775808 ~ 9223372036854775807|代表一个64位有符号整数
+int|32或64位|在32位系统上为 -2147483648 ~ 2147483647； 在64位系统上为-9223372036854775808 ~ 9223372036854775807|依赖于平台代表一个32位或64位有符号整数。你通常应该使用 int 来代表一个整形数，除非你有明确的尺寸需求
+
+```
+package main
+
+import "fmt"
+
+func main() {  
+    var a int = 89
+    b := 95
+    fmt.Println("value of a is", a, "and b is", b)
+}
+```
+上面的程序将打印出 `value of a is 89 and b is 95`。
+
+在上面的程序里 `a` 是 `int` 类型，`b` 的类型从给它赋予的值（95）推导而来。我们上面说过，在32位系统上 `int` 为32位，在64位系统上上为64位。让我们来验证这个说法。
+
+变量类型可以在 `Printf` 函数里使用  `%T` 格式化符号打印。 Go 有一个包叫作 [unsafe](https://golang.org/pkg/unsafe/)，该包拥有一个叫作 [Sizeof](https://golang.org/pkg/unsafe/#Sizeof) 的函数用于返回传给它的变量的字节数。`unsafe` 包主要用于多代码可移植性比较关心的场合，这里我们主要基础教程的目的使用它。
+
+下面的程序将打印变量 `a` 和 `b` 的类型及大小。`%T` 用于格式化类型，`%d` 用于格式化大小。
+```
+package main
+
+import (  
+    "fmt"
+    "unsafe"
+)
+
+func main() {  
+    var a int = 89
+    b := 95
+    fmt.Println("value of a is", a, "and b is", b)
+    fmt.Printf("type of a is %T, size of a is %d", a, unsafe.Sizeof(a)) //type and size of a
+    fmt.Printf("\ntype of b is %T, size of b is %d", b, unsafe.Sizeof(b)) //type and size of b
+}
+```
+上买的呢程序将产生下面的输出：
+```
+value of a is 89 and b is 95  
+type of a is int, size of a is 8
+type of b is int, size of b is 8  
+```
+### 4.3 无符号整型数
+类型|大小|范围|描述
+--------|--------|--------|--------
+uint8|8位|0 ~ 255|代表一个8位无符号整数
+uint16|16位|0 ~ 65535|代表一个16位无符号整数
+uint32|32位|0 ~ 4294967295|代表一个32位无符号整数
+uint64|64位|0 ~ 18446744073709551615|代表一个64位无符号整数
+uint|32或64位|在32位系统上为 0 ~ 4294967295，在64位系统上为0 ~ 18446744073709551615|依赖于平台代表一个32位或64位无符号整数。你通常应该使用 int 来代表一个整形数，除非你有明确的尺寸需求
+### 4.4 浮点数类型
+**float32**: 32位浮点数
+**float64**: 64位浮点数
+
+下面的程序演示了浮点数类型和整型数类型：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    a, b := 5.67, 8.97
+    fmt.Printf("type of a %T b %T\n", a, b)
+    sum := a + b
+    diff := a - b
+    fmt.Println("sum", sum, "diff", diff)
+
+    no1, no2 := 56, 89
+    fmt.Println("sum", no1+no2, "diff", no1-no2)
+}
+```
+`a` 和 `b` 的类型从指派给它们的值推导而来。在本例中，`a` 和 `b` 的类型是 `float64`（`float64` 是浮点数的默认类型）。
+```
+type of a float64 b float64  
+sum 14.64 diff -3.3000000000000007  
+sum 145 diff -33  
+```
+### 4.5 复数类型
+**complex64**: 实部和虚部皆为 float32 的复数
+**complex128**: 实部和虚部皆为 float32 的复数
+
+内建函数 [complex](https://golang.org/pkg/builtin/#complex) 用于从实部和虚部构造一个复数。`complex` 函数的签名如下：
+```
+func complex(r, i FloatType) ComplexType
+```
+复数也可以从快捷方式创建：
+```
+c := 6 + 7i
+```
+让我们写一个小程序来理解复数类型：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    c1 := complex(5, 7)
+    c2 := 8 + 27i
+    cadd := c1 + c2
+    fmt.Println("sum:", cadd)
+    cmul := c1 * c2
+    fmt.Println("product:", cmul)
+}
+```
+程序将输出：
+```
+sum: (13+34i)  
+product: (-149+191i)  
+```
+### 4.6 其它数字类型
+**byte** uint8别名
+**rune** int32别名
+
+当[学习字符串](https://golangbot.com/strings/)时，我们将会深入讨论 bytes 和 rune。
+### 4.7 字符串
+在 Go 中字符串时字节的集合。即使这个定义不合理但至少是正确的。现在，我们可以假定字符串是一个字符的集合。我们将在单独的[字符串教程](https://golangbot.com/strings/)学习到跟多字符串的细节。
+
+让我们来编写一个使用字符串的应用：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    first := "Naveen"
+    last := "Ramanathan"
+    name := first +" "+ last
+    fmt.Println("My name is",name)
+}
+```
+### 4.8 类型转换
+Go 在显式类型使用上非常严格。没有自动类型提升和转化。让我们从一个例子爱来看看这意味着什么：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    i := 55      //int
+    j := 67.8    //float64
+    sum := i + j //int + float64 not allowed
+    fmt.Println(sum)
+}
+```
+上述代码在 C 语言里绝对是合法的，但在 Go 里它却不能工作。`i` 是 `int` 类型，`j` 为 `float64` 类型。将两个不同类型的数字加载一起是不被允许的。当你运行这个程序时，你会得到 `main.go:10: invalid operation: i + j (mismatched types int and float64)`。
+
+为了解决这个问题，`i` 和 `j` 应该为同样的类型。让我们将 `j` 转化为 `int`。`T(v)` 是将一个值 `v` 转换为 `T` 类型的语法。
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    i := 55      //int
+    j := 67.8    //float64
+    sum := i + int(j) //j is converted to int
+    fmt.Println(sum)
+}
+```
+现在当你运行上面的程序，你将会看到输出 122.
+
+这同样适用于赋值操作，将一种类型的值赋给另一个类型需要显式的类型转化。下面的程序解释了这个规则：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    i := 10
+    var j float64 = float64(i) //this statement will not work without explicit conversion
+    fmt.Println("j", j)
+}
+```
+在第9行，`i` 被转化为 `float64`，然后被赋值给 `j`。当你试着将 `i` 赋值给 `j` 而不利用类型转化，编译器将抛出一个异常。
+## 5. 常量
 
 ## Reference
 - [Golang tutorial series](https://golangbot.com/learn-golang-series/)
