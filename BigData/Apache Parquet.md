@@ -77,8 +77,11 @@ File Metadata
 - DOUBLE: IEEE 64 位浮点数
 - BYTE_ARRAY: 任意长字节数组
 ## 逻辑类型
-逻辑类型通过执行基本类型如何被解释来扩展可用于 parquet 存储的类型。这保证基本数据类型集最小化，记忆高效编码。例如，字符串被存储为 UTF-8 注解的字节数组。这些注解定义了如何解码和解释数据。注解唉文件元数据中存储为 ConvertedType，其文挡在 [LogicalTypes.md](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)可见。
+逻辑类型通过执行基本类型如何被解释来扩展可用于 parquet 存储的类型。这保证基本数据类型集最小化，以及复用 parquet 的高效编码。例如，字符串被存储为 `UTF-8` 注解的字节数组。这些注解定义了如何解码和解释数据。注解在文件元数据中存储为 `ConvertedType`，其文挡在 [LogicalTypes.md](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)可见。
 ## 嵌套编码
+为了编码嵌套列，`Parquet` 使用 `Dremel` 的定义级别和副本级别编码。定义级别定义了在列所在路径上有多少可选字段被定义了。副本级别指定了在路径上多少值重复。最大定义和副本级别可从模式（schema ）计算（如有多少嵌套）。这定义了存储这些级别所需的位数（级别为列的所有值定义）。
+
+支持两种级别编码方式，`ITPACKED` 和 `RLE`，但当前只有 `RLE` 在使用，因为它取代了 `BITPACKED`。
 ## Nulls
 ## 数据页
 ## 列块
