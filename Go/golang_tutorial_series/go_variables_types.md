@@ -448,6 +448,132 @@ func main() {
 ```
 在第9行，`i` 被转化为 `float64`，然后被赋值给 `j`。当你试着将 `i` 赋值给 `j` 而不利用类型转化，编译器将抛出一个异常。
 ## 5. 常量
+### 什么是常量
+Go 中的术语常量用于指定固定的值如：
+```
+95  
+"I love Go" 
+67.89
+```
+### 声明一个常量
+关键字 `const` 用于声明一个常量。让我们用一个例子来看看如何声明一个常量：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    const a = 50
+    fmt.Println(a)
+}
+```
+在上面的代码中，a 是一个常量其被赋值为 50.
+### 声明一组常量
+还有额外的语法可以用一条语句声明一组常量。使用这个语法定义一组常量的例子如下：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    const (
+        name = "John"
+        age = 50
+        country = "Canada"
+    )
+    fmt.Println(name)
+    fmt.Println(age)
+    fmt.Println(country)
+
+}
+```
+在上面的程序里，我们声明了3个常量 `name`, `age` 和 `country`。上面的程序将打印：
+```
+John  
+50  
+Canada  
+```
+常量，意如其名，不能被重新赋值为另一个值。在下面的程序中，我们尝试将 `89` 赋给 `a`。由于 `a` 是一个常量，该操作不被允许。该程序将在编译时报错 `"cannot assign to a"`。
+```
+package main
+
+func main() {  
+    const a = 55 //allowed
+    a = 89 //reassignment not allowed
+}
+```
+**常量的值应该在编译时已知**。因此它不能被赋值为一个[函数调用](https://golangbot.com/functions/)的返回值，原因在于函数调用仅在运行时发生。
+```
+package main
+
+import (  
+    "math"
+)
+
+func main() {  
+    var a = math.Sqrt(4)   //allowed
+    const b = math.Sqrt(4) //not allowed
+}
+```
+在上面的程序中，`a` 是一个[变量](https://golangbot.com/variables/)，因此它可被赋值为函数 `math.Sqrt(4)` 的返回值（我们将在[单独的教程](https://golangbot.com/functions/)里讨论函数的更多细节）。
+
+`b` 是一个常量，其值需要在编译时求值。函数 `math.Sqrt(4)` 仅仅在运行时求值，因此 `const b = math.Sqrt(4)` 编译失败并报告了下面的错误：
+```
+./prog.go:9:8: const initializer math.Sqrt(4) is not a constant
+```
+### 字符串常量，有类型常量及无类型常量
+在 Go 中以双引号包裹的任意值为字符串。例如，在 Go 中字符串如 "Hello World", "Sam"都是常量。
+
+字符串常量属于什么类型？答案是它们是**无类型的（untyped）**。
+
+**一个字符串常量如 "Hello World" 不具有任何类型**。
+```
+const hello = "Hello World"  
+```
+在上面的代码中，常量 hello 不拥有任何类型。
+
+Go 是强类型语言。所有的类型需要一个显示的类型。在下面的程序中，变量 name 被用一个物类型的常量 n 类赋值，它可以工作吗？
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    const n = "Sam"
+    var name = n
+    fmt.Printf("type %T value %v", name, name)
+
+}
+```
+**答案是无类型的常量拥有一个伴生默认类型，它们只有在代码需要时才提供。在第 8 行的 var name = n 中，name 需要一个类型，它得到字符串常量 n 的默认类型，即字符串**。
+
+
+有方法创建有类型常量吗？答案是肯定的，下面的代码创建了一个有类型常量：
+```
+const typedhello string = "Hello World"  
+```
+**上面的代码中 typedhello 即为一个字符串类型的常量**。
+
+`Go` 是强类型语言。在赋值中混用类型是不允许的。让我们借助一个程序来看这意味着什么：
+```
+package main
+
+func main() {  
+        var defaultName = "Sam" //allowed
+        type myString string
+        var customName myString = "Sam" //allowed
+        customName = defaultName //not allowed
+
+}
+```
+在上面的代码中，我们首先创建了变量 `defaultName`，并将常量值 `Sam` 赋值给它。**常量 Sam 的默认类型为字符串，因此在赋值后，defaultName 类型为字符串**。
+
 
 ## Reference
 - [Golang tutorial series](https://golangbot.com/learn-golang-series/)
