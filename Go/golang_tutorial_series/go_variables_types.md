@@ -574,6 +574,101 @@ func main() {
 ```
 在上面的代码中，我们首先创建了变量 `defaultName`，并将常量值 `Sam` 赋值给它。**常量 Sam 的默认类型为字符串，因此在赋值后，defaultName 类型为字符串**。
 
+在下一行，我们创建了类型 myString，它是字符串的别名。
+
+接下来我们创建了 `myString` 类型的变量 `customName`，并将常量 “Sam” 赋值给它。因为 常量 “Sam” 是无类型的，它可被赋值给任何字符串类型的变量，因此这个复制是允许的，`customName` 因此具有类型 `myString`。
+
+现在我们拥有一个变量 defaultName，其类型为字符串；另一个变量 customName，其类型为 `myString`。虽然我们知道 `myString`是字符串的别名，Go 的强类型策略不允许一种类型的变量被赋值为另一种类型。**因此赋值 ustomName = defaultName 是不被允许的，编译器将抛出错误 ./prog.go:7:20: cannot use defaultName (type string) as type myString in assignment**。
+### 布尔常量
+布尔常量与字符串常量不同，它们是两个没有类型的常量 `true` 和 `false`。适用于字符串常量的规则也适用于布尔常量，因此这里我们就不重复了。下面的资格小李子解释了布尔常量：
+```
+package main
+
+func main() {  
+    const trueConst = true
+    type myBool bool
+    var defaultBool = trueConst //allowed
+    var customBool myBool = trueConst //allowed
+    defaultBool = customBool //not allowed
+}
+```
+上面的程序不解自明。
+### 数字常量
+数字常量包括整型，浮点和复数常量。关于数字常量有一些微妙之处.
+
+让我们来看一些解释这些情况的例子：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    const a = 5
+    var intVar int = a
+    var int32Var int32 = a
+    var float64Var float64 = a
+    var complex64Var complex64 = a
+    fmt.Println("intVar", intVar, "\nint32Var", int32Var, "\nfloat64Var", float64Var, "\ncomplex64Var", complex64Var)
+}
+```
+在上面的程序中，常量 `a` 是无类型的，其值为 `5`。你可能想知道常量 `a` 的默认类型，如果它确实拥有一个，将它赋值给一个不同的类型时会发生什么？答案在于 `a` 的语法。下面的程序将使得这更清晰：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    var i = 5
+    var f = 5.6
+    var c = 5 + 6i
+    fmt.Printf("i's type is %T, f's type is %T, c's type is %T", i, f, c)
+
+}
+```
+在上面你的程序中，每个变量的类型由数字常量的语法决定。从语法上，`5` 是整型，`5.6` 是浮点数，`5 + 6i` 是复数类型。上面的程序运行后有下面的输出：
+```
+i's type is int, f's type is float64, c's type is complex128
+```
+拥有上面的知识后，让我们尽力理解下面的程序如何工作的：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    const a = 5
+    var intVar int = a
+    var int32Var int32 = a
+    var float64Var float64 = a
+    var complex64Var complex64 = a
+    fmt.Println("intVar",intVar, "\nint32Var", int32Var, "\nfloat64Var", float64Var, "\ncomplex64Var",complex64Var)
+}
+```
+在上面的例子中，`a` 的值是 `5`，其语法是泛型的。它可以代表一个浮点数，整型值甚至一个没有虚部的复数。因此它它可以赋值给任何兼容的类型。这些常量的默认类型可以认为在运行时根据上下文确定。`var intVar int = a` 需要 `a` 是整型，于是它变成了一个整型常量。`var complex64Var complex64 = a` 要求 `a` 为复数，因此它变为了一个复数常量。相当清晰。
+### 数字表达式
+数字常量可以自由地混入或者匹配表达式，只有当它们被赋值给变量或者在需要一个类型的代码中类型才是需要的。
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    var a = 5.9 / 8
+    fmt.Printf("a's type is %T and value is %v", a, a)
+}
+```
+在上面的程序中，从语法上 5.9 是浮点数，8 是整型数。因此，5.9/8 是允许的，因为都是数字常量。除法结果为 0.7375 为浮点数，因此变量 a 是浮点类型。程序输出为：
+```
+a's type is float64 and value is 0.7375  
+```
 
 ## Reference
 - [Golang tutorial series](https://golangbot.com/learn-golang-series/)
