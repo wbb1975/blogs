@@ -420,3 +420,4 @@ func main() {
 ## Reference
 - [Golang tutorial series](https://golangbot.com/learn-golang-series/)
 - [函数](https://golangbot.com/functions/)
+- [Go Packages](https://golangbot.com/go-packages/)
