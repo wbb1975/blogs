@@ -380,7 +380,254 @@ for {
 }
 ```
 ## 第10章 switch 语句
+### 示例
+一个示例胜千言。让我们从一个简单实例开始，它接受一个手指数作为输入，输出手指对应名字。例如，1是拇指，2是无名指等。
+```
+package main
 
+import (  
+    "fmt"
+)
+
+func main() {  
+    finger := 4
+    fmt.Printf("Finger %d is ", finger)
+    switch finger {
+    case 1:
+        fmt.Println("Thumb")
+    case 2:
+        fmt.Println("Index")
+    case 3:
+        fmt.Println("Middle")
+    case 4:
+        fmt.Println("Ring")
+    case 5:
+        fmt.Println("Pinky")
+
+    }
+}
+```
+在上面的程序中，第10行的 `switch finger`将把 `finger` 的值与每一个 `case`语句比较。case 语句从上到下求值，首先匹配表达式的得以执行。在本例中，finger 值为4，所以打印出：
+```
+Finger 4 is Ring
+```
+### case 语句不允许重复
+带有同样常量值的 case 语句是不允许的。如果你试着运行下面的程序
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    finger := 4
+    fmt.Printf("Finger %d is ", finger)
+    switch finger {
+    case 1:
+        fmt.Println("Thumb")
+    case 2:
+        fmt.Println("Index")
+    case 3:
+        fmt.Println("Middle")
+    case 4:
+        fmt.Println("Ring")
+    case 4: //duplicate case
+        fmt.Println("Another Ring")
+    case 5:
+        fmt.Println("Pinky")
+
+    }
+}
+```
+编译器将抱怨：
+```
+./prog.go:19:7: duplicate case 4 in switch previous case at ./prog.go:17:7
+```
+### 默认 case
+我们手上只有五个手指。当我们输入一个错误的手指数会发生什么？这正是默认 case 的用武之地。当其它所有 case 全不能匹配时，默认 case 会被执行：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    switch finger := 8; finger {
+    case 1:
+        fmt.Println("Thumb")
+    case 2:
+        fmt.Println("Index")
+    case 3:
+        fmt.Println("Middle")
+    case 4:
+        fmt.Println("Ring")
+    case 5:
+        fmt.Println("Pinky")
+    default: //default case
+        fmt.Println("incorrect finger number")
+    }
+}
+```
+默认 `case` 并不必须是 `switch` 语句的最后一个子句，它可以位于 `switch` 子句的的任意位置。
+### case 中有多个表达式
+单个 `case` 中可以包含多个表达式，比此以逗号隔开：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    letter := "i"
+    fmt.Printf("Letter %s is a ", letter)
+    switch letter {
+    case "a", "e", "i", "o", "u": //multiple expressions in case
+        fmt.Println("vowel")
+    default:
+        fmt.Println("not a vowel")
+    }
+}
+```
+### 没有表达式的 switch
+`switch` 中的表达式是可选的，它可以缺失。如果没有表达式，`switch` 将成为 `switch true`，每个 `case` 语句将会被求值是否为 `true`，其对应代码块将会被执行。
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    num := 75
+    switch { // expression is omitted
+    case num >= 0 && num <= 50:
+        fmt.Printf("%d is greater than 0 and less than 50", num)
+    case num >= 51 && num <= 100:
+        fmt.Printf("%d is greater than 51 and less than 100", num)
+    case num >= 101:
+        fmt.Printf("%d is greater than 100", num)
+    }
+
+}
+```
+这种类型的 `switch` 可被视为多个 `if else` 子句的一个替代。
+### Fallthrough
+在 Go 中，如果一个 case 得到执行，控制将立即退出 switch 语句。`fallthrough` 语句用于将控制转到刚得到执行的 case 子句的下一个 case 子句的第一个表达式。
+
+让我们写一个程序来理解 `fallthrough`。我们的程序将检查输入数字是否将小于 50, 100, 或 200。例如，如果我们输入75，程序将打印 `75 小于 100 和 200`。我们用 fallthrough 来实现这个：
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func number() int {  
+        num := 15 * 5 
+        return num
+}
+
+func main() {
+
+    switch num := number(); { //num is not a constant
+    case num < 50:
+        fmt.Printf("%d is lesser than 50\n", num)
+        fallthrough
+    case num < 100:
+        fmt.Printf("%d is lesser than 100\n", num)
+        fallthrough
+    case num < 200:
+        fmt.Printf("%d is lesser than 200", num)
+    }
+
+}
+```
+Switch 和 case 表达式并必须要仅仅为常量。特闷也可以在运行时求值。
+
+fallthrough 在 case 中应该为其最后一条语句，如果它在中间，编译器将抱怨　“allthrough statement out of place”。
+### 即使　case 求值为　false，Fallthrough 也会进入
+这是使用　fallthrough　时需要考虑的很微妙的一点，即使　case 求值为　false，Fallthrough 也会进入。
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    switch num := 25; { 
+    case num < 50:
+        fmt.Printf("%d is lesser than 50\n", num)
+        fallthrough
+    case num > 100:
+        fmt.Printf("%d is greater than 100\n", num)     
+    }
+}
+```
+在上面的程序中， `num` 是25，它小于 50，因此第九行的 case 求值为 true。第 11 行有一个 `fallthrough` ，第12 行的 `case num > 100:` 应该求值为 false，因为 num < 100。但 `fallthrough` 并不考虑这个，即使 case 求值为 false `Fallthrough` 也会进入.
+
+上面的程序将输出：
+```
+25 is lesser than 50  
+25 is greater than 100  
+```
+因此当你使用 `fallthrough` 时，确保你理解了你所做的。
+
+另一件事情是 `fallthrough` 不能位于 `switch` 的最后一条 case。原因也很简单，没有更多的 cas e以便 `fallthrough`。如果将 `fallthrough` 置于 `switch` 的最后一条 case，它会导致如下编译错误：
+```
+cannot fallthrough final case in switch  
+```
+### 跳出 switch （Breaking switch）
+```
+package main
+
+import (  
+    "fmt"
+)
+
+func main() {  
+    switch num := -5; {
+    case num < 50:
+        if num < 0 {
+            break
+        }
+        fmt.Printf("%d is lesser than 50\n", num)
+        fallthrough
+    case num < 100:
+        fmt.Printf("%d is lesser than 100\n", num)
+        fallthrough
+    case num < 200:
+        fmt.Printf("%d is lesser than 200", num)
+    }
+
+}
+```
+这个 break 语句将跳出 switch 语句。
+### 跳出外部循环（Breaking the outer for loop）
+```
+package main
+
+import (  
+    "fmt"
+    "math/rand"
+)
+
+func main() {  
+randloop:  
+    for {
+        switch i := rand.Intn(100); {
+        case i%2 == 0:
+            fmt.Printf("Generated even number %d", i)
+            break randloop
+        }
+    }
+
+}
+```
+**注意如果 break 语句没有包含标签，那么只有 switch 语句会被跳出，循环将继续运行。因此，给一个循环打上标签，并在 switch 语句语句的 break 语句中使用它你才能退出外面整个循环**。
 
 ## reference
 - [If else statement](https://golangbot.com/if-statement/)
