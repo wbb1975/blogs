@@ -1,5 +1,5 @@
 # SpringBoot 知识
-## 1. 入门篇
+## 第1章. 入门篇
 ### spingboot建议的目录结果结构如下：
 root package结构：com.example.myproject
 ```
@@ -36,7 +36,7 @@ public class HelloWorldController {
 @RestController的意思就是controller里面的方法都以json格式输出。
 
 启动主程序，打开浏览器访问http://localhost:8080/hello，就可以看到效果了。
-## 2. Web 综合开发
+## 第2章. Web 综合开发
 Spring Boot Web 开发非常的简单，其中包括常用的 json 输出、filters、property、log 等
 ### json 接口开发
 只需要类添加 @RestController 即可，默认类中的方法都会以 json 的格式返回。
@@ -275,7 +275,7 @@ WebJars 是将客户端（浏览器）资源（JavaScript，Css等）打成 Jar 
 <link th:href="@{/webjars/bootstrap/3.3.6/dist/css/bootstrap.css}" rel="stylesheet"></link>
 ```
 就可以正常使用了！
-## 3. Spring Boot 中 Redis 的使用
+## 第3章. Spring Boot 中 Redis 的使用
 ### Redis 介绍
 Redis 是目前业界使用最广泛的内存数据存储。相比 Memcached，Redis 支持更丰富的数据结构，例如 hashes, lists, sets 等，同时支持数据持久化。除此之外，Redis 还提供一些类数据库的特性，比如事务，HA，主从库。可以说 Redis 兼具了缓存系统和数据库的一些特性，因此有着丰富的应用场景。本文介绍 Redis 在 Spring Boot 中两个典型的应用场景。
 ### 如何使用
@@ -437,7 +437,7 @@ t(spring:session:expirations:1472976480000
 ### 参考
 - [Redis的两个典型应用场景](http://emacoo.cn/blog/spring-redis)
 - [SpringBoot应用之分布式会话](https://segmentfault.com/a/1190000004358410)
-## 4. Thymeleaf 使用详解
+## 第4章. Thymeleaf 使用详解
 ### Thymeleaf 介绍
 简单说，Thymeleaf 是一个跟 Velocity、FreeMarker 类似的模板引擎，它可以完全替代 JSP 。相较与其他的模板引擎，它有如下三个极吸引人的特点：
 1. Thymeleaf 在有网络和无网络的环境下皆可运行，即它可以让美工在浏览器查看页面的静态效果，也可以让程序员在服务器查看带数据的动态页面效果。这是由于它支持 html 原型，然后在 html 标签里增加额外的属性来达到模板+数据的展示方式。浏览器解释 html 时会忽略未定义的标签属性，所以 Thymeleaf 的模板可以静态地运行；当有数据返回到页面时，Thymeleaf 标签会动态地替换掉静态内容，使页面动态显示。
@@ -452,6 +452,536 @@ t(spring:session:expirations:1472976480000
 ### 常用th标签都有那些？
 ### 几种常用的使用方法
 ### 使用 Thymeleaf 布局
+## 第5章. Spring Boot Jpa 的使用
+### 5.1 Spring Boot Jpa 介绍
+#### 首先了解 Jpa 是什么？
+Jpa (Java Persistence API) 是 Sun 官方提出的 Java 持久化规范。它为 Java 开发人员提供了一种对象/关联映射工具来管理 Java 应用中的关系数据。它的出现主要是为了简化现有的持久化开发工作和整合 ORM 技术，结束现在 Hibernate，TopLink，JDO 等 ORM 框架各自为营的局面。
+
+值得注意的是，Jpa是在充分吸收了现有 Hibernate，TopLink，JDO 等 ORM 框架的基础上发展而来的，具有易于使用，伸缩性强等优点。从目前的开发社区的反应上看，Jpa 受到了极大的支持和赞扬，其中就包括了 Spring 与 EJB3. 0的开发团队。
+> 注意:Jpa 是一套规范，不是一套产品，那么像 Hibernate,TopLink,JDO 他们是一套产品，如果说这些产品实现了这个 Jpa 规范，那么我们就可以叫他们为 Jpa 的实现产品。
+#### Spring Boot Jpa
+Spring Boot Jpa 是 Spring 基于 ORM 框架、Jpa 规范的基础上封装的一套 Jpa 应用框架，可使开发者用极简的代码即可实现对数据的访问和操作。它提供了包括增删改查等在内的常用功能，且易于扩展！学习并使用 Spring Data Jpa 可以极大提高开发效率！
+> Spring Boot Jpa 让我们解脱了 DAO 层的操作，基本上所有 CRUD 都可以依赖于它来实现
+### 5.2 基本查询
+基本查询也分为两种，一种是 Spring Data 默认已经实现，一种是根据查询的方法来自动解析成 SQL。
+#### 预先生成方法
+Spring Boot Jpa 默认预先生成了一些基本的CURD的方法，例如：增、删、改等等。
+1. 继承 JpaRepository
+   ```
+   public interface UserRepository extends JpaRepository<User, Long> {
+   }
+   ```
+2. 使用默认方法
+   ```
+   @Test
+    public void testBaseQuery() throws Exception {
+        User user=new User();
+        userRepository.findAll();
+        userRepository.findOne(1l);
+        userRepository.save(user);
+        userRepository.delete(user);
+        userRepository.count();
+        userRepository.exists(1l);
+        // ...
+    }
+   ```
+#### 自定义简单查询
+自定义的简单查询就是根据方法名来自动生成 SQL，主要的语法是findXXBy,readAXXBy,queryXXBy,countXXBy, getXXBy后面跟属性名称：
+```
+User findByUserName(String userName);
+```
+也使用一些加一些关键字And 、 Or：
+```
+User findByUserNameOrEmail(String username, String email);
+```
+修改、删除、统计也是类似语法：
+```
+Long deleteById(Long id);
+Long countByUserName(String userName)
+```
+基本上 SQL 体系中的关键词都可以使用，例如： LIKE 、 IgnoreCase、 OrderBy：
+```
+List<User> findByEmailLike(String email);
+User findByUserNameIgnoreCase(String userName);
+List<User> findByUserNameOrderByEmailDesc(String email);
+```
+具体的关键字，使用方法和生产成SQL如下表所示：
+Keyword|Sample|JPQL snippet
+--------|--------|--------
+And|findByLastnameAndFirstname|… where x.lastname = ?1 and x.firstname = ?2
+Or|findByLastnameOrFirstname|… where x.lastname = ?1 or x.firstname = ?2
+Is,Equals|findByFirstnameIs,findByFirstnameEquals|… where x.firstname = ?1
+Between|findByStartDateBetween|… where x.startDate between ?1 and ?2
+LessThan|findByAgeLessThan|… where x.age < ?1
+LessThanEqual|findByAgeLessThanEqual|… where x.age ⇐ ?1
+GreaterThan|findByAgeGreaterThan|… where x.age > ?1
+GreaterThanEqual|findByAgeGreaterThanEqual|… where x.age >= ?1
+After|findByStartDateAfter|… where x.startDate > ?1
+Before|findByStartDateBefore|… where x.startDate < ?1
+IsNull|findByAgeIsNull|… where x.age is null
+IsNotNull,NotNull|findByAge(Is)NotNull|… where x.age not null
+Like|findByFirstnameLike|… where x.firstname like ?1
+NotLike|findByFirstnameNotLike|… where x.firstname not like ?1
+StartingWith|findByFirstnameStartingWith|… where x.firstname like ?1 (parameter bound with appended %)
+EndingWith|findByFirstnameEndingWith|… where x.firstname like ?1 (parameter bound with prepended %)
+Containing|findByFirstnameContaining|… where x.firstname like ?1 (parameter bound wrapped in %)
+OrderBy|findByAgeOrderByLastnameDesc|… where x.age = ?1 order by x.lastname desc
+Not|findByLastnameNot|… where x.lastname <> ?1
+In|findByAgeIn(Collection ages)|… where x.age in ?1
+NotIn|findByAgeNotIn(Collection age)|… where x.age not in ?1
+TRUE|findByActiveTrue()|… where x.active = true
+FALSE|findByActiveFalse()|… where x.active = false
+IgnoreCase|findByFirstnameIgnoreCase|… where UPPER(x.firstame) = UPPER(?1)
+### 5.3 复杂查询
+在实际的开发中我们需要用到分页、删选、连表等查询的时候就需要特殊的方法或者自定义 SQL。
+#### 分页查询
+分页查询在实际使用中非常普遍了，`Spring Boot Jpa` 已经帮我们实现了分页的功能，在查询的方法中，需要传入参数 `Pageable` ,当查询中有多个参数的时候 `Pageable` 建议做为最后一个参数传入。
+```
+Page<User> findALL(Pageable pageable);
+Page<User> findByUserName(String userName,Pageable pageable);
+```
+`Pageable` 是 Spring 封装的分页实现类，使用的时候需要传入页数、每页条数和排序规则：
+```
+@Test
+public void testPageQuery() throws Exception {
+	int page=1,size=10;
+	Sort sort = new Sort(Direction.DESC, "id");
+    Pageable pageable = new PageRequest(page, size, sort);
+    userRepository.findALL(pageable);
+    userRepository.findByUserName("testName", pageable);
+}
+```
+#### 限制查询
+有时候我们只需要查询前N个元素，或者支取前一个实体。
+```
+User findFirstByOrderByLastnameAsc();
+User findTopByOrderByAgeDesc();
+Page<User> queryFirst10ByLastname(String lastname, Pageable pageable);
+List<User> findFirst10ByLastname(String lastname, Sort sort);
+List<User> findTop10ByLastname(String lastname, Pageable pageable);
+```
+#### 自定义SQL查询
+其实 Spring Data 绝大部分的 SQL 都可以根据方法名定义的方式来实现，但是由于某些原因我们想使用自定义的 SQL 来查询，Spring Data 也是完美支持的；在 SQL 的查询方法上面使用 `@Query` 注解，如涉及到删除和修改在需要加上 `@Modifying`.也可以根据需要添加 `@Transactional` 对事务的支持，查询超时的设置等。
+```
+@Modifying
+@Query("update User u set u.userName = ?1 where u.id = ?2")
+int modifyByIdAndUserId(String  userName, Long id);
+	
+@Transactional
+@Modifying
+@Query("delete from User where id = ?1")
+void deleteByUserId(Long id);
+  
+@Transactional(timeout = 10)
+@Query("select u from User u where u.emailAddress = ?1")
+User findByEmailAddress(String emailAddress);
+```
+#### 多表查询
+多表查询 Spring Boot Jpa 中有两种实现方式，第一种是利用 Hibernate 的级联查询来实现，第二种是创建一个结果集的接口来接收连表查询后的结果，这里主要第二种方式。
+
+首先需要定义一个结果集的接口类：
+```
+public interface HotelSummary {
+
+	City getCity();
+
+	String getName();
+
+	Double getAverageRating();
+
+	default Integer getAverageRatingRounded() {
+		return getAverageRating() == null ? null : (int) Math.round(getAverageRating());
+	}
+
+}
+```
+查询的方法返回类型设置为新创建的接口：
+```
+@Query("select h.city as city, h.name as name, avg(r.rating) as averageRating "
+		- "from Hotel h left outer join h.reviews r where h.city = ?1 group by h")
+Page<HotelSummary> findByCity(City city, Pageable pageable);
+
+@Query("select h.name as name, avg(r.rating) as averageRating "
+		- "from Hotel h left outer join h.reviews r  group by h")
+Page<HotelSummary> findByCity(Pageable pageable);
+```
+使用：
+```
+Page<HotelSummary> hotels = this.hotelRepository.findByCity(new PageRequest(0, 10, Direction.ASC, "name"));
+for(HotelSummary summay:hotels) {
+	System.out.println("Name" +summay.getName());
+}
+```
+> 在运行中 Spring 会给接口（HotelSummary）自动生产一个代理类来接收返回的结果，代码汇总使用 getXX的形式来获取
+### 5.4 多数据源的支持
+#### 同源数据库的多源支持
+日常项目中因为使用的分布式开发模式，不同的服务有不同的数据源，常常需要在一个项目中使用多个数据源，因此需要配置 Spring Boot Jpa 对多数据源的使用，一般分一下为三步：
+1. 配置多数据源
+2. 不同源的实体类放入不同包路径
+3. 声明不同的包路径下使用不同的数据源、事务支持 
+#### 异构数据库多源支持
+比如我们的项目中，即需要对 mysql 的支持，也需要对 Mongodb 的查询等。
+
+实体类声明@Entity 关系型数据库支持类型、声明@Document 为 Mongodb 支持类型，不同的数据源使用不同的实体就可以了：
+```
+interface PersonRepository extends Repository<Person, Long> {
+ …
+}
+
+@Entity
+public class Person {
+  …
+}
+
+interface UserRepository extends Repository<User, Long> {
+ …
+}
+
+@Document
+public class User {
+  …
+}
+```
+但是，如果 User 用户既使用 Mysql 也使用 Mongodb 呢，也可以做混合使用：
+```
+interface JpaPersonRepository extends Repository<Person, Long> {
+ …
+}
+
+interface MongoDBPersonRepository extends Repository<Person, Long> {
+ …
+}
+
+@Entity
+@Document
+public class Person {
+  …
+}
+```
+也可以通过对不同的包路径进行声明，比如 A 包路径下使用 mysql,B 包路径下使用 MongoDB：
+```
+@EnableJpaRepositories(basePackages = "com.neo.repositories.jpa")
+@EnableMongoRepositories(basePackages = "com.neo.repositories.mongo")
+interface Configuration { }
+```
+### 5.5 其它
+#### 使用枚举
+使用枚举的时候，我们希望数据库中存储的是枚举对应的 String 类型，而不是枚举的索引值，需要在属性上面添加 @Enumerated(EnumType.STRING)  注解：
+```
+@Enumerated(EnumType.STRING) 
+@Column(nullable = true)
+private UserType type;
+```
+#### 不需要和数据库映射的属性
+正常情况下我们在实体类上加入注解@Entity，就会让实体类和表相关连。如果其中某个属性我们不需要和数据库来关联，且只是在展示的时候做计算，只需要加上@Transient属性既可。
+```
+@Transient
+private String  userName;
+```
+### [**示例代码-github**](https://github.com/ityouknow/spring-boot-examples/tree/master/spring-boot-jpa)
+### 参考
+[Spring Data JPA - Reference Documentation](http://docs.spring.io/spring-data/jpa/docs/current/reference/html/)
+[Spring Data JPA——参考文档 中文版](https://www.gitbook.com/book/ityouknow/spring-data-jpa-reference-documentation/details)
+## 第9章. 定时任务
+在我们开发项目过程中，经常需要定时任务来帮助我们来做一些内容， Spring Boot 默认已经帮我们实行了，只需要添加相应的注解就可以实现
+### 1、pom 包配置
+pom 包里面只需要引入 Spring Boot Starter 包即可：
+```
+<dependencies>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-test</artifactId>
+		<scope>test</scope>
+	</dependency>
+</dependencies>
+```
+### 2、启动类启用定时
+在启动类上面加上@EnableScheduling即可开启定时：
+```
+@SpringBootApplication
+@EnableScheduling
+public class Application {
+	public static void main(String[] args) {
+		SpringApplication.run(Application.class, args);
+	}
+}
+```
+### 3、创建定时任务实现类
+- 定时任务1：
+  ```
+  @Component
+  public class SchedulerTask {
+    private int count=0;
+
+    @Scheduled(cron="*/6 * * * * ?")
+    private void process(){
+        System.out.println("this is scheduler task runing  "+(count++));
+    }
+  }
+  ```
+- 定时任务2：
+  ```
+  @Component
+  public class Scheduler2Task {
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+
+    @Scheduled(fixedRate = 6000)
+    public void reportCurrentTime() {
+        System.out.println("现在时间：" + dateFormat.format(new Date()));
+    }
+  }
+  ```
+
+结果如下：
+```
+this is scheduler task runing  0
+现在时间：09:44:17
+this is scheduler task runing  1
+现在时间：09:44:23
+this is scheduler task runing  2
+现在时间：09:44:29
+this is scheduler task runing  3
+现在时间：09:44:35
+```
+**参数说明**：
+`@Scheduled` 参数可以接受两种定时的设置，一种是我们常用的 `cron="*/6 * * * * ?"`,一种是 `fixedRate = 6000`，两种都表示每隔六秒打印一下内容。
+
+`fixedRate` 说明：
+- `@Scheduled(fixedRate = 6000)` ：上一次开始执行时间点之后6秒再执行
+- `@Scheduled(fixedDelay = 6000)` ：上一次执行完毕时间点之后6秒再执行
+- `@Scheduled(initialDelay=1000, fixedRate=6000)` ：第一次延迟1秒后执行，之后按 fixedRate 的规则每6秒执行一次
+
+[**示例代码-github**](https://github.com/ityouknow/spring-boot-examples/tree/master/spring-boot-scheduler)
+## 第10章. 邮件服务
+发送邮件应该是网站的必备功能之一，什么注册验证，忘记密码或者是给用户发送营销信息。最早期的时候我们会使用 JavaMail 相关 api 来写发送邮件的相关代码，后来 Spring 推出了 `JavaMailSender` 更加简化了邮件发送的过程，在之后 Spring Boot 对此进行了封装就有了现在的 `spring-boot-starter-mail` ,本章文章的介绍主要来自于此包。
+### 10.1 简单使用
+#### 1、pom 包配置
+pom 包里面添加 `spring-boot-starter-mail` 包引用：
+```
+<dependencies>
+	<dependency> 
+	    <groupId>org.springframework.boot</groupId>
+	    <artifactId>spring-boot-starter-mail</artifactId>
+	</dependency> 
+</dependencies>
+```
+#### 2、在 application.properties 中添加邮箱配置
+```
+spring.mail.host=smtp.qiye.163.com //邮箱服务器地址
+spring.mail.username=xxx@oo.com //用户名
+spring.mail.password=xxyyooo    //密码
+spring.mail.default-encoding=UTF-8
+
+mail.fromMail.addr=xxx@oo.com  //以谁来发送邮件
+```
+#### 3、编写 mailService，这里只提出实现类
+```
+@Component
+public class MailServiceImpl implements MailService {
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @Autowired
+    private JavaMailSender mailSender;
+
+    @Value("${mail.fromMail.addr}")
+    private String from;
+
+    @Override
+    public void sendSimpleMail(String to, String subject, String content) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(content);
+
+        try {
+            mailSender.send(message);
+            logger.info("简单邮件已经发送。");
+        } catch (Exception e) {
+            logger.error("发送简单邮件时发生异常！", e);
+        }
+
+    }
+}
+```
+#### 4、编写 test 类进行测试
+```
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class MailServiceTest {
+
+    @Autowired
+    private MailService MailService;
+
+    @Test
+    public void testSimpleMail() throws Exception {
+        MailService.sendSimpleMail("ityouknow@126.com","test simple mail"," hello this is simple mail");
+    }
+}
+```
+至此一个简单的文本发送就完成了。
+### 10.2 加点料
+但是在正常使用的过程中，我们通常在邮件中加入图片或者附件来丰富邮件的内容，下面讲介绍如何使用 Spring Boot 来发送丰富的邮件。
+#### 1. 发送 html 格式邮件
+其它都不变在 MailService 添加 sendHtmlMail 方法.
+```
+public void sendHtmlMail(String to, String subject, String content) {
+    MimeMessage message = mailSender.createMimeMessage();
+
+    try {
+        //true表示需要创建一个multipart message
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom(from);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(content, true);
+
+        mailSender.send(message);
+        logger.info("html邮件发送成功");
+    } catch (MessagingException e) {
+        logger.error("发送html邮件时发生异常！", e);
+    }
+}
+```
+在测试类中构建 html 内容，测试发送
+```
+@Test
+public void testHtmlMail() throws Exception {
+    String content="<html>\n" +
+            "<body>\n" +
+            "    <h3>hello world ! 这是一封Html邮件!</h3>\n" +
+            "</body>\n" +
+            "</html>";
+    MailService.sendHtmlMail("ityouknow@126.com","test simple mail",content);
+}
+```
+#### 2. 发送带附件的邮件
+在 MailService 添加 sendAttachmentsMail 方法.
+```
+public void sendAttachmentsMail(String to, String subject, String content, String filePath){
+    MimeMessage message = mailSender.createMimeMessage();
+
+    try {
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom(from);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(content, true);
+
+        FileSystemResource file = new FileSystemResource(new File(filePath));
+        String fileName = filePath.substring(filePath.lastIndexOf(File.separator));
+        helper.addAttachment(fileName, file);
+
+        mailSender.send(message);
+        logger.info("带附件的邮件已经发送。");
+    } catch (MessagingException e) {
+        logger.error("发送带附件的邮件时发生异常！", e);
+    }
+}
+```
+> 添加多个附件可以使用多条 `helper.addAttachment(fileName, file)`
+
+在测试类中添加测试方法：
+```
+@Test
+public void sendAttachmentsMail() {
+    String filePath="e:\\tmp\\application.log";
+    mailService.sendAttachmentsMail("ityouknow@126.com", "主题：带附件的邮件", "有附件，请查收！", filePath);
+}
+```
+#### 3. 发送带静态资源的邮件
+邮件中的静态资源一般就是指图片，在 MailService 添加 sendAttachmentsMail 方法.
+```
+public void sendInlineResourceMail(String to, String subject, String content, String rscPath, String rscId){
+    MimeMessage message = mailSender.createMimeMessage();
+
+    try {
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom(from);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(content, true);
+
+        FileSystemResource res = new FileSystemResource(new File(rscPath));
+        helper.addInline(rscId, res);
+
+        mailSender.send(message);
+        logger.info("嵌入静态资源的邮件已经发送。");
+    } catch (MessagingException e) {
+        logger.error("发送嵌入静态资源的邮件时发生异常！", e);
+    }
+}
+```
+在测试类中添加测试方法：
+```
+@Test
+public void sendInlineResourceMail() {
+    String rscId = "neo006";
+    String content="<html><body>这是有图片的邮件：<img src=\'cid:" + rscId + "\' ></body></html>";
+    String imgPath = "C:\\Users\\summer\\Pictures\\favicon.png";
+
+    mailService.sendInlineResourceMail("ityouknow@126.com", "主题：这是有图片的邮件", content, imgPath, rscId);
+}
+```
+> 添加多个图片可以使用多条 `<img src='cid:" + rscId + "' >` 和 `helper.addInline(rscId, res)` 来实现
+
+到此所有的邮件发送服务已经完成了。
+### 10.3 邮件系统
+#### 1. 邮件模板
+我们会经常收到这样的邮件：
+```
+尊敬的neo用户：
+              
+          恭喜您注册成为xxx网的用户,，同时感谢您对xxx的关注与支持并欢迎您使用xx的产品与服务。
+          ...
+```
+其中只有 neo 这个用户名在变化，其它邮件内容均不变，如果每次发送邮件都需要手动拼接的话会不够优雅，并且每次模板的修改都需要改动代码的话也很不方便，因此对于这类邮件需求，都建议做成邮件模板来处理。模板的本质很简单，就是在模板中替换变化的参数，转换为 html 字符串即可，这里以thymeleaf为例来演示。
+1. **pom 中导入 thymeleaf 的包**
+```
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+2. 在 `resorces/templates` 下创建 `emailTemplate.html`
+   ```
+   <!DOCTYPE html>
+   <html lang="zh" xmlns:th="http://www.thymeleaf.org">
+        <head>
+            <meta charset="UTF-8"/>
+            <title>Title</title>
+        </head>
+        <body>
+            您好,这是验证邮件,请点击下面的链接完成验证,<br/>
+            <a href="#" th:href="@{ http://www.ityouknow.com/neo/{id}(id=${id}) }">激活账号</a>
+        </body>
+   </html>
+   ```
+3. 解析模板并发送
+```
+@Test
+public void sendTemplateMail() {
+    //创建邮件正文
+    Context context = new Context();
+    context.setVariable("id", "006");
+    String emailContent = templateEngine.process("emailTemplate", context);
+
+    mailService.sendHtmlMail("ityouknow@126.com","主题：这是模板邮件",emailContent);
+}
+```
+#### 2. 发送失败
+因为各种原因，总会有邮件发送失败的情况，比如：邮件发送过于频繁、网络异常等。在出现这种情况的时候，我们一般会考虑重新重试发送邮件，会分为以下几个步骤来实现：
+1. 接收到发送邮件请求，首先记录请求并且入库。
+2. 调用邮件发送接口发送邮件，并且将发送结果记录入库。
+3. 启动定时系统扫描时间段内，未发送成功并且重试次数小于3次的邮件，进行再次发送
+#### 3. 异步发送
+很多时候邮件发送并不是我们主业务必须关注的结果，比如通知类、提醒类的业务可以允许延时或者失败。这个时候可以采用异步的方式来发送邮件，加快主交易执行速度，在实际项目中可以采用MQ发送邮件相关参数，监听到消息队列之后启动发送邮件。
+
+[**示例代码-github**](https://github.com/ityouknow/spring-boot-examples/tree/master/spring-boot-mail)
 
 ## Reference
 - [构建微服务：Spring boot 入门篇](https://www.cnblogs.com/ityouknow/p/5662753.html)
