@@ -682,8 +682,17 @@ private String  userName;
 ### 参考
 [Spring Data JPA - Reference Documentation](http://docs.spring.io/spring-data/jpa/docs/current/reference/html/)
 [Spring Data JPA——参考文档 中文版](https://www.gitbook.com/book/ityouknow/spring-data-jpa-reference-documentation/details)
+## 第6章. 如何优雅的使用 Mybatis
+这两天启动了一个新项目因为项目组成员一直都使用的是 Mybatis，虽然个人比较喜欢 Jpa 这种极简的模式，但是为了项目保持统一性技术选型还是定了 Mybatis 。到网上找了一下关于 Spring Boot 和 Mybatis 组合的相关资料，各种各样的形式都有，看的人心累，结合了 Mybatis 的官方 Demo 和文档终于找到了最简的两种模式，花了一天时间总结后分享出来。
+
+Orm 框架的本质是简化编程中操作数据库的编码，发展到现在基本上就剩两家了，一个是宣称可以不用写一句 Sql 的 Hibernate，一个是可以灵活调试动态 Sql 的 Mybatis ,两者各有特点，在企业级系统开发中可以根据需求灵活使用。发现一个有趣的现象：传统企业大都喜欢使用 Hibernate ,互联网行业通常使用 Mybatis 。
+
+Hibernate 特点就是所有的 Sql 都用 Java 代码来生成，不用跳出程序去写（看） Sql ，有着编程的完整性，发展到最顶端就是 Spring Data Jpa 这种模式了，基本上根据方法名就可以生成对应的 Sql 了，
+
+Mybatis 初期使用比较麻烦，需要各种配置文件、实体类、Dao 层映射关联、还有一大推其它配置。当然 Mybatis 也发现了这种弊端，初期开发了[generator](https://github.com/mybatis/generator)可以根据表结果自动生产实体类、配置文件和 Dao 层代码，可以减轻一部分开发量；后期也进行了大量的优化可以使用注解了，自动管理 Dao 层和配置文件等，发展到最顶端就是今天要讲的这种模式了，`mybatis-spring-boot-starter` 就是 Spring Boot+ Mybatis 可以完全注解不用配置文件，也可以简单配置轻松上手。
+> 现在想想 Spring Boot 就是牛逼呀，任何东西只要关联到 Spring Boot 都是化繁为简。
 ## 第9章. 定时任务
-在我们开发项目过程中，经常需要定时任务来帮助我们来做一些内容， Spring Boot 默认已经帮我们实行了，只需要添加相应的注解就可以实现
+在我们开发项目过程中，经常需要定时任务来帮助我们来做一些内容， Spring Boot 默认已经帮我们实行了，只需要添加相应的注解就可以实现。
 ### 1、pom 包配置
 pom 包里面只需要引入 Spring Boot Starter 包即可：
 ```
@@ -982,6 +991,298 @@ public void sendTemplateMail() {
 很多时候邮件发送并不是我们主业务必须关注的结果，比如通知类、提醒类的业务可以允许延时或者失败。这个时候可以采用异步的方式来发送邮件，加快主交易执行速度，在实际项目中可以采用MQ发送邮件相关参数，监听到消息队列之后启动发送邮件。
 
 [**示例代码-github**](https://github.com/ityouknow/spring-boot-examples/tree/master/spring-boot-mail)
+## 第19章. 使用 Spring Boot Actuator 监控应用
+微服务的特点决定了功能模块的部署是分布式的，大部分功能模块都是运行在不同的机器上，彼此通过服务调用进行交互，前后台的业务流会经过很多个微服务的处理和传递，出现了异常如何快速定位是哪个环节出现了问题？
+
+在这种框架下，微服务的监控显得尤为重要。本文主要结合 Spring Boot Actuator，跟大家一起分享微服务 Spring Boot Actuator 的常见用法，方便我们在日常中对我们的微服务进行监控治理。
+### 19.1 Actuator 监控
+Spring Boot 使用“习惯优于配置的理念”，采用包扫描和自动化配置的机制来加载依赖 Jar 中的 Spring bean，不需要任何 Xml 配置，就可以实现 Spring 的所有配置。虽然这样做能让我们的代码变得非常简洁，但是整个应用的实例创建和依赖关系等信息都被离散到了各个配置类的注解上，这使得我们分析整个应用中资源和实例的各种关系变得非常的困难。
+
+Actuator 是 Spring Boot 提供的对应用系统的自省和监控的集成功能，可以查看应用配置的详细信息，例如自动化配置信息、创建的 Spring beans 以及一些环境属性等。
+
+为了保证 actuator 暴露的监控接口的安全性，需要添加安全控制的依赖 `spring-boot-start-security` 依赖，访问应用监控端点时，都需要输入验证信息。Security` 依赖，可以选择不加，不进行安全管理，但不建议这么做。
+### 19.2 Actuator 的 REST 接口
+Actuator 监控分成两类：原生端点和用户自定义端点；自定义端点主要是指扩展性，用户可以根据自己的实际应用，定义一些比较关心的指标，在运行期进行监控。
+
+原生端点是在应用程序里提供众多 Web 接口，通过它们了解应用程序运行时的内部状况。原生端点又可以分成三类：
+1. 应用配置类：可以查看应用在运行期的静态信息：例如自动配置信息、加载的 springbean 信息、yml 文件配置信息、环境信息、请求映射信息；
+2. 度量指标类：主要是运行期的动态信息，例如堆栈、请求连、一些健康指标、metrics 信息等；
+3. 操作控制类：主要是指 shutdown,用户可以发送一个请求将应用的监控功能关闭。
+
+Actuator 提供了 13 个接口，具体如下表所示：
+HTTP 方法|路径|描述
+--------|--------|--------
+GET|/auditevents|显示应用暴露的审计事件 (比如认证进入、订单失败)
+GET|/beans|描述应用程序上下文里全部的 Bean，以及它们的关系
+GET|/conditions|就是 1.0 的 /autoconfig ，提供一份自动配置生效的条件情况，记录哪些自动配置条件通过了，哪些没通过
+GET|/configprops|描述配置属性(包含默认值)如何注入Bean
+GET|/env|获取全部环境属性
+GET|/env/{name}|根据名称获取特定的环境属性值
+GET|/flyway|提供一份 Flyway 数据库迁移信息
+GET|/liquidbase|显示Liquibase 数据库迁移的纤细信息
+GET|/health|报告应用程序的健康指标，这些值由 HealthIndicator 的实现类提供
+GET|/heapdump|dump 一份应用的 JVM 堆信息
+GET|/httptrace|显示HTTP足迹，最近100个HTTP request/repsponse
+GET|/info|获取应用程序的定制信息，这些信息由info打头的属性提供
+GET|/logfile|返回log file中的内容(如果 logging.file 或者 logging.path 被设置)
+GET|/loggers|显示和修改配置的loggers
+GET|/metrics|报告各种应用程序度量信息，比如内存用量和HTTP请求计数
+GET|/metrics/{name}|报告指定名称的应用程序度量值
+GET|/scheduledtasks|展示应用中的定时任务信息
+GET|/sessions|如果我们使用了 Spring Session 展示应用中的 HTTP sessions 信息
+POST|/shutdown|关闭应用程序，要求endpoints.shutdown.enabled设置为true
+GET|/mappings|描述全部的 URI路径，以及它们和控制器(包含Actuator端点)的映射关系
+GET|/threaddump|获取线程活动的快照
+### 19.3 快速上手
+#### 项目依赖
+```
+<dependencies>
+  <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+  </dependency>
+  <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+  </dependency>
+</dependencies>
+```
+#### 配置文件
+```
+info.app.name=spring-boot-actuator
+info.app.version= 1.0.0
+info.app.test=test
+
+management.endpoints.web.exposure.include=*
+management.endpoint.health.show-details=always
+#management.endpoints.web.base-path=/monitor
+
+management.endpoint.shutdown.enabled=true
+```
+- `management.endpoints.web.base-path=/monitor` 代表启用单独的url地址来监控 Spring Boot 应用，为了安全一般都启用独立的端口来访问后端的监控信息
+- `management.endpoint.shutdown.enabled=true` 启用接口关闭 Spring Boot
+
+配置完成之后，启动项目就可以继续验证各个监控功能了。
+### 19.4 命令详解
+在 Spring Boot 2.x 中为了安全期间，Actuator 只开放了两个端点 `/actuator/health` 和 `/actuator/info`。可以在配置文件中设置打开。
+
+可以打开所有的监控点：
+```
+management.endpoints.web.exposure.include=*
+```
+也可以选择打开部分：
+```
+management.endpoints.web.exposure.exclude=beans,trace
+```
+Actuator 默认所有的监控点路径都在/actuator/*，当然如果有需要这个路径也支持定制：
+```
+management.endpoints.web.base-path=/manage
+```
+设置完重启后，再次访问地址就会变成/manage/*
+
+Actuator 几乎监控了应用涉及的方方面面，我们重点讲述一些经常在项目中常用的命令。
+#### health
+health 主要用来检查应用的运行状态，这是我们使用最高频的一个监控点。通常使用此接口提醒我们应用实例的运行状态，以及应用不”健康“的原因，比如数据库连接、磁盘空间不够等。
+
+默认情况下 health 的状态是开放的，添加依赖后启动项目，访问：`http://localhost:8080/actuator/health` 即可看到应用的状态。
+```
+{
+    "status" : "UP"
+}
+```
+默认情况下，最终的 Spring Boot 应用的状态是由 `HealthAggregator` 汇总而成的，汇总的算法是：
+1. 设置状态码顺序：`setStatusOrder(Status.DOWN, Status.OUT_OF_SERVICE, Status.UP, Status.UNKNOWN)`;。
+2. 过滤掉不能识别的状态码。
+3. 如果无任何状态码，整个 Spring Boot 应用的状态是 `UNKNOWN`。
+4. 将所有收集到的状态码按照 1 中的顺序排序。
+5. 返回有序状态码序列中的第一个状态码，作为整个 Spring Boot 应用的状态。
+
+`health` 通过合并几个健康指数检查应用的健康情况。`Spring Boot Actuator` 有几个预定义的健康指标比如 `DataSourceHealthIndicator`, `DiskSpaceHealthIndicator`, `MongoHealthIndicator`, `RedisHealthIndicator`等，它使用这些健康指标作为健康检查的一部分。
+
+举个例子，如果你的应用使用 `Redis`，`RedisHealthindicator` 将被当作检查的一部分；如果使用 `MongoDB`，那么 `MongoHealthIndicator` 将被当作检查的一部分。
+
+可以在配置文件中关闭特定的健康检查指标，比如关闭 `redis` 的健康检查：
+```
+management.health.redise.enabled=false
+```
+默认，所有的这些健康指标被当作健康检查的一部分。
+#### info
+info 就是我们自己配置在配置文件中以 info 开头的配置信息，比如我们在示例项目中的配置是：
+```
+info.app.name=spring-boot-actuator
+info.app.version= 1.0.0
+info.app.test= test
+```
+启动示例项目，访问：`http://localhost:8080/actuator/info` 返回部分信息如下：
+```
+{
+  "app": {
+    "name": "spring-boot-actuator",
+    "version": "1.0.0",
+    "test":"test"
+  }
+}
+```
+#### beans
+根据示例就可以看出，展示了 bean 的别名、类型、是否单例、类的地址、依赖等信息。
+
+启动示例项目，访问：`http://localhost:8080/actuator/beans` 返回部分信息如下：
+```
+[
+  {
+    "context": "application:8080:management",
+    "parent": "application:8080",
+    "beans": [
+      {
+        "bean": "embeddedServletContainerFactory",
+        "aliases": [
+          
+        ],
+        "scope": "singleton",
+        "type": "org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainerFactory",
+        "resource": "null",
+        "dependencies": [
+          
+        ]
+      },
+      {
+        "bean": "endpointWebMvcChildContextConfiguration",
+        "aliases": [
+          
+        ],
+        "scope": "singleton",
+        "type": "org.springframework.boot.actuate.autoconfigure.EndpointWebMvcChildContextConfiguration$$EnhancerBySpringCGLIB$$a4a10f9d",
+        "resource": "null",
+        "dependencies": [
+          
+        ]
+      }
+  }
+]
+```
+#### conditions
+Spring Boot 的自动配置功能非常便利，但有时候也意味着出问题比较难找出具体的原因。使用 conditions 可以在应用运行时查看代码了某个配置在什么条件下生效，或者某个自动配置为什么没有生效。
+
+启动示例项目，访问：`http://localhost:8080/actuator/conditions` 返回部分信息如下：
+```
+{
+    "positiveMatches": {
+     "DevToolsDataSourceAutoConfiguration": {
+            "notMatched": [
+                {
+                    "condition": "DevToolsDataSourceAutoConfiguration.DevToolsDataSourceCondition", 
+                    "message": "DevTools DataSource Condition did not find a single DataSource bean"
+                }
+            ], 
+            "matched": [ ]
+        }, 
+        "RemoteDevToolsAutoConfiguration": {
+            "notMatched": [
+                {
+                    "condition": "OnPropertyCondition", 
+                    "message": "@ConditionalOnProperty (spring.devtools.remote.secret) did not find property 'secret'"
+                }
+            ], 
+            "matched": [
+                {
+                    "condition": "OnClassCondition", 
+                    "message": "@ConditionalOnClass found required classes 'javax.servlet.Filter', 'org.springframework.http.server.ServerHttpRequest'; @ConditionalOnMissingClass did not find unwanted class"
+                }
+            ]
+        }
+    }
+}
+```
+#### headdump
+返回一个 GZip 压缩的 JVM 堆 dump
+
+启动示例项目，访问：`http://localhost:8080/actuator/heapdump` 会自动生成一个 Jvm 的堆文件 `heapdump`，我们可以使用 JDK 自带的 Jvm 监控工具 `VisualVM` 打开此文件查看内存快照。类似如下图：
+![heapdump](images/heapdump.png)
+#### shutdown
+开启接口优雅关闭 Spring Boot 应用，要使用这个功能首先需要在配置文件中开启：
+```
+management.endpoint.shutdown.enabled=true
+```
+配置完成之后，启动示例项目，使用 curl 模拟 post 请求访问 shutdown 接口。
+> shutdown 接口默认只支持 post 请求。
+```
+curl -X POST "http://localhost:8080/actuator/shutdown" 
+{
+    "message": "Shutting down, bye..."
+}
+```
+此时你会发现应用已经被关闭。
+#### mappings
+描述全部的 URI 路径，以及它们和控制器的映射关系
+
+启动示例项目，访问：`http://localhost:8080/actuator/mappings` 返回部分信息如下：
+```
+{
+  "/**/favicon.ico": {
+    "bean": "faviconHandlerMapping"
+  },
+  "{[/hello]}": {
+    "bean": "requestMappingHandlerMapping",
+    "method": "public java.lang.String com.neo.controller.HelloController.index()"
+  },
+  "{[/error]}": {
+    "bean": "requestMappingHandlerMapping",
+    "method": "public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> org.springframework.boot.autoconfigure.web.BasicErrorController.error(javax.servlet.http.HttpServletRequest)"
+  }
+}
+```
+#### threaddump
+/threaddump 接口会生成当前线程活动的快照。这个功能非常好，方便我们在日常定位问题的时候查看线程的情况。 主要展示了线程名、线程ID、线程的状态、是否等待锁资源等信息。
+
+启动示例项目，访问：http://localhost:8080/actuator/threaddump返回部分信息如下：
+```
+[
+  {
+    "threadName": "http-nio-8088-exec-6",
+    "threadId": 49,
+    "blockedTime": -1,
+    "blockedCount": 0,
+    "waitedTime": -1,
+    "waitedCount": 2,
+    "lockName": "java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject@1630a501",
+    "lockOwnerId": -1,
+    "lockOwnerName": null,
+    "inNative": false,
+    "suspended": false,
+    "threadState": "WAITING",
+    "stackTrace": [
+      {
+        "methodName": "park",
+        "fileName": "Unsafe.java",
+        "lineNumber": -2,
+        "className": "sun.misc.Unsafe",
+        "nativeMethod": true
+      },
+      ...
+      {
+        "methodName": "run",
+        "fileName": "TaskThread.java",
+        "lineNumber": 61,
+        "className": "org.apache.tomcat.util.threads.TaskThread$WrappingRunnable",
+        "nativeMethod": false
+      }
+      ...
+    ],
+    "lockInfo": {
+      "className": "java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject",
+      "identityHashCode": 372286721
+    }
+  }
+  ...
+]
+```
+生产出现问题的时候，可以通过应用的线程快照来检测应用正在执行的任务。
+### 参考
+- [示例代码-github](https://github.com/ityouknow/spring-boot-examples/tree/master/spring-boot-actuator)
+- [Spring Boot Actuator: Production-ready features](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#production-ready)
+- [对没有监控的微服务Say No！](http://mp.163.com/v2/article/detail/D7SQCHGT0511FQO9.html)
+- [Spring Boot Actuator 使用](https://www.jianshu.com/p/af9738634a21)
+
 
 ## Reference
 - [构建微服务：Spring boot 入门篇](https://www.cnblogs.com/ityouknow/p/5662753.html)
