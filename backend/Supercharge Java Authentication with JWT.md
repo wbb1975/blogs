@@ -89,3 +89,4 @@ computeHMACSHA256(
 - [Using JWT with Spring Security OAuth](https://www.baeldung.com/spring-security-oauth-jwt)
 - [Spring REST API + OAuth2 + Angular](https://www.baeldung.com/rest-api-spring-oauth2-angular)
 - [OAuth2 for a Spring REST API – Handle the Refresh Token in Angular](https://www.baeldung.com/spring-security-oauth2-refresh-token-angular)
+- [Decode a JWT Token in Java](https://www.baeldung.com/java-jwt-token-decode)
