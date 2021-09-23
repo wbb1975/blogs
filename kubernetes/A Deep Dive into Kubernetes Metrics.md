@@ -1,7 +1,7 @@
 # 深入探讨Kubernetes 指标（Kubernetes Metrics）
-Kubernetes 正在吃下整个世界，这个平台的快速增长前所未见。每个主流的云提供商都提供了全管理的 Kubernetes 平台。伴随容器编排平台带来的各种好处，它也带来了许多新的挑战，
+Kubernetes 正在吃下整个世界，这个平台的快速增长前所未见。每个主流的云供应商都提供了全管理的 Kubernetes 平台。伴随容器编排平台带来的各种好处，它也带来了许多新的挑战，
 
-在新的平台上运行的应用的可观察性有其自有的挑战。我将在另一个系列里讨论它。平台本身的可观察性如何？Kubernetes 暴露了平台本身的很多指标。这些指标对于成功运行 Kubernetes 是重要的，无论你是以[hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way)运行 Kubernetes 还是利用云提供商脱管你的系统。
+在新的平台上运行的应用的可观察性有其自有的挑战。我将在另一个系列里讨论它。平台本身的可观察性如何？Kubernetes 暴露了平台本身的很多指标。这些指标对于成功运行 Kubernetes 是重要的，无论你是以[hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way)运行 Kubernetes 还是利用云供应商托管你的系统。
 
 在这个多篇系列里我讲深入 Kubetnetes 平台中各种可用的指标源，如何收集它们，如何在重要的指标上发警报，我也将谈及一些指标如何回馈到系统中以帮助调度和扩展 Kubernetes 负载，
 > 为了我们的目的我将指标定义为在固定时间间隔收集的数字采样并被存储到时间序列数据库中。在X轴上随时间可视化，另外我假设你在一个基于 Linux 的系统上运行 Kubernetes ，我并不打算讨论在Windows 上的 Kubernetes 。
