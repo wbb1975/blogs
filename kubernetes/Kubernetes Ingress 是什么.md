@@ -69,7 +69,9 @@ Ingress 是你能够加强进入一个单一资源的流量的路由规则，并
 - Ingress 作为 Kubernetes 集群的一部分以 Pod 的形式运行
 - 一个外部负载均衡器很贵，并且你需要在 Kubernetes 集群之外管理它。Kubernetes Ingress 则在集群之内管理。
 
-![Ingress](images/Ingress.png)
+![Ingress](images/Ingress.png) 
+
+![Ingress Architecture](images/Ingress_2.png)
 
 在产品环境中，典型地你使用 Ingress 来导出应用到 Internet。应用可以从 Internet 通过端口 80 (HTTP) 或 443 (HTTPS) 访问，而且 Ingress 是一个对象，它允许你从 Kubernetes 集群外部访问你的Kubernetes 服务。
 ## 总结
