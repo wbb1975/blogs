@@ -109,7 +109,501 @@ Pod 列表和详细信息页面可以链接到 Dashboard 内置的日志查看�
 
 ![日志查看器](images/ui-dashboard-logs-view.png)
 ## 二. 访问集群
+本文阐述多种与集群交互的方法。
+### 1. 使用 kubectl 完成集群的第一次访问
+当你第一次访问 Kubernetes API 的时候，我们建议你使用 Kubernetes CLI，`kubectl`。
+
+访问集群时，你需要知道集群的地址并且拥有访问的凭证。通常，这些在你通过[启动安装](https://kubernetes.io/zh/docs/setup/)安装集群时都是自动安装好的，或者其他人安装时 也应该提供了凭证和集群地址。
+
+通过以下命令检查 kubectl 是否知道集群地址及凭证：
+```
+kubectl config view
+```
+有许多[例子](https://kubernetes.io/zh/docs/reference/kubectl/cheatsheet/)介绍了如何使用 kubectl， 可以在[kubectl手册](https://kubernetes.io/zh/docs/reference/kubectl/overview/)中找到更完整的文档。
+### 2. 直接访问 REST API
+Kubectl 处理 apiserver 的定位和身份验证。如果要使用 `curl` 或 `wget` 等 `http` 客户端或浏览器直接访问 REST API，可以通过多种方式查找和验证：
+- 以代理模式运行 kubectl。
+  + 推荐此方式。
+  + 使用已存储的 apiserver 地址。
+  + 使用自签名的证书来验证 apiserver 的身份。杜绝 MITM 攻击。
+  + 对 apiserver 进行身份验证。
+  + 未来可能会实现智能化的客户端负载均衡和故障恢复。
+- 直接向 http 客户端提供位置和凭据。
+  + 可选的方案。
+  + 适用于代理可能引起混淆的某些客户端类型。
+  + 需要引入根证书到你的浏览器以防止 MITM 攻击。
+#### 使用 kubectl proxy
+以下命令以反向代理的模式运行 kubectl。它处理 apiserver 的定位和验证。 像这样运行：
+```
+kubectl proxy --port=8080 &
+```
+参阅 [kubectl proxy](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands/#proxy) 获取更多详细信息。
+
+然后，你可以使用 curl、wget 或浏览器访问 API，如果是 IPv6 则用 [::1] 替换 localhost， 如下所示：
+```
+curl http://localhost:8080/api/
+
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "10.0.1.149:443"
+    }
+  ]
+}
+```
+#### 不使用 kubectl proxy
+在 Kubernetes 1.3 或更高版本中，kubectl config view 不再显示 token。 使用 kubectl describe secret ... 来获取默认服务帐户的 token，如下所示：
+
+grep/cut 方法实现：
+```
+APISERVER=$(kubectl config view | grep server | cut -f 2- -d ":" | tr -d " ")
+TOKEN=$(kubectl describe secret $(kubectl get secrets | grep default | cut -f1 -d ' ') | grep -E '^token' | cut -f2 -d':' | tr -d ' ')
+curl $APISERVER/api --header "Authorization: Bearer $TOKEN" --insecure
+
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "10.0.1.149:443"
+    }
+  ]
+}
+```
+> **注意**：这里返回的APISERVE是一个列表如：https://9AE0853D7962A9E004641AA223974A4B.gr7.us-east-1.eks.amazonaws.com https://291830D24251F44BCA77BE2D3DC074DB.sk1.us-east-1.eks.amazonaws.com https://59F138489A2623D076BE061C417F8FD1.gr7.us-east-1.eks.amazonaws.com https://4284A68AD3AB4DC64902A67BB98A62B6.gr7.us-east-2.eks.amazonaws.com。因此你必须选择一个地址用于后面的测试，或者利用下面的 jsonpath 方法。
+jsonpath 方法实现：
+```
+APISERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+TOKEN=$(kubectl get secret $(kubectl get serviceaccount default -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode )
+curl $APISERVER/api --header "Authorization: Bearer $TOKEN" --insecure
+
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "10.0.1.149:443"
+    }
+  ]
+}
+```
+面的例子使用了 --insecure 参数，这使得它很容易受到 MITM 攻击。 当 kubectl 访问集群时，它使用存储的根证书和客户端证书来访问服务器 （它们安装在 ~/.kube 目录中）。 由于集群证书通常是自签名的，因此可能需要特殊配置才能让你的 http 客户端使用根证书。
+
+在一些集群中，apiserver 不需要身份验证；它可能只服务于 localhost，或者被防火墙保护， 这个没有一定的标准。 [配置对 API 的访问](https://kubernetes.io/zh/docs/concepts/security/controlling-access/)描述了集群管理员如何进行配置。此类方法可能与未来的高可用性支持相冲突。
+### 3. 以编程方式访问 API
+Kubernetes 官方提供对 [Go](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#go-client) 和 [Python](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#python-client) 的客户端库支持。
+#### Go 客户端
+- 想要获得这个库，请运行命令：`go get k8s.io/client-go/<version number>/kubernetes`。查阅 [INSTALL.md](https://github.com/kubernetes/client-go/blob/master/INSTALL.md#for-the-casual-user) 可得到详细安装步骤。 参阅 https://github.com/kubernetes/client-go 来查看目前支持哪些版本。
+- 基于这个 client-go 客户端库编写应用程序。 请注意，client-go 定义了自己的 API 对象，因此如果需要，请从 client-go 而不是从主存储库 导入 API 定义，例如，`import "k8s.io/client-go/kubernetes"` 才是对的。
+
+Go 客户端可以像 kubectl CLI 一样使用相同的 [kubeconfig 文件](https://kubernetes.io/zh/docs/concepts/configuration/organize-cluster-access-kubeconfig/) 来定位和验证 apiserver。可参阅[示例](https://git.k8s.io/client-go/examples/out-of-cluster-client-configuration/main.go)。
+
+如果应用程序以 Pod 的形式部署在集群中，那么请参阅[下一章](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod)。
+#### Python 客户端
+如果想要使用 [Python 客户端](https://github.com/kubernetes-client/python)， 请运行命令：`pip install kubernetes`。参阅 [Python Client Library page](https://github.com/kubernetes-client/python) 以获得更详细的安装参数。
+
+Python 客户端可以像 kubectl CLI 一样使用相同的 [kubeconfig 文件](https://kubernetes.io/zh/docs/concepts/configuration/organize-cluster-access-kubeconfig/)来定位和验证 apiserver，可参阅[示例](https://github.com/kubernetes-client/python/tree/master/examples)。
+#### 其它语言
+目前有多个[客户端库](https://kubernetes.io/zh/docs/reference/using-api/client-libraries/)为其它语言提供访问 API 的方法。 参阅其它库的相关文档以获取他们是如何验证的。
+#### 从 Pod 中访问 API
+当你从 Pod 中访问 API 时，定位和验证 apiserver 会有些许不同。
+
+在 Pod 中定位 apiserver 的推荐方式是通过 `kubernetes.default.svc` 这个 DNS 名称，该名称将会解析为服务 IP，然后服务 IP 将会路由到 apiserver。
+
+向 apiserver 进行身份验证的推荐方法是使用[服务帐户](https://kubernetes.io/zh/docs/tasks/configure-pod-container/configure-service-account/)凭据。 通过 kube-system，Pod 与服务帐户相关联，并且该服务帐户的凭证（token） 被放置在该 Pod 中每个容器的文件系统中，位于 `/var/run/secrets/kubernetes.io/serviceaccount/token`。
+
+如果可用，则将证书放入每个容器的文件系统中的 `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`， 并且应该用于验证 apiserver 的服务证书。
+
+最后，名字空间作用域的 API 操作所使用的 default 名字空间将被放置在 每个容器的 `/var/run/secrets/kubernetes.io/serviceaccount/namespace` 文件中。
+
+在 Pod 中，建议连接 API 的方法是：
+- 在 Pod 的边车容器中运行 `kubectl proxy`，或者以后台进程的形式运行。 这将把 Kubernetes API 代理到当前 Pod 的 localhost 接口， 所以 Pod 中的所有容器中的进程都能访问它。
+使用 Go 客户端库，并使用 `rest.InClusterConfig()` 和 `kubernetes.NewForConfig()` 函数创建一个客户端。 他们处理 apiserver 的定位和身份验证。 [示例](https://git.k8s.io/client-go/examples/in-cluster-client-configuration/main.go) 
+
+在每种情况下，Pod 的凭证都是为了与 apiserver 安全地通信。
+### 4. 访问集群中正在运行的服务
+上一节介绍了如何连接 Kubernetes API 服务。本节介绍如何连接到 Kubernetes 集群上运行的其他服务。 在 Kubernetes 中，[节点](https://kubernetes.io/zh/docs/concepts/architecture/nodes/)、 [pods](https://kubernetes.io/zh/docs/concepts/workloads/pods/) 和[服务](https://kubernetes.io/zh/docs/concepts/services-networking/service/) 都有自己的 IP。 在许多情况下，集群上的节点 IP、Pod IP 和某些服务 IP 将无法路由， 因此无法从集群外部的计算机（例如桌面计算机）访问它们。
+#### 连接的方法
+有多种方式可以从集群外部连接节点、Pod 和服务：
+- 通过公共 IP 访问服务
+  + 类型为 NodePort 或 LoadBalancer 的服务，集群外部可以访问。 请参阅[服务](https://kubernetes.io/zh/docs/concepts/services-networking/service/)和 [kubectl expose](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands/#expose) 文档。
+  + 取决于你的集群环境，该服务可能仅暴露给你的公司网络，或者也可能暴露给 整个互联网。 请考虑公开该服务是否安全。它是否进行自己的身份验证？
+  + 在服务后端放置 Pod。要从一组副本中访问一个特定的 Pod，例如进行调试， 请在 Pod 上设置一个唯一的标签，然后创建一个选择此标签的新服务。
+  + 在大多数情况下，应用程序开发人员不应该通过其 nodeIP 直接访问节点。
+- 使用 proxy 动词访问服务、节点或者 Pod
+  + 在访问远程服务之前进行 apiserver 身份验证和授权。 如果服务不能够安全地暴露到互联网，或者服务不能获得节点 IP 端口的 访问权限，或者是为了调试，那么请使用此选项。
+  + 代理可能会给一些 web 应用带来问题。
+  + 只适用于 HTTP/HTTPS。
+  + 更多详细信息在[这里](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#manually-constructing-apiserver-proxy-urls)。
+- 从集群中的节点或者 Pod 中访问
+  + 运行一个 Pod，然后使用 [kubectl exec](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands/#exec) 来连接 Pod 里的 Shell。 然后从 Shell 中连接其它的节点、Pod 和服务。
+  + 有些集群可能允许你通过 SSH 连接到节点，从那你可能可以访问集群的服务。 这是一个非正式的方式，可能可以运行在个别的集群上。 浏览器和其它一些工具可能没有被安装。集群的 DNS 可能无法使用。
+#### 发现内建服务（builtin service）
+通常来说，集群中会有 kube-system 创建的一些运行的服务。
+
+通过 kubectl cluster-info 命令获得这些服务列表：
+```
+kubectl cluster-info
+```
+输出如下：
+```
+Kubernetes master is running at https://104.197.5.247
+elasticsearch-logging is running at https://104.197.5.247/api/v1/namespaces/kube-system/services/elasticsearch-logging/proxy
+kibana-logging is running at https://104.197.5.247/api/v1/namespaces/kube-system/services/kibana-logging/proxy
+kube-dns is running at https://104.197.5.247/api/v1/namespaces/kube-system/services/kube-dns/proxy
+grafana is running at https://104.197.5.247/api/v1/namespaces/kube-system/services/monitoring-grafana/proxy
+heapster is running at https://104.197.5.247/api/v1/namespaces/kube-system/services/monitoring-heapster/proxy
+```
+这展示了访问每个服务的 `proxy-verb` URL。 例如，如果集群启动了集群级别的日志（使用 Elasticsearch），并且传递合适的凭证， 那么可以通过 `https://104.197.5.247/api/v1/namespaces/kube-system/services/elasticsearch-logging/proxy/` 进行访问。日志也能通过 kubectl 代理获取，例如：`http://localhost:8080/api/v1/namespaces/kube-system/services/elasticsearch-logging/proxy/`。 （参阅[使用 Kubernetes API 访问集群](https://kubernetes.io/zh/docs/tasks/administer-cluster/access-cluster-api/)了解如何传递凭据，或者使用 kubectl proxy）
+**手动构建 apiserver 代理 URL（Manually constructing apiserver proxy URLs）**
+如上所述，你可以使用 `kubectl cluster-info` 命令来获得服务的代理 URL。 要创建包含服务端点、后缀和参数的代理 URL，需添加到服务的代理 URL：
+```
+http://kubernetes_master_address/api/v1/namespaces/namespace_name/services/service_name[:port_name]/proxy
+```
+如果尚未为端口指定名称，则不必在 URL 中指定 `port_name`。对于已命名和未命名的端口，也可以使用端口号代替 `port_name`。
+
+默认情况下，API server 使用 HTTP 代理你的服务。 要使用 HTTPS，请在服务名称前加上 https: 
+```
+http://kubernetes_master_address/api/v1/namespaces/namespace_name/services/https:service_name:[port_name]/proxy
+```
+URL 名称段支持的格式为：
+- <service_name> - 使用 http 代理到默认或未命名的端口
+- <service_name>:<port_name> - 使用 http 代理到指定的端口名称或端口号
+- https:<service_name>: - 使用 https 代理到默认或未命名的端口（注意后面的冒号）
+- https:<service_name>:<port_name> - 使用 https 代理到指定的端口名称或端口号
+
+示例：
+- 要访问 Elasticsearch 服务端点 `_search?q=user:kimchy`，你需要使用：`http://104.197.5.247/api/v1/namespaces/kube-system/services/elasticsearch-logging/proxy/_search?q=user:kimchy`
+- 要访问 Elasticsearch 集群健康信息 `_cluster/health?pretty=true`，你需要使用：`https://104.197.5.247/api/v1/namespaces/kube-system/services/elasticsearch-logging/proxy/_cluster/health?pretty=true`
+```
+{
+    "cluster_name" : "kubernetes_logging",
+    "status" : "yellow",
+    "timed_out" : false,
+    "number_of_nodes" : 1,
+    "number_of_data_nodes" : 1,
+    "active_primary_shards" : 5,
+    "active_shards" : 5,
+    "relocating_shards" : 0,
+    "initializing_shards" : 0,
+    "unassigned_shards" : 5
+  }
+```
+#### 使用 web 浏览器访问运行在集群上的服务
+你可以在浏览器地址栏中输入 apiserver 代理 URL。但是：
+- Web 浏览器通常不能传递令牌，因此你可能需要使用基本（密码）身份验证。 Apiserver 可以配置为接受基本身份验证，但你的集群可能未进行配置。
+- 某些 Web 应用程序可能无法运行，尤其是那些使用客户端 javascript 以不知道代理路径前缀的方式构建 URL 的应用程序。
+### 5. 请求重定向（Requesting redirects）
+重定向功能已弃用并被删除。请改用代理（见下文）。
+### 6. 多种代理
+使用 Kubernetes 时可能会遇到几种不同的代理：
+1. [kubectl 代理](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#directly-accessing-the-rest-api)：
+   + 在用户的桌面或 Pod 中运行
+   + 代理从本地主机地址到 Kubernetes apiserver
+   + 客户端到代理将使用 HTTP
+   + 代理到 apiserver 使用 HTTPS
+   + 定位 apiserver
+   + 添加身份验证头部
+2. [apiserver 代理](https://kubernetes.io/zh/docs/tasks/access-application-cluster/access-cluster/#discovering-builtin-services)：
+   + 内置于 apiserver 中
+   + 将集群外部的用户连接到集群 IP，否则这些 IP 可能无法访问
+   + 运行在 apiserver 进程中
+   + 客户端代理使用 HTTPS（也可配置为 http）
+   + 代理将根据可用的信息决定使用 HTTP 或者 HTTPS 代理到目标
+   + 可用于访问节点、Pod 或服务
+   + 在访问服务时进行负载平衡
+3. [kube proxy](https://kubernetes.io/zh/docs/concepts/services-networking/service/#ips-and-vips)：
+   + 运行在每个节点上
+   + 代理 UDP 和 TCP
+   + 不能代理 HTTP
+   + 提供负载均衡
+   + 只能用来访问服务
+4. 位于 apiserver 之前的 Proxy/Load-balancer：
+   + 存在和实现因集群而异（例如 nginx）
+   + 位于所有客户和一个或多个 apiserver 之间
+   + 如果有多个 apiserver，则充当负载均衡器
+5. 外部服务上的云负载均衡器：
+   + 由一些云提供商提供（例如 AWS ELB，Google Cloud Load Balancer）
+   + 当 Kubernetes 服务类型为 LoadBalancer 时自动创建
+   + 只使用 UDP/TCP
+   + 具体实现因云提供商而异。
+
+除了前两种类型之外，Kubernetes 用户通常不需要担心任何其他问题。 集群管理员通常会确保后者的正确配置。
 ## 三. 配置对多集群的访问
+本文展示如何使用配置文件来配置对多个集群的访问。 在将集群、用户和上下文定义在一个或多个配置文件中之后，用户可以使用 `kubectl config use-context` 命令快速地在集群之间进行切换。
+> **说明**：用于配置集群访问的文件有时被称为 kubeconfig 文件。 这是一种引用配置文件的通用方式，并不意味着存在一个名为 kubeconfig 的文件。
+
+> **警告**：只使用来源可靠的 kubeconfig 文件。使用特制的 kubeconfig 文件可能会导致恶意代码执行或文件暴露。 如果必须使用不受信任的 kubeconfig 文件，请首先像检查 shell 脚本一样仔细检查它。
+### 1. 准备开始
+你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+- [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+- [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+
+要检查 kubectl 是否安装，执行 `kubectl version --client` 命令。 kubectl 的版本应该与集群的 API 服务器[使用同一次版本号](https://kubernetes.io/zh/releases/version-skew-policy/#kubectl)。
+### 2. 定义集群、用户和上下文
+假设用户有两个集群，一个用于正式开发工作，一个用于其它临时用途（scratch）。 在 `development` 集群中，前端开发者在名为 `frontend` 的名字空间下工作，存储开发者在名为 `storage` 的名字空间下工作。 在 `scratch` 集群中，开发人员可能在默认名字空间下工作，也可能视情况创建附加的名字空间。访问开发集群需要通过证书进行认证。访问其它临时用途的集群需要通过用户名和密码进行认证。
+
+创建名为 `config-exercise` 的目录。在 `config-exercise` 目录中，创建名为 `config-demo` 的文件，其内容为：
+```
+apiVersion: v1
+kind: Config
+preferences: {}
+
+clusters:
+- cluster:
+  name: development
+- cluster:
+  name: scratch
+
+users:
+- name: developer
+- name: experimenter
+
+contexts:
+- context:
+  name: dev-frontend
+- context:
+  name: dev-storage
+- context:
+  name: exp-scratch
+```
+配置文件描述了集群、用户名和上下文。`config-demo` 文件中含有描述两个集群、 两个用户和三个上下文的框架。
+
+进入 config-exercise 目录。输入以下命令，将集群详细信息添加到配置文件中：
+```
+kubectl config --kubeconfig=config-demo set-cluster development --server=https://1.2.3.4 --certificate-authority=fake-ca-file
+kubectl config --kubeconfig=config-demo set-cluster scratch --server=https://5.6.7.8 --insecure-skip-tls-verify
+```
+将用户详细信息添加到配置文件中：
+```
+kubectl config --kubeconfig=config-demo set-credentials developer --client-certificate=fake-cert-file --client-key=fake-key-seefile
+kubectl config --kubeconfig=config-demo set-credentials experimenter --username=exp --password=some-password
+```
+注意：
+- 要删除用户，可以运行 kubectl --kubeconfig=config-demo config unset users.<name>
+- 要删除集群，可以运行 kubectl --kubeconfig=config-demo config unset clusters.<name>
+- 要删除上下文，可以运行 kubectl --kubeconfig=config-demo config unset contexts.<name>
+
+将上下文详细信息添加到配置文件中：
+```
+kubectl config --kubeconfig=config-demo set-context dev-frontend --cluster=development --namespace=frontend --user=developer
+kubectl config --kubeconfig=config-demo set-context dev-storage --cluster=development --namespace=storage --user=developer
+kubectl config --kubeconfig=config-demo set-context exp-scratch --cluster=scratch --namespace=default --user=experimenter
+```
+打开 config-demo 文件查看添加的详细信息。 也可以使用 config view 命令进行查看：
+```
+kubectl config --kubeconfig=config-demo view
+```
+输出展示了两个集群、两个用户和三个上下文：
+```
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: fake-ca-file
+    server: https://1.2.3.4
+  name: development
+- cluster:
+    insecure-skip-tls-verify: true
+    server: https://5.6.7.8
+  name: scratch
+contexts:
+- context:
+    cluster: development
+    namespace: frontend
+    user: developer
+  name: dev-frontend
+- context:
+    cluster: development
+    namespace: storage
+    user: developer
+  name: dev-storage
+- context:
+    cluster: scratch
+    namespace: default
+    user: experimenter
+  name: exp-scratch
+current-context: ""
+kind: Config
+preferences: {}
+users:
+- name: developer
+  user:
+    client-certificate: fake-cert-file
+    client-key: fake-key-file
+- name: experimenter
+  user:
+    password: some-password
+    username: exp
+```
+其中的 `fake-ca-file`、`fake-cert-file` 和 `fake-key-file` 是证书文件路径名的占位符。 你需要更改这些值，使之对应你的环境中证书文件的实际路径名。
+
+有时你可能希望在这里使用 `BASE64` 编码的数据而不是一个个独立的证书文件。 如果是这样，你需要在键名上添加 -data 后缀。例如，`certificate-authority-data`、`client-certificate-data` 和 `client-key-data`。
+
+每个上下文包含三部分（集群、用户和名字空间），例如，`dev-frontend` 上下文表明：使用 `developer` 用户的凭证来访问 `development` 集群的 `frontend` 名字空间。
+
+设置当前上下文：
+```
+kubectl config --kubeconfig=config-demo use-context dev-frontend
+```
+现在当输入 `kubectl` 命令时，相应动作会应用于 `dev-frontend` 上下文中所列的集群和名字空间，同时，命令会使用 `dev-frontend` 上下文中所列用户的凭证。
+
+使用 `--minify` 参数，来查看与当前上下文相关联的配置信息。
+```
+kubectl config --kubeconfig=config-demo view --minify
+```
+输出结果展示了 dev-frontend 上下文相关的配置信息：
+```
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: fake-ca-file
+    server: https://1.2.3.4
+  name: development
+contexts:
+- context:
+    cluster: development
+    namespace: frontend
+    user: developer
+  name: dev-frontend
+current-context: dev-frontend
+kind: Config
+preferences: {}
+users:
+- name: developer
+  user:
+    client-certificate: fake-cert-file
+    client-key: fake-key-file
+```
+现在假设用户希望在其它临时用途集群中工作一段时间。
+
+将当前上下文更改为 `exp-scratch`：
+```
+kubectl config --kubeconfig=config-demo use-context exp-scratch
+```
+在你发出的所有 kubectl 命令都将应用于 `scratch` 集群的默认名字空间。同时，命令会使用 `exp-scratch` 上下文中所列用户的凭证。
+
+查看更新后的当前上下文 `exp-scratch` 相关的配置。
+```
+kubectl config --kubeconfig=config-demo view --minify
+```
+最后，假设用户希望在 `development` 集群中的 `storage` 名字空间下工作一段时间。
+
+将当前上下文更改为 `dev-storage`：
+```
+kubectl config --kubeconfig=config-demo use-context dev-storage
+```
+查看更新后的当前上下文 `dev-storage` 相关的配置。
+```
+kubectl config --kubeconfig=config-demo view --minify
+```
+### 3. 创建第二个配置文件
+在 `config-exercise` 目录中，创建名为 `config-demo-2` 的文件，其中包含以下内容：
+```
+apiVersion: v1
+kind: Config
+preferences: {}
+
+contexts:
+- context:
+    cluster: development
+    namespace: ramp
+    user: developer
+  name: dev-ramp-up
+```
+上述配置文件定义了一个新的上下文，名为 `dev-ramp-up`。
+### 4. 设置 KUBECONFIG 环境变量
+查看是否有名为 `KUBECONFIG` 的环境变量。 如有，保存 `KUBECONFIG` 环境变量当前的值，以便稍后恢复。例如：
+- Linux
+  ```
+  export KUBECONFIG_SAVED=$KUBECONFIG
+  ```
+- Windows PowerShell
+  ```
+  $Env:KUBECONFIG_SAVED=$ENV:KUBECONFIG
+  ```
+
+`KUBECONFIG` 环境变量是配置文件路径的列表，该列表在 `Linux` 和 `Mac` 中以冒号分隔， 在 `Windows` 中以分号分隔。 如果有 `KUBECONFIG` 环境变量，请熟悉列表中的配置文件。
+
+临时添加两条路径到 KUBECONFIG 环境变量中。 例如：
+- Linux
+  ```
+  export  KUBECONFIG=$KUBECONFIG:config-demo:config-demo-2
+  ```
+- Windows PowerShell
+  ```
+  $Env:KUBECONFIG=("config-demo;config-demo-2")
+  ```
+在 config-exercise 目录中输入以下命令：
+```
+kubectl config view
+```
+输出展示了 `KUBECONFIG` 环境变量中所列举的所有文件合并后的信息。特别地，注意合并信息中包含来自 `config-demo-2` 文件的 `dev-ramp-up` 上下文和来自 `config-demo` 文件的三个上下文：
+```
+contexts:
+- context:
+    cluster: development
+    namespace: frontend
+    user: developer
+  name: dev-frontend
+- context:
+    cluster: development
+    namespace: ramp
+    user: developer
+  name: dev-ramp-up
+- context:
+    cluster: development
+    namespace: storage
+    user: developer
+  name: dev-storage
+- context:
+    cluster: scratch
+    namespace: default
+    user: experimenter
+  name: exp-scratch
+```
+关于 kubeconfig 文件如何合并的更多信息，请参考[使用 kubeconfig 文件组织集群访问](https://kubernetes.io/zh/docs/concepts/configuration/organize-cluster-access-kubeconfig/)。
+### 5. 探索 $HOME/.kube 目录
+如果用户已经拥有一个集群，可以使用 kubectl 与集群进行交互，那么很可能在 `$HOME/.kube` 目录下有一个名为 `config` 的文件。
+
+进入 `$HOME/.kube` 目录，看看那里有什么文件。通常会有一个名为 `config` 的文件，目录中可能还有其他配置文件。请简单地熟悉这些文件的内容。
+### 6. 将 $HOME/.kube/config 追加到 KUBECONFIG 环境变量中
+如果有 `$HOME/.kube/config` 文件，并且还未列在 `KUBECONFIG` 环境变量中，那么现在将它追加到 `KUBECONFIG` 环境变量中。例如：
+- Linux
+  ```
+  export KUBECONFIG=$KUBECONFIG:$HOME/.kube/config
+  ```
+- Windows Powershell
+  ```
+  $Env:KUBECONFIG="$Env:KUBECONFIG;$HOME\.kube\config"
+  ```
+在配置练习目录中输入以下命令，查看当前 KUBECONFIG 环境变量中列举的所有文件合并后的配置信息：
+```
+kubectl config view
+```
+### 7. 清理
+将 KUBECONFIG 环境变量还原为原始值。 例如：
+- Linux
+  ```
+  export KUBECONFIG=$KUBECONFIG_SAVED
+  ```
+- Windows PowerShell
+  ```
+  $Env:KUBECONFIG=$ENV:KUBECONFIG_SAVED
+  ```
+### 8. 接下来
+- [使用 kubeconfig 文件组织集群访问](https://kubernetes.io/zh/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
+- [kubectl config](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#config)
 ## 四. 使用端口转发来访问集群中的应用
 ## 五. 使用服务来访问集群中的应用
 ## 六. 使用 Service 把前端连接到后端
