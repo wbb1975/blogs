@@ -605,20 +605,488 @@ kubectl config view
 - [使用 kubeconfig 文件组织集群访问](https://kubernetes.io/zh/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - [kubectl config](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#config)
 ## 四. 使用端口转发来访问集群中的应用
-## 五. 使用服务来访问集群中的应用
-## 六. 使用 Service 把前端连接到后端
-## 七. 创建外部负载均衡器
-本文展示如何创建一个外部负载均衡器。
-> 说明： 此功能仅适用于支持外部负载均衡器的云提供商或环境。
-创建服务时，你可以选择自动创建云网络负载均衡器。这提供了一个外部可访问的 IP 地址，可将流量分配到集群节点上的正确端口上 （ 假设集群在支持的环境中运行，并配置了正确的云负载平衡器提供商包）。
+本文展示如何使用 `kubectl port-forward` 连接到在 `Kubernetes` 集群中 运行的 `MongoDB` 服务。这种类型的连接对数据库调试很有用。
+### 1. 准备开始
+- 你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+   - [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+   - [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+   
+   要获知版本信息，请输入 kubectl version.
+- 安装 [MongoDB Shell](https://www.mongodb.com/try/download/shell)
+### 2. 创建 MongoDB deployment 和服务
+1. 创建一个运行 MongoDB 的 deployment：
+   ```
+   kubectl apply -f https://k8s.io/examples/application/mongodb/mongo-deployment.yaml
+   ```
+   查看输出是否成功，以验证是否成功创建 deployment：
+   ```
+   deployment.apps/mongo created
+   ```
+   查看 pod 状态，检查其是否准备就绪：
+   ```
+   kubectl get pods
+   ```
+   输出显示创建的 pod：
+   ```
+   NAME                     READY   STATUS    RESTARTS   AGE
+   mongo-75f59d57f4-4nd6q   1/1     Running   0          2m4s
+   ```
+   查看 Deployment 状态：
+   ```
+   kubectl get deployment
+   ```
+   输出显示创建的 Deployment：
+   ```
+   NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+   mongo   1/1     1            1           2m21s
+   ```
+   Deployment 自动管理 ReplicaSet。 查看 ReplicaSet 状态：
+   ```
+   kubectl get replicaset
+   ```
+   输出显示创建的 ReplicaSet：
+   ```
+   NAME               DESIRED   CURRENT   READY   AGE
+   mongo-75f59d57f4   1         1         1       3m12s
+   ```
+2. 创建一个在网络上公开的 MongoDB 服务：
+   ```
+   kubectl apply -f https://k8s.io/examples/application/mongodb/mongo-service.yaml
+   ```
+   查看输出是否成功，以验证是否成功创建 Service：
+   ```
+   service/mongo created
+   ```
+   检查 Service 是否创建：
+   ```
+   kubectl get service mongo
+   ```
+   输出显示创建的 Service：
+   ```
+   NAME    TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)     AGE
+   mongo   ClusterIP   10.96.41.183   <none>        27017/TCP   11s
+   ```
+3. 验证 MongoDB 服务是否运行在 Pod 中并且监听 27017 端口：
+   ```
+   # Change mongo-75f59d57f4-4nd6q to the name of the Pod
+   kubectl get pod mongo-75f59d57f4-4nd6q --template='{{(index (index .spec.containers 0).ports 0).containerPort}}{{"\n"}}'
+   ```
+   输出应该显示 Pod 中 MongoDB 的端口：
+   ```
+   27017
+   ```
+   （这是 Internet 分配给 MongoDB 的 TCP 端口）。
+### 3. 转发一个本地端口到 Pod 端口
+1. `kubectl port-forward` 允许使用资源名称 （例如 pod 名称）来选择匹配的 pod 来进行端口转发。
+   ```
+   # Change mongo-75f59d57f4-4nd6q to the name of the Pod
+   kubectl port-forward mongo-75f59d57f4-4nd6q 28015:27017
+   ```
+   这相当于
+   ```
+   kubectl port-forward pods/mongo-75f59d57f4-4nd6q 28015:27017
+   ```
+   或者
+   ```
+   kubectl port-forward deployment/mongo 28015:27017
+   ```
+   或者
+   ```
+   kubectl port-forward replicaset/mongo-75f59d57f4 28015:27017
+   ```
+   或者
+   ```
+   kubectl port-forward service/mongo 28015:27017
+   ```
 
-有关如何配置和使用 Ingress 资源为服务提供外部可访问的 URL、负载均衡流量、终止 SSL 等功能，请查看 [Ingress](https://kubernetes.io/zh/docs/concepts/services-networking/ingress/) 文档。
-### 准备开始
+   以上所有命令都应该有效。输出应该类似于：
+   ```
+   Forwarding from 127.0.0.1:28015 -> 27017
+   Forwarding from [::1]:28015 -> 27017
+   ```
+> 说明：`kubectl port-forward` 不会返回。你需要打开另一个终端来继续这个练习。
+2. 启动 MongoDB 命令行接口：
+   ```
+   mongosh --port 28015
+   ```
+3. 在 MongoDB 命令行提示符下，输入 ping 命令：
+   ```
+   db.runCommand( { ping: 1 } )
+   ```
+   成功的 ping 请求应该返回：
+   ```
+   { ok: 1 }
+   ```
+####（可选操作）让 kubectl 来选择本地端口
+如果你不需要指定特定的本地端口，你可以让 kubectl 来选择和分配本地端口， 以便你不需要管理本地端口冲突。该命令使用稍微不同的语法：
+```
+kubectl port-forward deployment/mongo :27017
+```
+kubectl 工具会找到一个未被使用的本地端口号（避免使用低段位的端口号，因为他们可能会被其他应用程序使用）。输出应该类似于：
+```
+Forwarding from 127.0.0.1:63753 -> 27017
+Forwarding from [::1]:63753 -> 27017
+```
+### 4. 讨论
+与本地 `28015` 端口建立的连接将转发到运行 `MongoD`B 服务器的 Pod 的 `27017` 端口。通过此连接，您可以使用本地工作站来调试在 Pod 中运行的数据库。
+> **警告**： kubectl port-forward 仅适用于 TCP 端口。 在 issue 47862 中跟踪了对 UDP 协议的支持。
+### 5. 接下来
+进一步了解 [kubectl port-forward](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands/#port-forward)。
+## 五. 使用服务来访问集群中的应用
+本文展示如何创建一个 Kubernetes 服务对象，能让外部客户端访问在集群中运行的应用。 该服务为一个应用的两个运行实例提供负载均衡。
+### 1. 准备开始
+- 你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+   - [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+   - [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+   
+   要获知版本信息，请输入 kubectl version.
+### 2. 教程目标
++ 运行 Hello World 应用的两个实例。
++ 创建一个服务对象来暴露 node port。
++ 使用服务对象来访问正在运行的应用。
+### 3. 为运行在两个 pod 中的应用创建一个服务
+这是应用程序部署的配置文件：
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+spec:
+  selector:
+    matchLabels:
+      run: load-balancer-example
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        run: load-balancer-example
+    spec:
+      containers:
+        - name: hello-world
+          image: gcr.io/google-samples/node-hello:1.0
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+```
+1. 在你的集群中运行一个 Hello World 应用： 使用上面的文件创建应用程序 Deployment：
+   ```
+   kubectl apply -f https://k8s.io/examples/service/access/hello-application.yaml
+   ```
+   上面的命令创建一个 [Deployment 对象](https://kubernetes.io/zh/docs/concepts/workloads/controllers/deployment/) 和一个关联的 [ReplicaSet](https://kubernetes.io/zh/docs/concepts/workloads/controllers/replicaset/) 对象。 这个 ReplicaSet 有两个 Pod，每个 Pod 都运行着 Hello World 应用。
+2. 展示 Deployment 的信息：
+   ```
+   kubectl get deployments hello-world
+   kubectl describe deployments hello-world
+   ```
+3. 展示你的 ReplicaSet 对象信息：
+   ```
+   kubectl get replicasets
+   kubectl describe replicasets
+   ```
+4. 创建一个服务对象来暴露 Deployment：
+   ```
+   kubectl expose deployment hello-world --type=NodePort --name=example-service
+   ```
+5. 展示 Service 信息：
+   ```
+   kubectl describe services example-service
+   ```
+   输出类似于：
+   ```
+   Name:                   example-service
+   Namespace:              default
+   Labels:                 run=load-balancer-example
+   Annotations:            <none>
+   Selector:               run=load-balancer-example
+   Type:                   NodePort
+   IP:                     10.32.0.16
+   Port:                   <unset> 8080/TCP
+   TargetPort:             8080/TCP
+   NodePort:               <unset> 31496/TCP
+   Endpoints:              10.200.1.4:8080,10.200.2.5:8080
+   Session Affinity:       None
+   Events:                 <none>
+   ```
+   注意服务中的 NodePort 值。例如在上面的输出中，NodePort 是 31496。
+6. 列出运行 Hello World 应用的 Pod：
+   ```
+   kubectl get pods --selector="run=load-balancer-example" --output=wide
+   ```
+   输出类似于：
+   ```
+   NAME                           READY   STATUS    ...  IP           NODE
+   hello-world-2895499144-bsbk5   1/1     Running   ...  10.200.1.4   worker1
+   hello-world-2895499144-m1pwt   1/1     Running   ...  10.200.2.5   worker2
+   ```
+7. 获取运行 Hello World 的 pod 的其中一个节点的公共 IP 地址。如何获得此地址取决于你设置集群的方式。 例如，如果你使用的是 Minikube，则可以通过运行 `kubectl cluster-info` 来查看节点地址。 如果你使用的是 Google Compute Engine 实例，则可以使用 `gcloud compute instances list` 命令查看节点的公共地址。
+8. 在你选择的节点上，创建一个防火墙规则以开放节点端口上的 TCP 流量。例如，如果你的服务的 `NodePort` 值为 31568，请创建一个防火墙规则以允许 31568 端口上的 TCP 流量。不同的云提供商提供了不同方法来配置防火墙规则。
+9.  使用节点地址和 node port 来访问 Hello World 应用：
+    ```
+    curl http://<public-node-ip>:<node-port>
+    ```
+    这里的 `<public-node-ip>` 是你节点的公共 IP 地址，`<node-port>` 是你服务的 NodePort 值。 对于请求成功的响应是一个 hello 消息：
+    ```
+    Hello Kubernetes!
+    ```
+### 4. 使用服务配置文件
+作为 kubectl expose 的替代方法，你可以使用[服务配置文件](https://kubernetes.io/zh/docs/concepts/services-networking/service/)来创建服务。
+### 5. 清理现场
+想要删除服务，输入以下命令：
+```
+kubectl delete services example-service
+```
+想要删除运行 Hello World 应用的 Deployment、ReplicaSet 和 Pod，输入以下命令：
+```
+kubectl delete deployment hello-world
+```
+### 6. 接下来
+- 进一步了解[通过服务连接应用](https://kubernetes.io/zh/docs/concepts/services-networking/connect-applications-service/)。
+## 六. 使用 Service 把前端连接到后端
+本任务会描述如何创建前端（Frontend）微服务和后端（Backend）微服务。后端微服务是一个 hello 欢迎程序。 前端通过 nginx 和一个 Kubernetes 服务 暴露后端所提供的服务。
+### 1. 教程目标
+- 使用部署对象（Deployment object）创建并运行一个 hello 后端微服务
+- 使用一个 Service 对象将请求流量发送到后端微服务的多个副本
+- 同样使用一个 Deployment 对象创建并运行一个 nginx 前端微服务
+- 配置前端微服务将请求流量发送到后端微服务
+- 使用 type=LoadBalancer 的 Service 对象将前端微服务暴露到集群外部
+### 2. 准备开始
 你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
 - [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
 - [玩转 Kubernetes](http://labs.play-with-k8s.com/)
 
 要获知版本信息，请输入 `kubectl version`。
+
+本任务使用[外部负载均衡服务](https://kubernetes.io/zh/docs/tasks/access-application-cluster/create-external-load-balancer/)， 所以需要对应的可支持此功能的环境。如果你的环境不能支持，你可以使用 [NodePort](https://kubernetes.io/zh/docs/concepts/services-networking/service/#nodeport) 类型的服务代替。
+### 3. 使用部署对象（Deployment）创建后端
+后端是一个简单的 hello 欢迎微服务应用。这是后端应用的 Deployment 配置文件：
+```
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  selector:
+    matchLabels:
+      app: hello
+      tier: backend
+      track: stable
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: hello
+        tier: backend
+        track: stable
+    spec:
+      containers:
+        - name: hello
+          image: "gcr.io/google-samples/hello-go-gke:1.0"
+          ports:
+            - name: http
+              containerPort: 80
+...
+```
+创建后端 Deployment：
+```
+kubectl describe deployment backend
+```
+输出类似于：
+```
+Name:                           backend
+Namespace:                      default
+CreationTimestamp:              Mon, 24 Oct 2016 14:21:02 -0700
+Labels:                         app=hello
+                                tier=backend
+                                track=stable
+Annotations:                    deployment.kubernetes.io/revision=1
+Selector:                       app=hello,tier=backend,track=stable
+Replicas:                       3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:                   RollingUpdate
+MinReadySeconds:                0
+RollingUpdateStrategy:          1 max unavailable, 1 max surge
+Pod Template:
+  Labels:       app=hello
+                tier=backend
+                track=stable
+  Containers:
+   hello:
+    Image:              "gcr.io/google-samples/hello-go-gke:1.0"
+    Port:               80/TCP
+    Environment:        <none>
+    Mounts:             <none>
+  Volumes:              <none>
+Conditions:
+  Type          Status  Reason
+  ----          ------  ------
+  Available     True    MinimumReplicasAvailable
+  Progressing   True    NewReplicaSetAvailable
+OldReplicaSets:                 <none>
+NewReplicaSet:                  hello-3621623197 (3/3 replicas created)
+Events:
+...
+```
+### 4. 创建 hello Service 对象
+将请求从前端发送到到后端的关键是后端 Service。Service 创建一个固定 IP 和 DNS 解析名入口， 使得后端微服务总是可达。Service 使用 选择算符 来寻找目标 Pod。
+
+首先，浏览 Service 的配置文件：
+```
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+spec:
+  selector:
+    app: hello
+    tier: backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: http
+...
+```
+配置文件中，你可以看到名为 `hello` 的 Service 将流量路由到包含 `app: hello` 和 `tier: backend` 标签的 Pod。
+
+创建后端 Service：
+```
+kubectl apply -f https://k8s.io/examples/service/access/backend-service.yaml
+```
+此时，你已经有了一个运行着 hello 应用的三个副本的 `backend` Deployment，你也有了 一个 Service 用于路由网络流量。不过，这个服务在集群外部无法访问也无法解析。
+### 5. 创建前端应用
+现在你已经有了运行中的后端应用，你可以创建一个可在集群外部访问的前端，并通过代理前端的请求连接到后端。
+
+前端使用被赋予后端 Service 的 DNS 名称将请求发送到后端工作 Pods。这一 DNS 名称为 `hello`，也就是 `examples/service/access/backend-service.yaml` 配置 文件中 `name` 字段的取值。
+
+前端 Deployment 中的 Pods 运行一个 `nginx` 镜像，这个已经配置好的镜像会将请求转发给后端的 `hello` Service。下面是 nginx 的配置文件：
+```
+# The identifier Backend is internal to nginx, and used to name this specific upstream
+upstream Backend {
+    # hello is the internal DNS name used by the backend Service inside Kubernetes
+    server hello;
+}
+
+server {
+    listen 80;
+
+    location / {
+        # The following statement will proxy traffic to the upstream named Backend
+        proxy_pass http://Backend;
+    }
+}
+
+```
+与后端类似，前端包含一个 Deployment 和一个 Service。后端与前端服务之间的一个重要区别是前端 Service 的配置文件包含了 `type: LoadBalancer`，也就是说，Service 会使用你的云服务商的默认负载均衡设备，从而实现从集群外访问的目的。
+**service/access/frontend-service.yaml**
+```
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: hello
+    tier: frontend
+  ports:
+  - protocol: "TCP"
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+...
+```
+**service/access/frontend-deployment.yaml**
+```
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: hello
+      tier: frontend
+      track: stable
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hello
+        tier: frontend
+        track: stable
+    spec:
+      containers:
+        - name: nginx
+          image: "gcr.io/google-samples/hello-frontend:1.0"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx","-s","quit"]
+...
+```
+创建前端 Deployment 和 Service：
+```
+kubectl apply -f https://k8s.io/examples/service/access/frontend-deployment.yaml
+kubectl apply -f https://k8s.io/examples/service/access/frontend-service.yaml
+```
+通过输出确认两个资源都已经被创建：
+```
+deployment.apps/frontend created
+service/frontend created
+```
+> **说明**：这个 nginx 配置文件是被打包在容器镜像里的。 更好的方法是使用 `ConfigMap`，这样的话你可以更轻易地更改配置。
+### 6. 与前端 Service 交互
+一旦你创建了 LoadBalancer 类型的 Service，你可以使用这条命令查看外部 IP：
+```
+kubectl get service frontend
+```
+外部 IP 字段的生成可能需要一些时间。如果是这种情况，外部 IP 会显示为 <pending>。
+```
+NAME       CLUSTER-IP      EXTERNAL-IP   PORT(S)  AGE
+frontend   10.51.252.116   <pending>     80/TCP   10s
+```
+当外部 IP 地址被分配可用时，配置会更新，在 EXTERNAL-IP 头部下显示新的 IP：
+```
+NAME       CLUSTER-IP      EXTERNAL-IP        PORT(S)  AGE
+frontend   10.51.252.116   XXX.XXX.XXX.XXX    80/TCP   1m
+```
+这一新的 IP 地址就可以用来从集群外与 frontend 服务交互了。
+### 7. 通过前端发送流量
+前端和后端已经完成连接了。你可以使用 curl 命令通过你的前端 Service 的外部 IP 访问服务端点。
+```
+curl http://${EXTERNAL_IP} # 将 EXTERNAL_P 替换为你之前看到的外部 IP
+```
+输出显示后端生成的消息：
+```
+{"message":"Hello"}
+```
+### 8. 清理现场
+要删除服务，输入下面的命令：
+```
+kubectl delete services frontend backend
+```
+要删除在前端和后端应用中运行的 Deployment、ReplicaSet 和 Pod，输入下面的命令：
+```
+kubectl delete deployment frontend backend
+```
+### 9. 接下来
+- 进一步了解 [Service](https://kubernetes.io/zh/docs/concepts/services-networking/service/)
+- 进一步了解 [ConfigMap](https://kubernetes.io/zh/docs/tasks/configure-pod-container/configure-pod-configmap/)
+- 进一步了解 [Service 和 Pods 的 DNS](https://kubernetes.io/zh/docs/concepts/services-networking/dns-pod-service/)
+## 七. 创建外部负载均衡器
+本文展示如何创建一个外部负载均衡器。
+> 说明： 此功能仅适用于支持外部负载均衡器的云提供商或环境。
+
+创建服务时，你可以选择自动创建云网络负载均衡器。这提供了一个外部可访问的 IP 地址，可将流量分配到集群节点上的正确端口上（ 假设集群在支持的环境中运行，并配置了正确的云负载平衡器提供商包）。
+
+你可以使用使用 Ingress 替换服务，更多信息，请查看 [Ingress](https://kubernetes.io/zh/docs/concepts/services-networking/ingress/) 文档。
+### 准备开始
+你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+- [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+- [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+
+你的集群必须运行在云上或者其它已经提供了对配置外部负载均衡器的环境。
 ### 配置文件
 要创建外部负载均衡器，请将以下内容添加到[服务配置文件](https://kubernetes.io/zh/docs/concepts/services-networking/service/#loadbalancer)：`type: LoadBalancer`
 
@@ -641,7 +1109,7 @@ spec:
 ```
 kubectl expose rc example --port=8765 --target-port=9376 --name=example-service --type=LoadBalancer
 ```
-此命令通过使用与引用资源（在上面的示例的情况下，名为 example 的 replication controller）相同的选择器来创建一个新的服务。
+此命令通过使用与引用资源（在上面的示例的情况下，名为 `example` 的 replication controller）相同的选择器来创建一个新的服务。
 
 更多信息（包括更多的可选参数），请参阅 [kubectl expose 指南](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands/#expose)。
 ### 找到你的 IP 地址
@@ -668,33 +1136,523 @@ kubectl describe services example-service
 IP 地址列在 `LoadBalancer Ingress` 旁边。
 
 > 说明：如果你在 Minikube 上运行服务，你可以通过以下命令找到分配的 IP 地址和端口：`minikube service example-service --url`
-### 保留客户端源 IP
-默认地，目标容器中看到的源 IP 将 不是客户端的原始源 IP。要启用保留客户端 IP，可以在服务的 spec 中配置以下字段（支持 GCE/Google Kubernetes Engine 环境）：
+### 保留客户端源 IP（Preserving the client source IP）
+默认地，目标容器中看到的源 IP 将不是客户端的原始源 IP。要启用保留客户端 IP，可以在服务的 spec 中配置以下字段：
 - `service.spec.externalTrafficPolicy` - 表示此服务是否希望将外部流量路由到节点本地或集群范围的端点。 有两个可用选项：`Cluster（默认）`和 `Local`。 `Cluster` 隐藏了客户端源 IP，可能导致第二跳到另一个节点，但具有良好的整体负载分布。 `Local` 保留客户端源 IP 并避免 `LoadBalancer` 和 `NodePort` 类型服务的第二跳， 但存在潜在的不均衡流量传播风险。
-- `service.spec.healthCheckNodePort` - 指定服务的 `healthcheck nodePort`（数字端口号）。 如果未指定 `healthCheckNodePort`，服务控制器从集群的 `NodePort` 范围内分配一个端口。 你可以通过设置 API 服务器的命令行选项 `--service-node-port-range` 来配置上述范围。 它将会使用用户指定的 `healthCheckNodePort` 值（如果被客户端指定）。 仅当 `type` 设置为 `LoadBalancer` 并且 `externalTrafficPolicy` 设置为 `Local` 时才生效。
+- `service.spec.healthCheckNodePort` - 指定服务的 `healthcheck nodePort`（数字端口号）。 如果未指定 `healthCheckNodePort`，服务控制器从集群的 `NodePort` 范围内分配一个端口。 
 
-可以通过在服务的配置文件中将 `externalTrafficPolicy` 设置为 `Local` 来激活此功能。
+你可以通过设置 API 服务器的命令行选项 `--service-node-port-range` 来配置上述范围。 它将会使用用户指定的 `healthCheckNodePort` 值（如果被客户端指定），仅当 `type` 设置为 `LoadBalancer` 并且 `externalTrafficPolicy` 设置为 `Local` 时才生效。
+
+可以通过在服务的配置文件中将 `externalTrafficPolicy` 设置为 `Local` 来激活此功能：
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: example-service
+spec:
+  selector:
+    app: example
+  ports:
+    - port: 8765
+      targetPort: 9376
+  externalTrafficPolicy: Local
+  type: LoadBalancer
+```
 #### 保留客户端源 IP 的警告和限制
-一些云提供商的负载均衡服务不能让你配置不同目标的权重。
+一些云提供商的负载均衡服务不支持你配置不同目标的权重。
 
 当每个目标权重均等，即流量被平均分配到节点时，外部流量在不同 Pods 间是不均衡的。外部负载均衡器对作为目标运行的节点上有多少个 Pod 并不清楚。
 
 当 `NumServicePods` << `_NumNodes` 或 `NumServicePods` >> `NumNodes`，即使没有权重也可以获得一个相对均衡的分配。
 
-内部 Pod 间的流量行为如同 ClusterIP 服务，经可能保持平均。
+内部 Pod 间的流量行为如同 ClusterIP 服务，尽可能保持平均。
 ### 回收负载均衡器（Garbage collecting load balancers）
 在通常情况下，应在删除 LoadBalancer 类型服务后立即清除云提供商中的相关负载均衡器资源。 但是，众所周知，在删除关联的服务后，云资源被孤立的情况很多。引入了针对服务负载均衡器的终结器保护，以防止这种情况发生。 通过使用终结器，在删除相关的负载均衡器资源之前，也不会删除服务资源。
 
-具体来说，如果服务具有 type LoadBalancer，则服务控制器将附加一个名为 service.kubernetes.io/load-balancer-cleanup 的终结器。 仅在清除负载均衡器资源后才能删除终结器。 即使在诸如服务控制器崩溃之类的极端情况下，这也可以防止负载均衡器资源悬空。
+具体来说，如果服务具有 type LoadBalancer，则服务控制器将附加一个名为 service.kubernetes.io/load-balancer-cleanup 的终结器。 仅在清除负载均衡器资源后才能删除终结器。即使在诸如服务控制器崩溃之类的极端情况下，这也可以防止负载均衡器资源悬空。
 ### 外部负载均衡器提供商
 请务必注意，此功能的数据路径由 Kubernetes 集群外部的负载均衡器提供。
 
-当服务 type 设置为 LoadBalancer 时，Kubernetes 向集群中的 Pod 提供的功能等同于 type 等于 ClusterIP，并通过对相关Kubernetes pod的节点条目对负载均衡器（从外部到 Kubernetes） 进行编程来扩展它。 Kubernetes 服务控制器自动创建外部负载均衡器、健康检查（如果需要）、防火墙规则（如果需要）， 并获取云提供商分配的外部 IP 并将其填充到服务对象中。
+当服务 type 设置为 LoadBalancer 时，Kubernetes 向集群中的 Pod 提供的功能等同于 type 等于 ClusterIP，并通过对相关Kubernetes pod的节点条目对负载均衡器（从外部到 Kubernetes） 进行编程来扩展它。 Kubernetes 服务控制器自动创建外部负载均衡器、健康检查（如果需要）、防火墙规则（如果需要），并获取云提供商分配的外部 IP 并将其填充到服务对象中。
+### 接下来
+- 进一步了解 [Service](https://kubernetes.io/zh/docs/concepts/services-networking/service/)
+- 进一步了解 [ConfigMap](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+- 进一步了解 [利用服务连接应用](https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/)
 ## 八. 列出集群中所有运行容器的镜像
+本文展示如何使用 kubectl 来列出集群中所有运行 Pod 的容器的镜像
+### 1. 准备开始
+你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+- [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+- [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+
+要获知版本信息，请输入 `kubectl version`。
+
+在本练习中，你将使用 kubectl 来获取集群中运行的所有 Pod，并格式化输出来提取每个 Pod 中的容器列表。
+### 2. 列出所有命名空间下的所有容器
+- 使用 `kubectl get pods --all-namespaces` 获取所有命名空间下的所有 Pod
+- 使用 `-o jsonpath={.items[*].spec.containers[*].image}` 来格式化输出，以仅包含容器镜像名称。 这将以递归方式从返回的 json 中解析出 image 字段。
+  + 参阅 [jsonpath 说明](https://kubernetes.io/zh/docs/reference/kubectl/jsonpath/)获取更多关于如何使用 jsonpath 的信息。
+- 使用标准化工具来格式化输出：`tr`, `sort`, `uniq`
+  + 使用 `tr` 以用换行符替换空格
+  + 使用 `sort` 来对结果进行排序
+  + 使用 `uniq` 来聚合镜像计数
+```
+kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" |\
+tr -s '[[:space:]]' '\n' |\
+sort |\
+uniq -c
+```
+上面的命令将递归获取所有返回项目的名为 image 的字段。
+
+作为替代方案，可以使用 Pod 的镜像字段的绝对路径。这确保即使字段名称重复的情况下也能检索到正确的字段，例如，特定项目中的许多字段都称为 name：
+```
+kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}"
+```
+jsonpath 解释如下：
+- `.items[*]`: 对于每个返回的值
+- `.spec`: 获取 spec
+- `.containers[*]`: 对于每个容器
+- `.image`: 获取镜像
+
+> **说明**： 按名字获取单个 Pod 时，例如 `kubectl get pod nginx`，路径的 `.items[*]` 部分应该省略， 因为返回的是一个 Pod 而不是一个项目列表。
+### 3. 列出 Pod 中的容器镜像
+可以使用 `range` 操作进一步控制格式化，以单独操作每个元素。
+```
+kubectl get pods --all-namespaces -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' |\
+sort
+```
+### 4. 列出以标签过滤后的 Pod 的所有容器
+要获取匹配特定标签的 Pod，请使用 -l 参数。以下匹配仅与标签 `app=nginx` 相符的 Pod。
+```
+kubectl get pods --all-namespaces -o=jsonpath="{.items[*].spec.containers[*].image}" -l app=nginx
+```
+### 5. 列出以命名空间过滤后的 Pod 的所有容器
+要获取匹配特定命名空间的 Pod，请使用 namespace 参数。以下仅匹配 kube-system 命名空间下的 Pod。
+```
+kubectl get pods --namespace kube-system -o jsonpath="{.items[*].spec.containers[*].image}"
+```
+### 6. 使用 go-template 代替 jsonpath 来获取容器
+作为 jsonpath 的替代，Kubectl 支持使用 go-templates 来格式化输出：
+```
+kubectl get pods --all-namespaces -o go-template --template="{{range .items}}{{range .spec.containers}}{{.image}} {{end}}{{end}}"
+```
+### 7. 接下来
+- [Jsonpath 参考指南](https://kubernetes.io/zh/docs/reference/kubectl/jsonpath/)
+- [Go template 参考指南](https://golang.org/pkg/text/template/)
 ## 九. 在 Minikube 环境中使用 NGINX Ingress 控制器配置 Ingress
+[Ingress](https://kubernetes.io/zh/docs/concepts/services-networking/ingress/)是一种 API 对象，其中定义了一些规则使得集群中的 服务可以从集群外访问。[Ingress 控制器](https://kubernetes.io/zh/docs/concepts/services-networking/ingress-controllers/)负责实现 Ingress 中所设置的规则。
+
+本节为你展示如何配置一个简单的 Ingress，根据 HTTP URI 将服务请求路由到服务 `web` 或 `web2`。
+### 1. 准备开始
+你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+- [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+- [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+
+要获知版本信息，请输入 `kubectl version`。
+### 2. 创建一个 Minikube 集群
+1. 点击 Launch Terminal
+2. （可选操作）如果你在本地安装了 Minikube，运行下面的命令：
+   ```
+   minikube start
+   ```
+### 3. 启用 Ingress 控制器
+1. 为了启用 NGINIX Ingress 控制器，可以运行下面的命令：
+   ```
+   minikube addons enable ingress
+   ```
+2. 检查验证 NGINX Ingress 控制器处于运行状态：
+   ```
+   kubectl get pods -n kube-system
+   ```
+   > **说明**： 这一操作可能需要近一分钟时间。
+   输出：
+   ```
+   NAME                                        READY     STATUS    RESTARTS   AGE
+   default-http-backend-59868b7dd6-xb8tq       1/1       Running   0          1m
+   kube-addon-manager-minikube                 1/1       Running   0          3m
+   kube-dns-6dcb57bcc8-n4xd4                   3/3       Running   0          2m
+   kubernetes-dashboard-5498ccf677-b8p5h       1/1       Running   0          2m
+   nginx-ingress-controller-5984b97644-rnkrg   1/1       Running   0          1m
+   storage-provisioner                         1/1       Running   0          2m
+   ```
+### 4. 部署一个 Hello World 应用
+1. 使用下面的命令创建一个 Deployment：
+   ```
+   kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
+   ```
+   输出：
+   ```
+   deployment.apps/web created
+   ```
+2. 将 Deployment 暴露出来：
+   ```
+   kubectl expose deployment web --type=NodePort --port=8080
+   ```
+   输出：
+   ```
+   service/web exposed
+   ```
+3. 验证 Service 已经创建，并且可能从节点端口访问：
+   ```
+   kubectl get service web
+   ```
+   输出：
+   ```
+   NAME      TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+   web       NodePort   10.104.133.249   <none>        8080:31637/TCP   12m
+   ```
+4. 使用节点端口信息访问服务：
+   ```
+   minikube service web --url
+   ```
+   输出：
+   ```
+   http://172.17.0.15:31637
+   ```
+   > **说明**： 如果使用的是 `Katacoda` 环境，在终端面板顶端，请点击加号标志。 然后点击 `Select port to view on Host 1`。 输入节点和端口号（这里是31637），之后点击 `Display Port`。
+   输出：
+   ```
+   Hello, world!
+   Version: 1.0.0
+   Hostname: web-55b8c6998d-8k564
+   ```
+   你现在应该可以通过 Minikube 的 IP 地址和节点端口来访问示例应用了。下一步是让自己能够通过 Ingress 资源来访问应用。
+### 5. 创建一个 Ingress 资源
+下面是一个 Ingress 资源的配置文件，负责通过 `hello-world.info` 将服务请求 转发到你的服务。
+1. 根据下面的 YAML 创建文件 `example-ingress.yaml`：
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - host: hello-world.info
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 8080
+```
+2. 通过运行下面的命令创建 Ingress 资源：
+   ```
+   kubectl apply -f https://k8s.io/examples/service/networking/example-ingress.yaml
+   ```
+   输出：
+   ```
+   ingress.networking.k8s.io/example-ingress created
+   ```
+3. 验证 IP 地址已被设置：
+   ```
+   kubectl get ingress
+   ```
+   说明： 此操作可能需要几分钟时间。
+   ```
+   NAME              CLASS    HOSTS              ADDRESS        PORTS   AGE
+   example-ingress   <none>   hello-world.info   172.17.0.15    80      38s
+   ```
+4. 在 /etc/hosts 文件的末尾添加以下内容：
+   > **说明**： 如果你在本地运行 Minikube 环境，需要使用 `minikube ip` 获得外部 IP 地址。 Ingress 列表中显示的 IP 地址会是内部 IP 地址。
+
+   ```
+   172.17.0.15 hello-world.info
+   ```
+   此设置使得来自 `hello-world.info` 的请求被发送到 Minikube。
+5. 验证 Ingress 控制器能够转发请求流量：
+   ```
+   curl hello-world.info
+   ```
+   输出：
+   ```
+   Hello, world!
+   Version: 1.0.0
+   Hostname: web-55b8c6998d-8k564
+   ```
+   > **说明**： 如果你在使用本地 Minikube 环境，你可以从浏览器中访问 hello-world.info。
+### 6. 创建第二个 Deployment
+1. 使用下面的命令创建 v2 的 Deployment：
+   ```
+   kubectl create deployment web2 --image=gcr.io/google-samples/hello-app:2.0
+   ```
+   输出：
+   ```
+   deployment.apps/web2 created
+   ```
+2. 将 Deployment 暴露出来：
+   ```
+   kubectl expose deployment web2 --port=8080 --type=NodePort
+   ```
+   输出：
+   ```
+   service/web2 exposed
+   ```
+### 7. 编辑 Ingress
+1. 编辑现有的 example-ingress.yaml，添加以下行：
+   ```
+   - path: /v2
+     pathType: Prefix
+     backend:
+        service:
+        name: web2
+        port:
+            number: 8080
+   ```
+2. 应用所作变更：
+   ```
+   kubectl apply -f example-ingress.yaml
+   ```
+   输出：
+   ```
+   ingress.networking/example-ingress configured
+   ```
+### 8. 测试你的 Ingress
+1. 访问 HelloWorld 应用的第一个版本：
+   ```
+   curl hello-world.info
+   ```
+   输出：
+   ```
+   Hello, world!
+   Version: 1.0.0
+   Hostname: web-55b8c6998d-8k564
+   ```
+2. 访问 HelloWorld 应用的第二个版本：
+   ```
+   curl hello-world.info/v2
+   ```
+   输出：
+   ```
+   Hello, world!
+   Version: 2.0.0
+   Hostname: web2-75cd47646f-t8cjk
+   ```
+> **说明**： 如果你在本地运行 Minikube 环境，你可以使用浏览器来访问 `hello-world.info` 和 `hello-world.info/v2`。
+### 9. 接下来
+- 进一步了解 [Ingress](https://kubernetes.io/zh/docs/concepts/services-networking/ingress/)。
+- 进一步了解 [Ingress 控制器](https://kubernetes.io/zh/docs/concepts/services-networking/ingress-controllers/)
+- 进一步了解[服务](https://kubernetes.io/zh/docs/concepts/services-networking/service/)
 ## 十. 同 Pod 内的容器使用共享卷通信
+本文旨在说明如何让一个 Pod 内的两个容器使用一个卷（Volume）进行通信。 参阅如何让两个进程跨容器通过[共享进程名字空间](https://kubernetes.io/zh/docs/tasks/configure-pod-container/share-process-namespace/)。
+### 1. 准备开始
+你必须拥有一个 Kubernetes 的集群，同时你的 Kubernetes 集群必须带有 kubectl 命令行工具。 如果你还没有集群，你可以通过 [Minikube](https://kubernetes.io/zh/docs/tasks/tools/#minikube) 构建一 个你自己的集群，或者你可以使用下面任意一个 Kubernetes 工具构建：
+- [Katacoda](https://www.katacoda.com/courses/kubernetes/playground)
+- [玩转 Kubernetes](http://labs.play-with-k8s.com/)
+
+要获知版本信息，请输入 `kubectl version`。
+### 2. 创建一个包含两个容器的 Pod
+在这个练习中，你会创建一个包含两个容器的 Pod。两个容器共享一个卷用于他们之间的通信。 Pod 的配置文件如下：
+**pods/two-container-pod.yaml**
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: two-containers
+spec:
+
+  restartPolicy: Never
+
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+
+  containers:
+
+  - name: nginx-container
+    image: nginx
+    volumeMounts:
+    - name: shared-data
+      mountPath: /usr/share/nginx/html
+
+  - name: debian-container
+    image: debian
+    volumeMounts:
+    - name: shared-data
+      mountPath: /pod-data
+    command: ["/bin/sh"]
+    args: ["-c", "echo Hello from the debian container > /pod-data/index.html"]
+```
+在配置文件中，你可以看到 Pod 有一个共享卷，名为 `shared-data`。
+
+配置文件中的第一个容器运行了一个 nginx 服务器。共享卷的挂载路径是 /usr/share/nginx/html。 第二个容器是基于 debian 镜像的，有一个 /pod-data 的挂载路径。第二个容器运行了下面的命令然后终止：
+```
+echo Hello from the debian container > /pod-data/index.html
+```
+注意，第二个容器在 nginx 服务器的根目录下写了 index.html 文件。
+
+创建一个包含两个容器的 Pod：
+```
+kubectl apply -f https://k8s.io/examples/pods/two-container-pod.yaml
+```
+查看 Pod 和容器的信息：
+```
+kubectl get pod two-containers --output=yaml
+```
+这是输出的一部分：
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  ...
+  name: two-containers
+  namespace: default
+  ...
+spec:
+  ...
+  containerStatuses:
+
+  - containerID: docker://c1d8abd1 ...
+    image: debian
+    ...
+    lastState:
+      terminated:
+        ...
+    name: debian-container
+    ...
+
+  - containerID: docker://96c1ff2c5bb ...
+    image: nginx
+    ...
+    name: nginx-container
+    ...
+    state:
+      running:
+    ...
+```
+你可以看到 debian 容器已经被终止了，而 nginx 服务器依然在运行。
+
+进入 nginx 容器的 shell：
+```
+kubectl exec -it two-containers -c nginx-container -- /bin/bash
+```
+在 shell 中，确认 nginx 还在运行：
+```
+root@two-containers:/# ps aux
+```
+输出类似于这样：
+```
+USER       PID  ...  STAT START   TIME COMMAND
+root         1  ...  Ss   21:12   0:00 nginx: master process nginx -g daemon off;
+```
+回忆一下，debian 容器在 nginx 的根目录下创建了 index.html 文件。 使用 curl 向 nginx 服务器发送一个 GET 请求：
+```
+root@two-containers:/# curl localhost
+```
+输出表示 nginx 提供了 debian 容器写的页面：
+```
+Hello from the debian container
+```
+### 3 讨论
+Pod 能有多个容器的主要原因是为了支持辅助应用（helper applications），以协助主应用（primary application）。 辅助应用的典型例子是数据抽取，数据推送和代理。辅助应用和主应用经常需要相互通信。 就如这个练习所示，通信通常是通过共享文件系统完成的，或者，也通过回环网络接口 localhost 完成。 举个网络接口的例子，web 服务器带有一个协助程序用于拉取 Git 仓库的更新。
+
+在本练习中的卷为 Pod 生命周期中的容器相互通信提供了一种方法。如果 Pod 被删除或者重建了， 任何共享卷中的数据都会丢失。
+### 4. 接下来
+- 进一步了解[复合容器的模式](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns.html)
+- 学习[模块化架构中的复合容器](https://www.slideshare.net/Docker/slideshare-burns)
+- 参见[配置 Pod 使用卷来存储数据](https://kubernetes.io/zh/docs/tasks/configure-pod-container/configure-volume-storage/)
+- 参考[在 Pod 中的容器之间共享进程命名空间](https://kubernetes.io/zh/docs/tasks/configure-pod-container/share-process-namespace/)
+- 参考 [Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core)
+- 参考 [Pod](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pod-v1-core)
 ## 十一. 为集群配置 DNS
+Kubernetes 提供 DNS 集群插件，大多数支持的环境默认情况下都会启用。在 Kubernetes 1.11 及其以后版本中，推荐使用 `CoreDNS`，kubeadm 默认会安装 CoreDNS。
+
+要了解关于如何为 Kubernetes 集群配置 `CoreDNS` 的更多信息，参阅[定制 DNS 服务](https://kubernetes.io/zh/docs/tasks/administer-cluster/dns-custom-nameservers/)。关于如何利用 kube-dns 配置 kubernetes DNS 的演示例子，参阅 [Kubernetes DNS 插件示例](https://github.com/kubernetes/examples/tree/master/staging/cluster-dns)。
+
+## Appendix:
+### JSONPath 支持
+Kubectl 支持 JSONPath 模板。
+
+JSONPath 模板由 {} 包起来的 JSONPath 表达式组成。Kubectl 使用 JSONPath 表达式来过滤 JSON 对象中的特定字段并格式化输出。除了原始的 JSONPath 模板语法，以下函数和语法也是有效的:
++ 使用双引号将 JSONPath 表达式内的文本引起来。
++ 使用 range，end 运算符来迭代列表。
++ 使用负片索引后退列表。负索引不会“环绕”列表，并且只要 `-index + listLength> = 0` 就有效。
+> **说明**：1. $ 运算符是可选的，因为默认情况下表达式总是从根对象开始。2. 结果对象将作为其 String() 函数输出。
+
+给定 JSON 输入:
+```
+{
+  "kind": "List",
+  "items":[
+    {
+      "kind":"None",
+      "metadata":{"name":"127.0.0.1"},
+      "status":{
+        "capacity":{"cpu":"4"},
+        "addresses":[{"type": "LegacyHostIP", "address":"127.0.0.1"}]
+      }
+    },
+    {
+      "kind":"None",
+      "metadata":{"name":"127.0.0.2"},
+      "status":{
+        "capacity":{"cpu":"8"},
+        "addresses":[
+          {"type": "LegacyHostIP", "address":"127.0.0.2"},
+          {"type": "another", "address":"127.0.0.3"}
+        ]
+      }
+    }
+  ],
+  "users":[
+    {
+      "name": "myself",
+      "user": {}
+    },
+    {
+      "name": "e2e",
+      "user": {"username": "admin", "password": "secret"}
+    }
+  ]
+}
+```
+
+函数|描述|示例|结果
+--------|--------|--------|--------
+text|纯文本|kind is {.kind}|kind is List
+@|当前对象|{@}|与输入相同
+. or []|子运算符|{.kind}, {['kind']} or {['name\.type']}|List
+..|递归下降|{..name}|127.0.0.1 127.0.0.2 myself e2e
+*|通配符。获取所有对象|{.items[*].metadata.name}|[127.0.0.1 127.0.0.2]
+[start:end :step]|下标运算符|{.users[0].name}|myself
+[,]|并集运算符|{.items[*]['metadata.name', 'status.capacity']}|127.0.0.1 127.0.0.2 map[cpu:4] map[cpu:8]
+?()|过滤|{.users[?(@.name=="e2e")].user.password}|secret
+range, end|迭代列表|{range .items[*]}[{.metadata.name}, {.status.capacity}] {end}|[127.0.0.1, map[cpu:4]] [127.0.0.2, map[cpu:8]]
+''|引用解释执行字符串|{range .items[*]}{.metadata.name}{'\t'}{end}|127.0.0.1 127.0.0.2
+
+使用 kubectl 和 JSONPath 表达式的示例:
+```
+kubectl get pods -o json
+kubectl get pods -o=jsonpath='{@}'
+kubectl get pods -o=jsonpath='{.items[0]}'
+kubectl get pods -o=jsonpath='{.items[0].metadata.name}'
+kubectl get pods -o=jsonpath="{.items[*]['metadata.name', 'status.capacity']}"
+kubectl get pods -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.startTime}{"\n"}{end}'
+```
+> **说明**：在 Windows 上，对于任何包含空格的 JSONPath 模板，您必须使用双引号（不是上面 bash 所示的单引号）。 反过来，这意味着您必须在模板中的所有文字周围使用单引号或转义的双引号。 例如:
+> ```
+> C:\> kubectl get pods -o=jsonpath="{range .items[*]}{.metadata.name}{'\t'}{.status.startTime}{'\n'}{end}"
+> C:\> kubectl get pods -o=jsonpath="{range .items[*]}{.metadata.name}{\"\t\"}{.status.startTime}{\"\n\"}{end}"
+> ```
+
+> **说明**：不支持 JSONPath 正则表达式。如需使用正则表达式进行匹配操作，您可以使用如 jq 之类的工具。
+> //# kubectl 的 JSONpath 输出不支持正则表达式
+> //# 下面的命令不会生效
+> ```
+> kubectl get pods -o jsonpath='{.items[?(@.metadata.name=~/^test$/)].metadata.name}'
+> ```
+>
+> //# 下面的命令可以获得所需的结果
+> ```
+> kubectl get pods -o json | jq -r '.items[] | select(.metadata.name | test("test-")).spec.containers[].image'
+> ```
 
 ## Reference
 - [Access Applications in a Cluster](https://kubernetes.io/docs/tasks/access-application-cluster/)
 - [K8s loadbalancer externalTrafficPolicy "Local" or "Cluster"](https://medium.com/pablo-perez/k8s-externaltrafficpolicy-local-or-cluster-40b259a19404)
+- [JSONPath Support](https://kubernetes.io/docs/reference/kubectl/jsonpath/)
+

@@ -43,12 +43,13 @@ Kubernetes 正在吃下整个世界，这个平台的快速增长前所未见。
 ### `node_exporter` 作为 DaemonSet
 一个单实例的 `node_exporter` 需要内安装到你的集群内的每一个节点上以便收集这些节点的指标，在每一个机器上安装一件程序的 Kubernetes 的方式是利用 [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)。Kubernetes 将确保每个节点只会安装一个实例，并在必要时重启它。非常智能！
 #### 什么指标会被收集？
-`node_exporter` 默认打开 30 个不同的指标分类，另有 14 指标分类可以选择性开启。在我们的产品集群中，每个主机收集超过 1000 个指标系列。
+`node_exporter` 默认打开 30 个不同的指标分类，另有 14 指标分类可以选择性开启。在我们的产品集群中，每个主机收集超过 `1000` 个指标系列。
 #### 什么指标是重要的？
-面对 `node_exporter` 收集的数百个指标，很容易淹没在众多的指标海洋里。在大部分云提供商，你应该首先考虑“核心”资源指标，即CPU，内存，磁盘和网络。
+面对 `node_exporter` 收集的数百个指标，很容易淹没在众多的指标海洋里。在大部分云提供商，你应该首先考虑“核心”资源指标，即 CPU，内存，磁盘和网络。
 
 在一个 Kubernetes 集群里，CPU，内存，磁盘和网络会由 kubetlet 暴露（通过 cAdvisor）。这些核心容器指标属于每个容器范畴，并被直接映射到由 node_exporter 导出的核心指标。由于容器运行时可以限制单个容器的资源消耗，我们必须得有新的工具来判断资源是用饱和度。
 ## Part 2: USE 方法及 node_exporter 指标
+本节将深入讨论由 node_exporter 导出的节点指标。首先，我们将快速查看几种决定什么是重要指标的方法，接下来我将检视核心节点指标；基于使用率，饱和度及错误各个方面的CPU，内存，磁盘及网络。
 ## Part 3: 容器资源指标
 ## Part 4: Kubernetes API Server
 ## Part 5: etcd 指标
