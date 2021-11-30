@@ -723,6 +723,413 @@ target_link_libraries(all PUBLIC sub)
 target_include_directories(all PUBLIC sub)
 ```
 这里的内容可以有个大概了解即可，随着后续深入使用，自然会水到渠成。
+## $5 集成gtest进行单元测试
+> 编写代码有bug是很正常的，通过编写完备的单元测试，可以及时发现问题，并且在后续的代码改进中持续观测是否引入了新的bug。对于追求质量的程序员，为自己的代码编写全面的单元测试是必备的基础技能，在编写单元测试的时候也能复盘自己的代码设计，是提高代码质量极为有效的手段。
+
+本文主要介绍以下几个方面的内容：
+- 何为单元测试
+- 何为gtest
+- 怎么使用gtest
+- 怎么运行测试
+本文仍以开源项目：https://gitee.com/RealCoolEngineer/cmake-template 为例，后续示例代码基于上一篇文章的状态进行修改，本文对应的 commit id为：`c9f1c21`。
+
+### 一 单元测试是什么？
+**单元测试**（Unit Testing），一般指对软件中的最小可测试单元进行检查和验证。最小可测试单元可以是指一个函数、一次调用过程、一个类等，不同的语言可能有不同的测试方法，暂时不必深究。
+
+对于C/C++语言，单元测试一般是针对一个函数而言，单元测试的目的就是**检测目标函数在所有可能的输入下，函数的执行过程和输出是否符合预期**。可以说，单元测试是颗粒度最小的测试，对于软件开发而言，保证每个小的函数执行正确，才能保证利用这些小模块组合起来的系统能够正常工作。
+
+和测试相关的另外一个重要概念是**测试用例**(Test Case)。百度百科给的定义是，测试用例是对一项特定的软件产品进行测试任务的描述，体现测试方案、方法、技术和策略，包括测试目标、测试环境、输入数据、测试步骤、预期结果、测试脚本等。
+
+这个定义是比较广泛的，对于单元测试来说，就是测试在不同输入下，目标函数（模块）的预期执行过程和输出（返回值），每个不同的情形可以有一个或多个测试用例。**编写测试用例需要尽量覆盖所有输入情况（尤其是边界值、特殊值、异常值）**。比如下列函数：
+```
+int fibo(int i) {
+  if (i == 1 || i == 2) {
+    return 1;
+  }
+
+  return fibo(i - 1) + fibo(i - 2);
+}
+```
+这个函数是为了实现斐波那契数列，所以输入可以分为几类，就可以覆盖所有情况：
+- 小于等于0的整数
+- 1和2
+- 大于2的整数
+
+对应地，可以设置以下测试用例：
+- 输入0，期望值是0
+- 输入1，期望值是1
+- 输入2，期望值是1
+- 输入3，期望值是2
+- 输入4，期望值是3
+- 
+可以比较明显地发现，如果输入是小于等于0的整数，这个函数就一直递归下去了。这也是开发过程中需要注意的，代码（功能）的使用者并不一定会遵循常规的思维（斐波那契数列不可能输入负数），**开发者只能相信自己的代码，不要对输入有任何假设**。
+> 上述test case在cmake-template项目的test/c/test_gtest_demo.cc中有示例
+### 二 gtest简介
+Google Test是Google开源的一个跨平台的C++单元测试框架，简称 gtest，它提供了非常丰富的测试断言、判断宏，极大方便开发者编写测试用例的流程，也是很多开源项目使用的测试框架。
+
+在前面介绍CMake的测试功能时，每个单元测试都是一个可执行文件，实现了 `main` 函数，在CMakeLists.txt中使用 `add_test` 命令来添加测试用例：
+```
+enable_testing()
+add_executable(test_add test/c/test_add.c)
+add_executable(test_minus test/c/test_minus.c)
+target_link_libraries(test_add math)
+target_link_libraries(test_minus math)
+
+add_test(NAME test_add COMMAND test_add 10 24 34)
+add_test(NAME test_minus COMMAND test_minus 40 96 -56)
+```
+通过使用 gtest 可以简化这个流程，让开发者可以专注在测试用例的书写上，而不用手动编写大量的main函数，以及一些判断输出是否符合预期的附加代码。
+### 三 集成 gtest
+#### 1. 将gtest源码加入项目
+gtest是一个开源的框架，代码位于github仓库：[google/googletest](https://link.zhihu.com/?target=https%3A//github.com/google/googletest)，本文介绍直接将gtest加入到项目中，通过CMake编译使用。
+
+首先在项目根目录新建一个third_party目录，下载源码的最新release版本，并解压：
+```
+➜ # mkdir third_party
+➜ # cd third_party
+➜ # wget https://codeload.github.com/google/googletest/zip/refs/tags/release-1.10.0.zip
+➜ # unzip googletest-release-1.10.0.zip
+```
+#### 2. 将gtest添加为子模块
+修改项目根目录的CMakeLists.txt文件，使用上一篇文章介绍的命令add_subdirectory，在开启单元测试时，添加gtest为子模块，并将对应头文件路径添加进来：
+```
+enable_testing()
+add_subdirectory(third_party/googletest-release-1.10.0)
+include_directories(third_party/googletest-release-1.10.0/googletest/include)
+```
+此时执行命令：
+```
+➜ # cmake -B cmake-build
+➜ # cmake --build cmake-build
+```
+可以看到构建目录下多了一个目录 `cmake-build/third_party/googletest-release-1.10.0`，并且gtest编译生成了4个新的库文件（gtest子模块的编译目标，位于目录 `cmake-build/lib`下）：
+1. libgtest.a
+2. libgtest_main.a
+3. libgmock.a
+4. libgmock_main.a
+
+其中 `libgtest.a` 提供单元测试相关的功能，`libgtest_main.a` 提供单元测试的主入口，只有链接该库，测试用例就会编译成可执行文件；两个mock库也是类似的，主要提供数据库交互，网络连接等方面的模拟测试，这不是本文的重点。
+
+此时就可以在链接其他目标时直接使用gtest的这4个编译目标（target）。
+#### 3. 编写测试用例
+接下来直接修改先前的两个测试用例源文件，实现相同的测试功能：
+- test/c/test_add.c
+- test/c/test_minus.c
+
+因为使用的是C++测试框架，所以上述两个源文件修改为 `.cc` 后缀。
+
+在源文件中include头文件 `gtest/gtest.h`，使用gtest测试用例定义宏来定义测试用例：
+```
+TEST(test_case_name, test_name) {}
+```
+一个 `test_case_name` 下面可以包含多个不同（`test_name`）的测试。
+
+test/c/test_add.cc内容为：
+```
+#include "gtest/gtest.h"
+#include "math/add.h"
+
+TEST(TestAddInt, test_add_int_1) {
+  int res = add_int(10, 24);
+  EXPECT_EQ(res, 34);
+}
+```
+test/c/test_minus.cc内容为：
+```
+#include "gtest/gtest.h"
+#include "math/minus.h"
+
+TEST(TestMinusInt, test_minus_int_1) {
+  int res = minus_int(40, 96);
+  EXPECT_EQ(res, -56);
+}
+```
+显而易见，测试用例的代码量比之前少了很多，而且更加可读，更加专业。
+
+这里使用了一个判断值相等的断言EXPECT_EQ，gtest中的断言分成两大类：
+1. **ASSERT_*系列：如果检测失败就直接退出当前函数**
+2. **EXPECT_*系列：如果检测失败发出提示，并继续往下执行**
+
+gtest有很多类似的宏用来判断数值的关系、判断条件的真假、判断字符串的关系。 对于**条件判断**可以使用：
+```
+ASSERT_TRUE(condition);  // 判断条件是否为真
+ASSERT_FALSE(condition); // 判断条件是否为假
+```
+对于**数值比较**可以使用：
+```
+ASSERT_EQ(val1, val2); // 判断是否相等
+ASSERT_NE(val1, val2); // 判断是否不相等
+ASSERT_LT(val1, val2); // 判断是否小于
+ASSERT_LE(val1, val2); // 判断是否小于等于
+ASSERT_GT(val1, val2); // 判断是否大于
+ASSERT_GE(val1, val2); // 判断是否大于等于
+```
+对于字符串比较可以使用：
+```
+ASSERT_STREQ(str1,str2); // 判断字符串是否相等
+ASSERT_STRNE(str1,str2); // 判断字符串是否不相等
+ASSERT_STRCASEEQ(str1,str2); // 判断字符串是否相等，忽视大小写
+ASSERT_STRCASENE(str1,str2); // 判断字符串是否不相等，忽视大小写
+```
+#### 4. 添加测试用例
+书写好测试用例源文件后，需要修改项目根目录的CMakeLists.txt：
+```
+enable_testing()
+add_subdirectory(third_party/googletest-release-1.10.0)
+include_directories(third_party/googletest-release-1.10.0/googletest/include)
+set(GTEST_LIB gtest gtest_main)
+
+add_executable(test_add test/c/test_add.cc)
+add_executable(test_minus test/c/test_minus.cc)
+target_link_libraries(test_add math gtest gtest_main)
+target_link_libraries(test_minus math gtest gtest_main)
+
+add_test(NAME test_add COMMAND test_add)
+add_test(NAME test_minus COMMAND test_minus)
+```
+对于一个单元测试来说，添加的步骤为：
+1. 使用 `add_executable` 添加测试目标
+2. 使用 `target_link_libraries` 为测试目标添加依赖 `gtest` 和 `gtest_main`
+3. 使用 `add_test` 添加到项目，以便可以使用 `ctest` 命令执行测试
+
+需要注意的不同就是，依旧将单元测试的源文件编译为可执行文件，并且链接的时候链接了 `gtest` 和 `gtest_main`。必须要链接 `gtest_main` 库，才能给单元测试添加 `main` 函数主入口，否则在链接的时候将会报错。
+#### 5. 运行测试
+在前面的文章中已经介绍过了，在构建编译完成后，进入构建目录，使用ctest命令执行测试即可。 笔者常用的命令为：
+```
+make test CTEST_OUTPUT_ON_FAILURE=TRUE GTEST_COLOR=TRUE
+# 或者
+GTEST_COLOR=TRUE ctest --output-on-failure
+```
+指定 `--output-on-failure` 或者设置 `CTEST_OUTPUT_ON_FAILURE` 变量为 `TRUE`，让单元测试失败时输出具体信息，而 `GTEST_COLOR` 设置为 `TRUE` 可以让输出带有颜色，可以在详细输出模式下（-VV）更快找到错误的输出（如果有失败的测试）。
+
+上面即为在CMake项目中引入gtest框架的示例，关于gtest更多的信息可以阅读gtest的官方文档：
+- [GoogleTest Primer](https://google.github.io/googletest/primer.html)
+- [GoogleTest User's Guide](https://google.github.io/googletest/)
+## $6 安装和打包
+> 为了方便使用项目编译的目标文件，快速部署到目标目录，可以使用CMake的安装功能；如果需要对外发布，提供头文件、库文件、或者demo的压缩包则可以使用CMake的打包功能。
+
+本文主要介绍以下几个方面的内容：
+- 安装库文件、可执行文件和所需要对外提供的头文件
+- 将需要安装的文件打包成压缩包
+- 编译构建脚本编写
+本文会先介绍相关命令和知识点，如果想先实践，可直接跳到最后一部分。
+### 一 安装
+#### 1. install命令
+安装使用install命令，用于指定一个项目的安装规则。其命令格式如下：
+```
+install(TARGETS <target>... [...])
+install({FILES | PROGRAMS} <file>... [...])
+install(DIRECTORY <dir>... [...])
+install(SCRIPT <file> [...])
+install(CODE <code> [...])
+install(EXPORT <export-name> [...])
+```
+以上命令概述显示install命令可以安装的目标类型：构建目标、文件、程序、目录等，对应的关键字后面跟上对应要安装的目标。
+
+安装不同的目标的时候，有一些通用的关键字，下面着重介绍几个最常使用的。
+##### DESTINATION
+很好理解，就是安装对象的目标安装路径，可以是绝对路径，也可以是相对路径，如果是相对路径，则认为是相对于CMAKE_INSTALL_PREFIX的，所以可以配置CMAKE_INSTALL_PREFIX指定安装目录。
+
+因为cpack并不支持绝对路径，所以建议还是不要使用绝对路径，当然，除非这是开发者自己确切的目的。
+##### CONFIGURATIONS
+为不同的配置设置不同的安装规则。假如对Debug和Release两个配置不同的安装路径，代码示例如下：
+```
+install(TARGETS target
+        CONFIGURATIONS Debug
+        RUNTIME DESTINATION Debug/bin)
+install(TARGETS target
+        CONFIGURATIONS Release
+        RUNTIME DESTINATION Release/bin)
+```
+##### PERMISSIONS
+设置安装目标的权限，接受的参数是一个权限关键字列表，比如：
+```
+install(TARGETS target
+        RUNTIME PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+```
+#### 2. 安装构建目标
+安装构建目标的命令格式为：
+```
+install(TARGETS static_lib shared_lib exe
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib)
+```
+命令第一个参数TARGETS指定需要安装的构建目标的列表，可以是静态库文件、动态库文件、可执行文件；安装时常常按照文件类型安装到不同的子目录，比如库文件放在lib目录，可执行文件放在bin目录。
+
+针对不同文件类型，比如（`RUNTIME`, `ARCHIVE`, `LIBRARY`，`PUBLIC_HEADER`），可以分开进行配置，比如分别指定安装路径（`DESTINATION`）、设置文件权限（`PERMISSIONS`）；如果不是在某个类别下的单独配置，那么就是针对所有类型。
+
+值得一提的是，`ARCHIVE`一般是指静态库，`LIBRARY`则是指共享库，在不同平台上，略有差异，实际应用感觉不符合预期时查看一下官方文档即可，问题不大。
+#### 3. 安装目录
+安装一个目录，一般用于将头文件安装到目标路径。 在实际使用中，一般把需要安装的头文件放到一个特定目录下，然后直接安装整个目录即可，比如：
+```
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+```
+更加完备的命令格式为：
+```
+install(DIRECTORY dirs...
+        TYPE <type> | DESTINATION <dir>
+        [FILES_MATCHING]
+        [[PATTERN <pattern> | REGEX <regex>]
+         [EXCLUDE] [PERMISSIONS permissions...]]
+```
+**TYPE/DESTINATION**
+安装目录必须执行安装的目录类型TYPE或者安装的目标路径DESTINATION，但是又不可以同时指定；可以使用TYPE指定安装的目录中的文件类型，然后CMake会自动按照类型分配安装目录，不同类型对应的安装路径如下图：
+
+![不同类型对应的安装路径](images/v2-6916aafb864affe08f92c13cd3a9a35b_720w.jpg)
+
+当然，开发者也可以选择只使用DESTINATION显式指定安装的目录。
+
+**FILES_MATCHING**
+安装目录的时候默认会安装所有的文件，如果使用 `FILES_MATCHING` 关键字（在第一个 `PATTERN` 或者 `REGEX` 之前），则表示必须要满足对应的模式或者正则的文件才能被安装。
+
+比如，如果目录下源文件和头文件混在一起，但是只想安装其中的头文件，则可以这样写：
+```
+install(DIRECTORY src/ DESTINATION include/
+        FILES_MATCHING PATTERN "*.h")
+```
+
+**PATTERN/REGEX**
+PATTERN表示文件名完全匹配才会被安装，而REGEX则是通过正则表达式匹配目标安装文件（针对目标文件的全路径）；在这两个表达式后面还可以加上EXCLUDE表示反选，或者使用PERMISSIONS指定匹配的目标文件的权限。
+#### 4. 安装文件
+和安装目录类似，只不过是安装的是文件列表，核心的参数也是类似的；需要使用TYPE指定文件类型，自行推断安装目录，或者使用 `DESTINATION` 显式指定安装目录。命令格式为：
+```
+install(<FILES|PROGRAMS> files...
+        TYPE <type> | DESTINATION <dir>
+```
+`FILES` 和 `PROGRAMS` 的不同之处在于文件的默认权限，前者是一般文件，而后者为可执行文件，默认有可执行权限，包括：`OWNER_EXECUTE`，`GROUP_EXECUTE`和 `WORLD_EXECUTE`。
+#### 5. 自定义安装脚本
+使用install命令还可以在安装的时候执行自定义的脚本，使用的命令格式为：
+```
+install([[SCRIPT <file>] [CODE <code>]]
+        [COMPONENT <component>] [EXCLUDE_FROM_ALL] [...])
+```
+`SCRIPT` 指定安装时需要执行的脚本；`CODE` 指定的是 CMake 的命令，也在安装期间执行，比如：
+```
+install(CODE "MESSAGE(\"Sample install message.\")")
+```
+#### 6. 执行安装
+在构建编译完成之后，可以使用命令执行安装：
+```
+cmake --build . --target install
+# 或者针对make构建工具
+make install
+```
+更加优雅的方法是在cmake3.15版本往后，使用cmake --install命令：
+```
+cmake --install . --prefix "../output"
+```
+`--install` 指定构建目录；`--prefix` 指定安装路径，覆盖安装路径变量 `CMAKE_INSTALL_PREFIX`。
+### 二 打包
+#### 1. CPack
+要使用打包功能，需要执行 `include(CPack)` 启用相关的功能。
+
+`include(CPack)` 会在构建路径(Build tree)下生成两个cpack的配置文件，`CPackConfig.cmake`和`CPackSourceConfig.cmake`，其实也就对应了两个构建目标：`package`和`package_source`；
+
+配合cpack命令，使用`-G`参数指定生成器，常用的有`ZIP`、`TGZ`、`7Z`等，可以同时指定多个，格式也是CMake语法中的列表，例如其默认值 "STGZ;TGZ"；`--config`参数可以指定打包配置文件，比如：
+```
+cpack -G TGZ --config CPackConfig.cmake
+cpack -G TGZ --config CPackSourceConfig.cmake
+```
+当然也可以使用cmake命令：
+```
+cmake --build . --target package
+cmake --build . --target package_source
+```
+如果使用make作为构建工具，可以简单地执行:
+```
+make package
+make package_source
+```
+#### 2. CMake打包相关的内置变量
+打包的内容就是install命令安装的内容，以目标打包（`CPackConfig.cmake`）为例，主要的相关变量有：
+变量|含义
+--------|--------
+CPACK_GENERATOR|打包使用的压缩工具，比如"ZIP"；cpack命令的-G参数会覆盖此设置
+CPACK_OUTPUT_CONFIG_FILE|配置文件，默认为CPackConfig.cmake
+CPACK_OUTPUT_FILE_PREFIX|打包安装的路径前缀。如果是相对路径，则是相对于构建目录
+CPACK_INSTALL_PREFIX|打包压缩包的内部目录前缀
+CPACK_PACKAGE_FILE_NAME|打包压缩包的名称，由CPACK_PACKAGE_NAME、CPACK_PACKAGE_VERSION、CPACK_SYSTEM_NAME三部分构成
+
+需要特别注意的是：**以上变量的设置需要在include(CPack)语句之前**。
+> Before including this CPack module in your CMakeLists.txt file, there are a variety of variables that can be set to customize the resulting installers.
+
+其中 `CPACK_PACKAGE_NAME` 默认为项目名称，`CPACK_PACKAGE_VERSION` 默认为项目版本号，它们的默认值都是对应project命令所设置的值；但是如果没有指定版本号，则会是CMake的默认值。
+
+假如: `CPACK_OUTPUT_FILE_PREFIX` 设置为 `/usr/local/package`； `CPACK_INSTALL_PREFIX` 设置为 `RealCoolEngineer`；`CPACK_PACKAGE_FILE_NAME` 设置为 `CMakeTemplate-1.0.0`； 那么执行打包文件的生成路径为：
+```
+/usr/local/package/CMakeTemplate-1.0.0.zip
+```
+解压这个包得到的目标文件则会位于路径下：
+```
+/usr/local/package/CMakeTemplate-1.0.0/RealCoolEngineer/
+```
+> 对于源文件打包，相关的变量名基本是对应地以 `CPACK_SOURCE`_开头，细节可以查看官方文档。
+### 三 实践
+本文仍以开源项目：https://gitee.com/RealCoolEngineer/cmake-template为例，本文对应的`commit id`为：`5713908`。
+
+在项目根目录中的CMakeLists.txt文件中，使用安装和打包的语句为：
+```
+# Install
+install(TARGETS math demo
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        PUBLIC_HEADER DESTINATION include)
+file(GLOB_RECURSE MATH_LIB_HEADERS src/c/math/*.h)
+install(FILES ${MATH_LIB_HEADERS} DESTINATION include/math)
+
+# Package
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_SET_DESTDIR ON)  # 支持指定安装目录
+set(CPACK_INSTALL_PREFIX "RealCoolEngineer")
+include(CPack)
+```
+安装打包的内容为项目构建目标可执行文件 `demo`，静态库 `math` ，以及 `math` 库对应的头文件。
+#### 1. 构建脚本
+为了方便，笔者通常将构建的命令编写为脚本，在脚本内指定文件的安装、打包的目标目录（CMake参数）。
+
+下面针对cmake-template的一个示范，将目标文件安装并打包到项目根目录下的output目录：
+```
+#!/bin/bash
+
+set -euf -o pipefail
+
+BUILD_DIR="cmake-build"
+INSTALL_DIR=$(pwd)/output
+rm -rf "${BUILD_DIR}"
+
+# Configure
+BUILD_TYPE=Debug
+cmake -B "${BUILD_DIR}" \
+    -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+    -DCPACK_OUTPUT_FILE_PREFIX="${INSTALL_DIR}"
+
+# Build
+cmake --build "${BUILD_DIR}"
+
+cd "${BUILD_DIR}"
+# Test
+make test CTEST_OUTPUT_ON_FAILURE=TRUE GTEST_COLOR=TRUE
+# GTEST_COLOR=TRUE ctest --output-on-failure
+
+# Install
+# cmake --build . --target install
+# cmake --install . --prefix "../output" # After cmake 3.15
+make install
+
+# Package
+# cmake --build . --target package
+make package
+
+cd -
+```
+以上便是关于安装和打包的介绍，关于构建脚本开头set命令的几个参数，可参看往期这篇文章：[编写安全的shell脚本](https://zhuanlan.zhihu.com/p/360880840)
+## $7 从编译过程理解CMake
+## $8 合并静态库的最佳实践
+## $9 生成器表达式
 
 ## Reference
 - [本文首发专栏：CMake实践应用专题](https://www.zhihu.com/column/c_1369781372333240320)
