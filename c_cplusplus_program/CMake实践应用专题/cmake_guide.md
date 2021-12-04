@@ -1128,9 +1128,337 @@ cd -
 ```
 以上便是关于安装和打包的介绍，关于构建脚本开头set命令的几个参数，可参看往期这篇文章：[编写安全的shell脚本](https://zhuanlan.zhihu.com/p/360880840)
 ## $7 从编译过程理解CMake
+> CMake和编译的过程是有对应关系的，理解了编译构建的过程，可以更加理解CMake的相关命令；理解其目的和用途，自然也就可以更好地运用CMake。
+### 一 编译构建的框架
+在[GCC编译过程概述](https://zhuanlan.zhihu.com/p/380937946)一文中，主要介绍了源文件如何编译成机器码.o文件，以及最后链接器怎么链接相关库文件得到最后的可执行文件。
+
+其实，对于构建的每一个目标，都是树形的结构，以本系列的开源项目https://gitee.com/RealCoolEngineer/cmake-template为例(当前commit id: ca0e593)，构建目标、源文件/.o文件和.a文件之间构成一棵"构建树"（Build Tree）：
+![构建树](images/v2-47c50d195fe338ce6beb8c9541b69a16_720w.jpg)
+
+对于最终的可执行文件(demo)来说，必须能够找到所有需要的函数的实现，这些实现可能包含在单个.o文件（demo.o，crtn.o等等）、或者打包好的库文件（其实就是.o文件的集合，比如`libmath.a`，`libm.a`），所以它会是构建树的根。
+
+对于一些库文件（模块）来说，它可以是最终可执行文件构建树的子树，也有对应的构建产物(比如这里的 `libmath.a`)。
+
+而对于构建树的叶子节点，其实都对应到具体的源文件，只是说有时候是预编译好的第三方库或者系统库。而源文件如果开源，开发者可以选择自己从源码编译（比如这个项目中的gtest，就是从源码编译出来的，在单元测试可执行文件的构建树里，叶子节点就是gtest开源的源码）。
+> 在CMake官网有关于Build Tree的定义，可以查看链接：https://cmake.org/cmake/help/latest/manual/cmake.1.html#introduction-to-cmake-buildsystems
+注意重在理解其含义而非形式
+### 二 GCC编译过程和CMake命令之间的关联
+GCC的编译的具体过程其实是通过gcc命令的参数进行控制的，这些参数的作用就和CMake的命令有对应的关系。
+
+在GCC编译过程概述文中，介绍了gcc命令的常用参数（下面补充了-D和-O）：
+![gcc命令的常用参数](images/v2-f03d8e0e28adeda3250301feecd21511_720w.jpg)
+
+GCC的编译过程大概是：
+1. 预处理：将源文件处理为 `.ii/.i`，处理各种预处理指令，如 `#include`、`#ifdef`、`#i`f等等，同时也会清除注释；
+2. 编译：将 `.ii/.i` 处理为 `.S/.asm`，即机器语言的[汇编文件]()；
+3. 汇编：将 `.asm/.S` 处理为 `.o`，把汇编文件变成机器码；
+4. 链接：将各种依赖的静态/动态库文件、.o文件、启动文件链接成最终的可执行文件或者共享库文件。
+
+其实gcc命令的参数是针对不同的编译阶段的，下面分阶段介绍gcc参数和CMake命令的对应关系。
+#### 1. 预处理
+在预处理阶段，主要处理各种宏，开发的过程中往往会通过#ifdef来判断是否定义了对应的宏，来灵活地切换不同代码，比如：
+```
+#ifdef UPPER_CASE
+#define name "REAL_COOL_ENGINEER"
+#else
+#define name "real_cool_engineer"
+#endif
+```
+这个时候，如果需要使用大写的版本，就可以使用gcc的-D参数：
+```
+gcc -DUPPER_CASE ...
+```
+而在CMake中，可以使用命令：
+```
+add_definitions(-DUPPER_CASE)
+```
+#### 2. 编译
+在编译的时候，需要把源文件处理成机器代码，主要有两个方面：
+1. 对于源文件里面的代码具体怎样进行编译
+2. 源文件内部调用的外部函数怎么查找
+
+对于第一点，就是各种编译选项，有很多类型：
+1. 编译警告选项，比如-Wall、-Wextra
+2. 代码优化选项，比如：-O0、-Ofast
+3. 调试选项，比如：-g、-fvar-tracking
+4. 预处理选项，比如：-M、-MP
+5. 代码生成选项，比如：-fPIC、-fPIE
+6. 等等，还有针对不同语言特有的选项
+
+所有的选项在GNU GCC官网上有详细的介绍，参见：[Option-Summary](https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html)。
+
+对于第二点，在源文件内部，调用的外部函数是在头文件中声明的，所以通过#include的头文件编译器必须能够找到，这个时候需要使用-I参数指定头文件的查找路径，以确保编译器可以找到源文件所使用的头文件。
+
+在使用gcc命令时，选项直接作为参数传递即可，比如：
+```
+gcc -c xxx.c -Os -g -Wall -Wextra -pedantic -Werror -o xxx.o -Isrc/c
+```
+
+那么在CMake中，可以：
+1. 使用add_compile_options命令指定编译选项
+2. 使用include_directories命令指定头文件搜索路径
+
+因此上面的gcc命令的效果等同于：
+```
+add_compile_options(-Os -g -Wall -Wextra -pedantic -Werror)
+include_directories(src/c)
+add_library(xxx STATIC xxx.c)
+```
+需要注意的是，因为CMake的构建目标必须是库或者可执行文件，所以并没有命令仅生成.o文件，所以这里使用add_library代替。
+#### 3. 链接
+链接需要做的就是把最终目标依赖的东西都组装起来。
+
+对于这里的可执行文件来说，先从demo.o的main函数开始，链接整个程序执行过程中需要的所有函数的实现；不同实现可能在不同的.o文件或者库文件内，通过头文件声明的函数名，在.o和.a文件里面查找需要的实现；如果找不到，就会引发一个链接错误。
+
+对于项目内部的构建目标库文件及其他的.o文件，在链接的时候直接使用即可，而对于外部的第三方库或者系统的库文件，则需要使用-L和-l参数来告知链接器。
+
+和编译一样的，除了-L和-l，链接器也还有很多其他参数比如：
+```
+-pie -pthread -r -s  -static  -static-pie
+```
+详细的参数介绍详见：[Link-Options](https:gcc.gnu.org/onlinedocs/gcc/Link-Options.html%23Link-Options)。
+
+对应地，CMake对应可以使用的命令为：
+1. 对于-L，使用 `link_directories` 或者 `target_link_directories` 命令
+2. 对于-l，使用 `link_libraries` 或者 `target_link_libraries` 命令
+3. 指定链接器的选项，使用 `add_link_options` 或者 `target_link_options` 命令
+> 上述命令中，以target_开头的是针对特定的目标进行设置，否则是针对所有的目标。
+
+假设目标程序使用了外部库文件/usr/lib/libmath.a就可以使用命令：
+```
+gcc demo.c -L/usr/lib -lmath -pthread
+```
+对应地，CMake使用的命令应该是：
+```
+add_link_options(-pthread)
+add_executable(demo demo.c)
+link_directories(/usr/lib)
+target_link_libraries(demo math)
+```
+### 三 总结
+最后，使用一个表格总结一下本文的核心内容。 GCC编译过程使用的gcc参数和CMake命令之间的对应关系表：
+![gcc参数和CMake命令之间的对应关系](images/v2-50fe7e1b02eb0bdc91f07cfe73d2afaa_720w.jpg)
+
 ## $8 合并静态库的最佳实践
+> 在实际项目中，往往需要将一些基础库或者算法库发布出去，但是不同项目可能需要用到不同的子模块，此时为了保持简洁，可能需要合并多个静态库为一个。
+
+在笔者的实际工作中，合并静态库的需求还是有的，而且大多数时候都是基于CMake的项目，所以希望能够基于不同配置，自动合并多个模块的静态库为一个，方便发布版本和管理。本文介绍的就是如何在CMake工程中，优雅地完成多个静态库目标的合并。
+
+本文仍以本系列的开源项目[cmake-template](https://gitee.com/RealCoolEngineer/cmake-template)为例(当前commit id: 9015193)。
+### 一 合并静态库的方法
+静态库其实就是一些源文件被编译成对应机器代码文件（.o文件）的集合。
+
+在Linux系统中，通过ar命令可以对静态库进行各种操作，在MacOS下可以使用libtool工具。有以下几种不同的合并静态库的方法。
+### 1. 方法1
+先使用ar把静态库拆解为多个.o文件：
+```
+ar x liba.a
+ar x libb.a
+```
+再把所有的.o文件打包为一个静态库：
+```
+ar crs libmerge.a *.o
+```
+参数解释：
+- x：拆解静态库文件为其包含的内容
+- c：封装.o文件为静态库文件
+- r：覆盖同名库文件或者新创建目标库文件
+- s：相当于对结果执行一次ranlib，为静态库的内容添加索引，提高访问效率
+### 2. 方法2
+当然，还有更加简洁的命令：
+```
+ar crsT libmerge.a liba.a libb.a
+```
+参数T表示将后续所有静态库中的.o文件打包到第一个参数指定的静态库文件中，如果不加该参数，得到的将会是后面几个.a文件的集合。可以使用命令ar -t查看打包的内容，诸君手动一试便知。
+> MacOS下的ar命令和Linux的有所不同，此法不适用于MacOS。
+### 3. 方法3
+使用MRI脚本。
+
+首先编写一个MRI脚本，比如merge.mri：
+```
+create libmerge.a
+addlib liba.a 
+addlib libb.a
+save
+end
+```
+然后使用命令：
+```
+ar -M < merge.mri
+```
+> MacOS下面的的ar命令并没有-M参数，所以此法也不适用于MacOS系统。
+### 4. 方法4
+此方法针对MacOS系统，在MacOS系统下可以使用libtool命令：
+```
+libtool -static -o libmerge.a liba.a libb.a
+```
+> 在Linux下也有libtool工具，但是用法和MacOS也是不一致的，所以此法不适用于Linux。
+### 二 基于CMake合并静态库
+在示例项目cmake-template中，源码目录下有两个子目录：`src/math`和 `src/nn`，分别编译得到两个静态库目标 `libmath.a` 和 `libnn.a`。
+
+现在在项目根目录下的CMakeLists.txt中：通过 `add_custom_command 命令配合 `add_custom_target` 命令，将 `libmath.a` 和 `libnn.a` 合并为 `libmerge.a`；并将合并的静态库文件导入使用。
+#### 1. 合并静态库
+这里使用了CMake的内置变量APPLE，如果是MacOS系统，APPLE会被设置为true，以此来确定要使用libtool还是ar。
+
+合并静态库实现代码如下：
+```
+# Merge library
+if (APPLE)
+    add_custom_command(OUTPUT libmerge.a
+    COMMAND libtool -static -o libmerge.a $<TARGET_FILE:math> $<TARGET_FILE:nn>
+    DEPENDS math nn)
+else()
+    add_custom_command(OUTPUT libmerge.a
+    COMMAND ar crsT libmerge.a $<TARGET_FILE:math> $<TARGET_FILE:nn>
+    DEPENDS math nn)
+endif()
+add_custom_target(_merge ALL DEPENDS libmerge.a)
+```
+代码解释：
+- OUTPUT：指定输出文件名称（会被标记为GENERATED）
+- COMMAND：后面跟的就是要执行的命令，这里就和在shell中执行命令差不多
+- DEPENDS：表明依赖的目标
+- add_custom_target指明的目标依赖于合并操作的输出（libmerge.a），而合并操作需要依赖目标math和nn，所以在这两个目标文件生成以后，就会去执行合并操作
+
+需要注意的是，合并静态库的时候需要知道每个静态库的路径，在CMake中，目标静态库math的路径可以使用生成器表达式 `$<TARGET_FILE:math>` 获取。
+
+但是还有另外一种情况，如果是使用find_library查找到的静态库，比如：
+```
+find_library(LIB_C c HINTS ${SEARCH_PATH})
+```
+这时DEPENDS中就不用加上c，而${LIB_C}就是该库的路径了。
+#### 2. 导入合并的静态库并使用
+现在把合并的静态库导入，并在链接demo可执行程序时使用。
+
+代码实现如下：
+```
+add_library(merge STATIC IMPORTED GLOBAL)
+set_target_properties(merge PROPERTIES
+    IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/libmerge.a
+)
+
+# Build demo executable
+add_executable(demo src/c/main.c)
+target_link_libraries(demo PRIVATE merge)
+```
+因为 `libmerge.a` 是命令 `add_custom_command` 指定的输出，所以它会标记为是自动生成的文件（**GENERATED**）。
+
+链接 `demo` 的时候依赖导入的静态库 `merge`，而 `merge` 的 `IMPORTED_LOCATION` 指定的这个文件是自动生成的，所以CMake就知道需要等 `libmerge.a` 生成之后才能开始链接 `demo`。
+
+如果没有add_custom_target那一行，执行编译构建会报错，由此也可见一斑：
+```
+make[2]: *** No rule to make target `libmerge.a', needed by `demo'
+```
 ## $9 生成器表达式
+> CMake的生成器表达式不算是特别常用，但是有一些场景可能是必须要使用的；或者在针对不同编译类型设置不同编译参数的时候可以巧妙应用，从而减少配置代码。
+
+生成器表达式听起来稍微有点复杂，但是其实只需要掌握一些常用的功能就能够有所裨益，至于更加复杂的写法，在需要的时候研究一下即可。本文主要介绍下生成器表达式的概念、种类、和常用的一些生成器表达式。
+### 一 概述
+生成器表达式简单来说就是在CMake生成构建系统的时候根据不同配置动态生成特定的内容。比如：
+- 条件链接，如针对同一个编译目标，debug版本和release版本链接不同的库文件
+- 条件定义，如针对不同编译器，定义不同的宏
+
+所以可以看到，其中的要点是条件，之所以需要自动生成，那绝大多数时候肯定是因为开发者无法提前确定某些配置，不能提前确定那往往就是有条件的。
+
+生成器表达式的格式形如 `$<...>`，可以嵌套，可以用在很多构建目标的属性设置和特定的CMake命令中。值得强调的是，生成表达式被展开是在生成构建系统的时候，所以不能通过解析配置CMakeLists.txt阶段的message命令打印，文末会介绍其调试方法。
+### 二 常用的生成器表达式
+#### 1. 布尔生成器表达式
+**逻辑运算符**
+逻辑运算很多语言都是需要的，CMake生成器表达式中有这些：
+- `$<BOOL:string>`：如果字符串为空、0；不区分大小写的FALSE、OFF、N、NO、IGNORE、NOTFOUND；或者区分大小写以-NOTFOUND结尾的字符串，则为0，否则为1
+- `$<AND:conditions>`：逻辑与，conditons是以逗号分割的条件列表
+- `$<OR:conditions>`：逻辑或，conditons是以逗号分割的条件列表
+- `$<NOT:condition>`：逻辑非
+> 一般来说，条件是列表的，都是使用逗号进行分割，后面不再赘述。
+
+**字符串比较**
+- `$<STREQUAL:string1,string2>`：判断字符串是否相等
+- `$<EQUAL:value1,value2>`：判断数值是否相等
+- `$<IN_LIST:string,list>`：判断string是否包含在list中，list使用分号分割
+> **注意这里的list是在逗号后面的列表，所以其内容需要使用分号分割**。
+
+**变量查询**
+这个会是比较常用的，在实际使用的时候会根据不同CMake内置变量生成不同配置，核心就在于“判断”：
+- `$<TARGET_EXISTS:target>`：判断目标是否存在
+- `$<CONFIG:cfgs>`：判断编译类型配置是否包含在cfgs列表（比如"release,debug"）中；不区分大小写
+- `$<PLATFORM_ID:platform_ids>`：判断CMake定义的平台ID是否包含在platform_ids列表中
+- `$<COMPILE_LANGUAGE:languages>`：判断编译语言是否包含在languages列表中
+#### 2. 字符串值生成器表达式
+请注意，前面都是铺垫，这里才是使用生成器表达式的主要目的：生成特定的字符串。 比如官方的例子：基于编译器ID指定include目录：
+```
+include_directories(/usr/include/$<CXX_COMPILER_ID>/)
+```
+根据编译器的类型，`$<CXX_COMPILER_ID>` 会被替换成对应的ID（比如“GNU”、“Clang”）。
+
+**条件表达式**
+这便是本文的核心了，主要有两个格式：
+- `$<condition:true_string>`：如果条件为真，则结果为 `true_string`，否则为空
+- `$<IF:condition,str1,str2>`：如果条件为真，则结果为 `str1`，否则为 `str2`
+
+这里的条件一般情况下就是前面介绍的布尔生成器表达式。 比如要根据编译类型指定不同的编译选项，可以像下面这样：
+```
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+```
+但是使用生成器表达式可以简化成：
+```
+add_compile_options("$<$<CONFIG:Debug>:-g;-O0>")
+add_compile_options($<$<CONFIG:Debug>:-O2>)
+```
+> **如果需要指定多个编译选项，必须使用双引号把生成器表达式包含起来，且选项之间使用分号**。
+
+后面这个方法适用于设置一些对所有编译器（取决于项目编译语言）都通用的编译选项，而需要设置一些编译器特有的选项时，通过设置指定编译器的编译选项（前一种方法）更加简洁明了。
+> 当然，可以用表达式判断编译器ID设置不同编译选项，不过明显有些为了用而用，这是没必要的。
+
+**转义字符**
+这比较好理解，因为有一些字符有特殊含义，所以可能需要转义，比如常用的 `$<COMMA>` 和 `$<SEMICOLON>`，分别表示 `,` 和 `;`。
+
+**字符串操作**
+常用的有 `$<LOWER_CASE:string>`、`$<UPPER_CASE:string>` 用于转换大小写。
+
+**获取变量值**
+获取变量的值和前文提到的变量查询很类似，前面说的变量查询是判断是否存在于指定列表中或者等于指定值。语法格式是类似的，以CONFIG为例：
+- 获取变量值：`$<CONFIG>`
+- 判断是否存在于列表中：`$<CONFIG:cfgs>`
+
+详见：[Variable Queries](https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html%23id2)。
+
+**编译目标查询**
+这里的查询是指获取编译目标（通过 `add_executable()`、`add_library()`命令生成的）相关的一些信息，包括：
+- `$<TARGET_FILE:tgt>`：获取编译目标的文件路径
+- `$<TARGET_FILE_NAME:tgt>`：获取编译目标的文件名
+- `$<TARGET_FILE_BASE_NAME:tgt>`：获取编译目标的基础名字，也就是文件名去掉前缀和扩展名
+
+官网有更多详细介绍，有其他需要可以阅读：[target-dependent-queries](https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html%23target-dependent-queries)。
+> 在本专题前一篇文章中介绍合并静态库的时候，就用到 `$<TARGET_FILE:tgt>` 去获取静态库的路径。
+#### 3. 调试
+调试可以通过输出到文件的方式，在cmake执行完之后去检查是否符合预期，比如：
+```
+file(GENERATE OUTPUT "./generator_test.txt" CONTENT "$<$<CONFIG:Debug>:-g;-O0>,$<PLATFORM_ID>\n")
+```
+在MacOS中执行cmake，得到的结果如下：
+```
+# cmake -B cmake-build -DCMAKE_BUILD_TYPE=Debug
+...
+# cat cmake-build/generator_test.txt
+-g;-O0,Darwin
+```
+如果不想写文件，也可以添加一个自定义目标，比如：
+```
+add_custom_target(gentest COMMAND ${CMAKE_COMMAND} -E echo "\"$<$<CONFIG:Debug>:-g;-O0>,$<PLATFORM_ID>\"")
+```
+> 注意这里需要双引号转义，确保生成器表达式展开之后是字符串。
+
+在执行cmake之后，可以使用make gentest输出到生成器表达式的内容：
+```
+# cd cmake-build && make gentest
+-g;-O0,Darwin
+Built target gentest
+```
 
 ## Reference
 - [本文首发专栏：CMake实践应用专题](https://www.zhihu.com/column/c_1369781372333240320)
 - [本文示例代码上传到开源仓库：FarmerLi / cmake-template](https://gitee.com/RealCoolEngineer/cmake-template)
+- [GCC编译过程概述](https://zhuanlan.zhihu.com/p/380937946)
