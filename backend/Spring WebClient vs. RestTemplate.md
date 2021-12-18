@@ -108,6 +108,9 @@ RestTemplate 使用 Java Servlet API，因此时同步且堵塞的。相反，We
 RestTemplate 任然可以使用。在某些情况下，非堵塞方式使用比堵塞方式少得多的系统资源。因此， 在这些场景下，WebClient 时更推荐的方式。
 
 本文中提到的带有代码片段可以通过 [GitHub](https://github.com/eugenp/tutorials/tree/master/spring-5-reactive-2) 找到。
+> 注意：RestTemplate 将会在未来版本中废弃（> 5.0），之后也不再会添加新的特性。
 
 ## Reference
 - [Spring WebClient vs. RestTemplate](https://www.baeldung.com/spring-webclient-resttemplate)
+- [WebClient vs RestTemplate](https://stackoverflow.com/questions/47974757/webclient-vs-resttemplate)
+- [Spring 5 WebClient](https://www.baeldung.com/spring-5-webclient)
