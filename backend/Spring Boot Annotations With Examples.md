@@ -169,28 +169,155 @@ private String[] columnNames;
 ### 4.1 @SpringBootApplication (@Configuration + @ComponentScan + @EnableAutoConfiguration)
 每个使用 Spring Boot 的人都使用过这个注解。当我们创建一个 Spring Boot 启动器项目时，我们会以礼物形式收到这个注解。这个注解应用在含有 main() 方法的 main 类上。Main 类在 Spring Boot 应用中有两个目的：`配置`和`启动`。事实上，@SpringBootApplication 是一个带有默认值的三个注解的集合。它们是 `@Configuration`, `@ComponentScan`, 和 `@EnableAutoConfiguration`。因此，我们可以说 `@SpringBootApplication` 是一个 三合一的注解。
 - @EnableAutoConfiguration： 开启 Spring Boot 的自动配置特性
-- @ComponentScan：开启 @Component 包级别扫描以在 Spring 应用上下中发现和注册组件成 Bean
+- @ComponentScan：开启 `@Component` 包级别扫描以在 Spring 应用上下中发现和注册组件成 Bean
 - @Configuration：允许在上下文中注册额外的 Bean 或者导入额外的配置类。
+
+如果我们期待修改以上三种注解的行为，我们也可以使用它们来代替 `@SpringBootApplication` 注解。
 ### 4.2 @EnableAutoConfiguration
-#### 4.2.1 Use of ‘exclude’ in @EnableAutoConfiguration 
-#### 4.2.2 Use of ‘excludeName’ in @EnableAutoConfiguration 
+@EnableAutoConfiguration 开启 Spring Boot 应用类路径上的 Bean 的自动配置。简单来说，这个注解可以让 Spring Boot 自动配置应用上下文。因此，它自动创建和注册在我们的类路径上的 Jar文件中的 Bean，以及在我们的应用中由我们定义的 Bean。例如，当我们创建一个 Spring Boot 启动器项目时如果选择了在类路径中添加 Spring Web 和 Spring Security 依赖，Spring Boot 为我们自动配置 Tomcat，Spring MVC 和 Spring Security。
+
+而且，Spring Boot 认为添加了 @EnableAutoConfiguration 注解的类的所在包为默认包。因此，如果我们在应用的根包上应用这个注解，所有的子包及类都会被扫描。最终，我们并不需要显式在包上添加 @ComponentScan 注解。
+
+更进一步，@EnableAutoConfiguration 为我们提供了两个属性用以从自动配置中排除类。如果我们并不期待某些类被自动配置，我们可以利用排除属性来禁用它们。另一个属性是 excludeName 用以声明一系列完整路径的类。例如，下面是一些代码示例：
+#### 4.2.1 Use of ‘exclude’ in @EnableAutoConfiguration
+```
+@Configuration
+@EnableAutoConfiguration(exclude={WebSocketMessagingAutoConfiguration.class})
+public class MyWebSocketApplication {
+        public static void main(String[] args) {
+            ...
+        }
+}
+```
+#### 4.2.2 Use of ‘excludeName’ in @EnableAutoConfiguration
+```
+@Configuration
+@EnableAutoConfiguration(excludeName = {"org.springframework.boot.autoconfigure.websocket.servlet.WebSocketMessagingAutoConfiguration"})
+public class MyWebSocketApplication {
+        public static void main(String[] args) {
+            ...
+        }
+}
+```
 ### 4.3 @SpringBootConfiguration
+这个注解是 Spring Boot 框架的一部分。但是，@SpringBootApplication 从它继承。因此，如果一个应用使用了 @SpringBootApplication，它已经使用了 @SpringBootConfiguration。而且，它可以用作 @Configuration 注解的替代。主要的区别在于 @SpringBootConfiguration 允许配置被自动发现。
+
+@SpringBootConfiguration 指示类提供配置，它也应用到类级别。部分地，它在单元测试及集成测试中很有用。例如，检测下面的代码：
+```
+@SpringBootConfiguration
+public class MyApplication {
+
+     public static void main(String[] args) {
+          SpringApplication.run(MyApplication.class, args);
+     }
+     @Bean
+     public IEmployeeService employeeService() {
+         return new EmployeeServiceImpl();
+     }
+}
+```
 ### 4.4 @ConfigurationProperties
+Spring 框架提供了各种方式来从属性文件中注入值。其中之一是使用 `@Value` 注解。另一种是在一个配置 Bean 上使用 `@ConfigurationProperties` 向一个 Bean 注入属性值。但两种方式有什么区别，使用 `@ConfigurationProperties` 的优势在哪里，你将在稍后得到答案。现在，让我们展示如何使用 `@ConfigurationProperties` 注解来从 `application.properties` 或其它任何你选择的属性文件注入属性值。
+
+首先，让我们在 `application.properties` 文件中定义一些属性如下。让我们假设你在定义我们的开发工作环境的一些属性。因此，在属性名前加上前缀 “dev”。
+```
+dev.name=Development Application
+dev.port=8090
+dev.dburl=mongodb://mongodb.example.com:27017/
+dev.dbname=employeeDB
+dev.dbuser=admin
+dev.dbpassword=admin
+```
+现在，创建一个带有`setter` 以及 `getter` 的 Bean 类并为其加上 `@ConfigurationProperties` 注解：
+```
+@ConfigurationProperties(prefix="dev")
+public class MyDevAppProperties {
+      private String name;
+      private int port;
+      private String dburl;
+      private String dbname;
+      private String dbuser;
+      private String dbpassword;
+
+    //getter and setter methods
+}
+```
+这里，Spring 将自动绑定定义在我们的属性文件中的带前缀 “dev” 的属性，以及定义于 `MyDevAppProperties` 类中的同名字段。
+
+接下来，使用 `@EnableConfigurationProperties` 注解来在你的 `@Configuration` 类中注册 `@ConfigurationProperties类`。
+```
+@Configuration
+@EnableConfigurationProperties(MyDevAppProperties.class)
+public class MySpringBootDevApp { }
+```
+最后创建一个 Test Runner 来测试这些属性值如下：
+```
+@Component
+public class DevPropertiesTest implements CommandLineRunner {
+
+      @Autowired
+      private MyDevAppProperties devProperties;
+
+      @Override
+      public void run(String... args) throws Exception {
+           System.out.println("App Name = " + devProperties.getName());
+           System.out.println("DB Url = " + devProperties.getDburl());
+           System.out.println("DB User = " + devProperties.getDbuser());
+      }
+}
+```
+我们也可以在 `@Bean` 注解的方法上 `@ConfigurationProperties` 注解。
 ### 4.5 @EnableConfigurationProperties
+为了在我们的项目中使用注册类，我们需要将其注册为一个正规 Spring Bean。在这种情况下，@EnableConfigurationProperties 可以帮助我们。我们使用这个注解来在Spring 上下文中注册我们的配置 Bean（一个 @ConfigurationProperties 注解类）。这是快速注册 @ConfigurationProperties 注解 Bean 的一种便利方式。而且，它严格地与 @ConfiguratonProperties 伴生。例如，你可以从前一章节引用 @ConfigurationProperties。
 ### 4.6 @EnableConfigurationPropertiesScan
-### 4.7 @EntityScan and @EnableJpaRepositories
+@EnableConfigurationPropertiesScan 注解基于传给它的参数值来扫描包，并发现包里所有具有 @ConfiguratonProperties 注解的类。例如，检验下面的代码：
+```
+@SpringBootApplication
+@EnableConfigurationPropertiesScan(“com.dev.spring.test.annotation”)
+public class MyApplication { }
+```
+从上面的例子，`@EnableConfigurationPropertiesScan` 将会扫描所有包 `com.dev.spring.test.annotation` 里的 `@ConfiguratonProperties` 注解类并进而注册它们。
+### 4.7 @EntityScan 和 @EnableJpaRepositories
+Spring Boot 注解如 @ComponentScan, @ConfigurationPropertiesScan 甚至 @SpringBootApplication 使用包来定义扫描位置。类似地，@EnityScan 和 @EnableJpaRepositories 也使用包来定义扫描位置。这里我们使用 @EntityScan。
+
+为了发现实体类（entity classes），另一方面通常 @EnableJpaRepositories 用于 JPA 存储库类（repository classes）。这些注解通常用于你的待发现类不位于根包下也不在你的主应用的子包下。记住，@EnableAutoConfiguration(作为 @SpringBootApplication 的一部分) 扫描根包或你的主应用的子包下的所有类。因此，如果存储库类或其它实体类并未放在根包下也不在你的主应用的子包下，那么相关的包应该在你的主应用类中以 @EntityScan 和 @EnableJpaRepositories 注解做相应声明。例如，观察下面的代码：
+```
+@EntityScan(basePackages = "com.dev.springboot.examples.entity")
+
+@EnableJpaRepositories(basePackages = "com.dev.springboot.examples.jpa.repositories")
+```
 ## 5 其它注解的链接（Links to Other Annotations）
-### 5.1 Spring Boot Bean Annotations With Examples
-### 5.2 Spring Boot MVC & REST Annotations With Examples
-### 5.3 Spring Boot Security, Scheduling and Transactions Annotations With Examples
-### 5.4 Spring Boot Errors, Exceptions and AOP Annotations With Examples
+正如我们在 “Spring Boot 注解及其实例” 介绍章节所说，我们将讨论我们通常在 Spring Boot Web 应用中使用的注解。以下是 “Spring Boot 注解及其实例” 的后继文章：
+- [Spring Boot Bean Annotations With Examples](https://javatechonline.com/spring-boot-bean-annotations-with-examples/)
+- [Spring Boot MVC & REST Annotations With Examples](https://javatechonline.com/spring-boot-mvc-rest-annotations-with-examples/)
+- [Spring Boot Security, Scheduling and Transactions Annotations With Examples](https://javatechonline.com/spring-boot-security-scheduling-transactions-annotations-with-examples/)
+- [Spring Boot Errors, Exceptions and AOP Annotations With Examples](https://javatechonline.com/spring-boot-errors-and-aop-annotations-with-examples/)
 ## 6 我们能够在哪里使用注解？（Where can we use Annotations?）
+我们可以将注解应用于一个应用的不同元素的声明上，比如类，字段，方法以及其它程序元素的声明。通常，我们在这些元素的前面应用这些注解。而且，随着 Java 8 的发布，我们也可将注解应用在类型上。例如，下面的代码片段展示了注解的应用。
 ### 6.1 Class instance creation expression
+```
+    new @Interned MyObject();
+```
 ### 6.2 Type cast
+```
+myString = (@NonNull String) str;
+```
 ### 6.3 implements clause
+```
+    class UnmodifiableList<T> implements
+        @Readonly List<@Readonly T> { ... }
+```
 ### 6.4 Thrown exception declaration
+```
+void monitorTemperature() throws
+        @Critical TemperatureException { ... }
+```
+这种类型的注解被称为类型注解。更多信息，请参见类型注解及可插拔类型系统 https://docs.oracle.com/javase/tutorial/java/annotations/type_annotations.html。
+
+但是，这些注解以前并不存在，以后哦我们会更多地看到它们在代码中出现。因此，我们必须至少对它们有个初步了解。
 
 ## Refrence
 - [Spring Boot Annotations With Examples](https://javatechonline.com/spring-boot-annotations-with-examples/)
 - [Annotations In Java](https://javatechonline.com/annotations-in-java/)
 - [谈IOC--说清楚IOC是什么](https://blog.csdn.net/ivan820819/article/details/79744797)
+- [Spring Boot Annotations](https://www.baeldung.com/spring-boot-annotations)
