@@ -7,7 +7,7 @@
 
 `org.springframework.beans` 和 `org.springframework.context` 包是 Spring Framework [控制反转容器](https://docs.spring.io/spring-framework/docs/3.2.x/spring-framework-reference/html/beans.html)的基础。[ApplicationContext](http://static.springsource.org/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationContext.html) 是 `BeanFactory` 的子接口。
 ### 1.2 什么是 Spring Framework 的应用上下文（What is an Application Context in Spring Framework?）
-当你使用 Spring 或 Spring Boot 创建一个项目，一个容器或包装器被创建出来以管理你的 beans。这就是应用上下文（Application Context）。但是 Spring 支持两种容器：`Bean Factory` 和 `Application Context`。简单来讲，`BeanFactory` 提供配置框架和基础功能。而 `ApplicationContext` 增加了许多企业级特性如：更易于与 `Spring AOP` 特性集成，消息资源处理（国际化中使用），事件发布，应用层特定上下文如 Web 应用中使用的 `WebApplicationContex`t。`ApplicationContext` 是 `BeanFactory` 的完整超集，在 本文描述 Spring 的控制反转容器时特地使用。Spring 框架推荐使用 `Application Context` 以获得框架的全部特性。而且，依赖注入和Bean 自动装配也是在 `Application Context` 中完成。
+当你使用 Spring 或 Spring Boot 创建一个项目，一个容器或包装器被创建出来以管理你的 beans。这就是应用上下文（Application Context）。但是 Spring 支持两种容器：`Bean Factory` 和 `Application Context`。简单来讲，`BeanFactory` 提供配置框架和基础功能。而 `ApplicationContext` 增加了许多企业级特性如：更易于与 `Spring AOP` 特性集成，消息资源处理（国际化中使用），事件发布，应用层特定上下文如 Web 应用中使用的 `WebApplicationContex`t。`ApplicationContext` 是 `BeanFactory` 的完整超集，在 本文描述 Spring 的控制反转容器时特地使用。Spring 框架推荐使用 `Application Context` 以获得框架的全部特性。而且，依赖注入和 Bean 自动装配也是在 `Application Context` 中完成。
 
 接口 `org.springframework.context.ApplicationContext` 代表 Spring 依赖反转容器，它管理了 beans 的初始化，配置以及装配的全过程。容器通过读取配置元数据来获取关于什么对象需要初始化，配置以及装配的指令。配置元数据表现为 XML文件，Java 注解以及 Java 代码。
 ### 1.3 什么是 Spring Bean 或 组件 （What is Spring Bean or Components?）
@@ -321,3 +321,5 @@ void monitorTemperature() throws
 - [Annotations In Java](https://javatechonline.com/annotations-in-java/)
 - [谈IOC--说清楚IOC是什么](https://blog.csdn.net/ivan820819/article/details/79744797)
 - [Spring Boot Annotations](https://www.baeldung.com/spring-boot-annotations)
+- [Spring Boot Reference Documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/)
+- [Spring Boot Reference Guide](https://docs.spring.io/spring-boot/docs/2.1.6.RELEASE/reference/html/)
