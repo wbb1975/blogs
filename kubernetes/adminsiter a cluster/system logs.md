@@ -386,3 +386,5 @@ second line.}
 ### Reference
 - [System Logs](https://kubernetes.io/docs/concepts/cluster-administration/system-logs/)
 - [Linux日志文件总管——logrotate](https://linux.cn/article-4126-1.html)
+- [Structured Logging](https://github.com/kubernetes/enhancements/tree/master/keps/sig-instrumentation/1602-structured-logging)
+- [Conventions for logging severity](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md)
