@@ -494,3 +494,4 @@ public static ConfigurableApplicationContext run(String... args) {
 
 ## Reference
 - [给你一份超详细 Spring Boot 知识清单](https://mp.weixin.qq.com/s/1yxsCD3IxopIWYceA54Ayw)
+- [Spring Boot 教程](https://github.com/javastacks/spring-boot-best-practice)
