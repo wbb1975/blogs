@@ -1,13 +1,13 @@
 # Spring Boot Annotations With Examples
 ## 1 注解基础
 在讨论 “Spring Boot 注解及其实例”之前，让我们先讨论一些在解释注解时用到的一些基本术语。
-- Bean： Spring Bean 时实例化，组装好且被 Spring 容器管理的 Java 对象。
+- Bean：Spring Bean 时实例化，组装好且被 Spring 容器管理的 Java 对象。
 ### 1.1 什么是控制反转容器（What is The IoC container?）
-简言之，在创建 Bean 时注入依赖的容器。`IoC`` 代表“控制反转”。借助控制反转容器，利用类的直接构造 bean 自己控制其依赖的实例化或定位，而非由我们（主动）创建对象。因此，这个过程被称为“控制反转”。有时候我们也简称之为 Spring 容器。
+简言之，在创建 Bean 时注入依赖的容器。`IoC` 代表“控制反转”。借助控制反转容器，利用类的直接构造 bean 自己控制其依赖的实例化或定位，而非由我们（主动）创建对象。因此，这个过程被称为“控制反转”。有时候我们也简称之为 Spring 容器。
 
 `org.springframework.beans` 和 `org.springframework.context` 包是 Spring Framework [控制反转容器](https://docs.spring.io/spring-framework/docs/3.2.x/spring-framework-reference/html/beans.html)的基础。[ApplicationContext](http://static.springsource.org/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationContext.html) 是 `BeanFactory` 的子接口。
 ### 1.2 什么是 Spring Framework 的应用上下文（What is an Application Context in Spring Framework?）
-当你使用 Spring 或 Spring Boot 创建一个项目，一个容器或包装器被创建出来以管理你的 beans。这就是应用上下文（Application Context）。但是 Spring 支持两种容器：`Bean Factory` 和 `Application Context`。简单来讲，`BeanFactory` 提供配置框架和基础功能。而 `ApplicationContext` 增加了许多企业级特性如：更易于与 `Spring AOP` 特性集成，消息资源处理（国际化中使用），事件发布，应用层特定上下文如 Web 应用中使用的 `WebApplicationContex`t。`ApplicationContext` 是 `BeanFactory` 的完整超集，在 本文描述 Spring 的控制反转容器时特地使用。Spring 框架推荐使用 `Application Context` 以获得框架的全部特性。而且，依赖注入和 Bean 自动装配也是在 `Application Context` 中完成。
+当你使用 Spring 或 Spring Boot 创建一个项目，一个容器或包装器被创建出来以管理你的 beans。这就是应用上下文（Application Context）。但是 Spring 支持两种容器：`Bean Factory` 和 `Application Context`。简单来讲，`BeanFactory` 提供配置框架和基础功能。而 `ApplicationContext` 增加了许多企业级特性如：更易于与 `Spring AOP` 特性集成，消息资源处理（国际化中使用），事件发布，应用层特定上下文如 Web 应用中使用的 `WebApplicationContext`。`ApplicationContext` 是 `BeanFactory` 的完整超集，在 本文描述 Spring 的控制反转容器时特地使用。Spring 框架推荐使用 `Application Context` 以获得框架的全部特性。而且，依赖注入和 Bean 自动装配也是在 `Application Context` 中完成。
 
 接口 `org.springframework.context.ApplicationContext` 代表 Spring 依赖反转容器，它管理了 beans 的初始化，配置以及装配的全过程。容器通过读取配置元数据来获取关于什么对象需要初始化，配置以及装配的指令。配置元数据表现为 XML文件，Java 注解以及 Java 代码。
 ### 1.3 什么是 Spring Bean 或 组件 （What is Spring Bean or Components?）
@@ -15,7 +15,7 @@
 ### 1.4 什么是组件扫描（What is Component Scanning?）
 发现可作用于应用上下文的类的过程被称为组件扫描。在组建扫描过程中，如果 Spring 发现了一个类带有特殊的注解，它将考虑将其视为 Spring Bean/Component 的一个候选，并将其加入到应用上下文。借助 @ComponentScan 注解，Spring 显式将其视为 Spring bean 的候选。
 ### 1.5 在 Spring Boot 应用中什么时候使用组件扫描（When to use Component Scanning in a Spring Boot Application?）
-默认地，@ComponentScan 注解將扫描当前包及其子包以查找组件。如果它是一个 Spring Boot 应用，包含主类（带 @SpringBootApplication 注解的类）的包下的所有包都会被隐式扫描。因此如果你的包不在包含主类的包的层级结构下，那么需要显式声明一个组件扫描。
+默认地，@ComponentScan 注解将扫描当前包及其子包以查找组件。如果它是一个 Spring Boot 应用，包含主类（带 @SpringBootApplication 注解的类）的包下的所有包都会被隐式扫描。因此如果你的包不在包含主类的包的层级结构下，那么需要显式声明一个组件扫描。
 ### 1.6 Spring 注解对比 Spring Boot 注解（Spring Annotations vs Spring Boot Annotations）
 我们都知道 Spring Boot 框架使用 Spring 框架库创建，并移除了 XML 配置方式。但是，所有 Spring 的注解仍适用于 Spring Boot。而且 Spring Boot 还提供了一些仅仅适用于 Spring Boot 的注解。在某些情况下，Spring Boot 在创建了一个 Spring 框架注解之后创建注解。这里，我们将学习常用注解，它是 Spring 框架或者 Spring Boot 的一部分。
 ## 2 创建 Bean的注解（Annotations to create a Bean）
@@ -32,9 +32,9 @@ public class AppConfig {
     } 
 }
 ```
-通过这个方法创建一个对象的好处是你会仅仅拥有它的一个实例。当需要它时你不需要多次创建该对象。现在你可以在你的代码的任何地方调用它。
+通过这个方法创建一个对象的好处是**你会仅仅拥有它的一个实例**。当需要它时你不需要多次创建该对象。现在你可以在你的代码的任何地方调用它。
 ### 2.2 @Bean
-我们在方法级别使用 @Bean 注解。如果你记得 Spring 的 XML 配置，它和 XML `<bean/>` 元素很相似。它创建 Spring Beans，且通常和 @Configuration 一起使用。正如之前提到的，一个带 @Configuration 注解的类（我们将其称为注解类）将拥有方法来实例化对象并配置依赖。这类方法将拥有 @Bean 注解。默认地，Bean 的名字与方法名相同。它实例化并返回实际的 Bean，注解方法产生一个由 Spring IoC 容器管理的 Bean。
+我们在方法级别使用 @Bean 注解。如果你记得 Spring 的 XML 配置，它和 XML `<bean/>` 元素很相似。它创建 Spring Beans，且通常和 `@Configuration` 一起使用。正如之前提到的，一个带 @Configuration 注解的类（我们将其称为注解类）将拥有方法来实例化对象并配置依赖。这类方法将拥有 `@Bean` 注解。默认地，Bean 的名字与方法名相同。它实例化并返回实际的 Bean，注解方法产生一个由 Spring IoC 容器管理的 Bean。
 > **注意**： Spring 上添加的 @Bean 注解都是**默认单例模式**。
 ```
 @Configuration
@@ -59,22 +59,24 @@ public class AppConfig {
 ```
 注解支持大部分 `<bean/>` 提供的元素，比如：[init-method](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-lifecycle-initializingbean), [destroy-method](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-lifecycle-disposablebean), [autowiring](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-autowire), [lazy-init](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-lazy-init), [dependency-check](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-dependencies), [depends-on](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-dependson) 和 [scope](http://static.springframework.org/spring/docs/2.5.x/reference/beans.html#beans-factory-scopes)。
 ### 2.3 @Component
-这是一个相对老套的注解，指示该类时一个 Spring 管理的 bean/component。@Component 时一个类级别注解。其它注解是 @Component 的特化。在组件扫描过程中，Spring 框架自动发现带 @Component 注解的类，它将它们在应用上下文中以 Spring Bean 的形式注册。在一个类上应用 @Component 注解意味着我们将该类标记成 Spring 管理的 bean/component。例如，看看下面的代码：
+这是一个相对老套的注解，指示该类是一个 Spring 管理的 bean/component。@Component 是一个类级别注解。其它注解（stereotypes）是 @Component 的特化。在组件扫描过程中，Spring 框架自动发现带 @Component 注解的类，它将它们在应用上下文中以 Spring Bean 的形式注册。在一个类上应用 @Component 注解意味着我们将该类标记成 Spring 管理的 bean/component。例如，看看下面的代码：
 ```
 @Component
 class MyBean { }
 ```
-当编写了一个如上所示的类时，Spring 将创建一个名为 myBean 的 Bean 实例。请记住，该类的 Bean 实例与该类拥有相同名字，输了首字母小写。然而，我们可以利用该注解一个可选阐述来为其制指定一个不同的名字，如下所示：
+当编写了一个如上所示的类时，Spring 将创建一个名为 myBean 的 Bean 实例。请记住，**该类的 Bean 实例与该类拥有相同名字**，输了首字母小写。然而，我们可以利用该注解一个可选阐述来为其制指定一个不同的名字，如下所示：
 ```
 @Component("myTestBean")
 class MyBean { }
 ```
 ### 2.4 @Controller
 @Controller 告诉 Spring 框架以 @Controller 注解的类将用作 Spring MVC 项目中的控制器。
+> **注意**： Spring 上添加的 @Controller 注解都是**默认单例模式**。
 ### 2.5 @RestController
 @RestController 告诉 Spring 框架以 @RestController 注解的类将用作 Spring REST 项目中的控制器。
 ### 2.6 @Service
 @Service 告诉 Spring 框架以 @Service 注解的类是服务层的一部分，它将包含该应用的商业逻辑。
+> **注意**： Spring 上添加的 @Service 注解都是**默认单例模式**。
 ### 2.7 @Repository
 @Repository 告诉 Spring 框架以 @Repository 注解的类是数据访问层的一部分，它将包含从该应用的数据库访问数据的逻辑。
 ### 2.8 @Bean vs @Component
@@ -91,9 +93,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 @Configuration
 @ComponentScan(basePackages = {"com.springframework.javatechonline.example.package1",
-                                                    "com.springframework.javatechonline.example.package3",
-                                                    "com.springframework.javatechonline.example.package4"},
-                                basePackageClasses = Bean1.class
+                                "com.springframework.javatechonline.example.package3",
+                                "com.springframework.javatechonline.example.package4"},
+                basePackageClasses = Bean1.class
                                )
 public class SpringApplicationComponentScanExample {
                ....
@@ -103,7 +105,7 @@ public class SpringApplicationComponentScanExample {
 
 更进一步，在一个 Spring Boot 项目中，我们典型地在主应用上使用 `@SpringBootApplication` 注解。在其内部，`@SpringBootApplication` 是 `@Configuration` 和 `@ComponentScanableAutoConfiguration` 注解的组合。默认设置下，Spring Boot 将自动扫描当前包（包含主应用包）及其子包下的所有组件。
 ### 3.2 @Import
-加入我们有多个带有 `@Configuration` 注解的 Java 配置类。`@Import` 用于导入一个或多个 Java 配置类。更进一步，它可以把多个 Java 配置类组织起来。当一个 `@Configuration` 类逻辑地导入由另一个定义的 Bean 时，我们可以使用这个注解。例如：
+假如我们有多个带有 `@Configuration` 注解的 Java 配置类。`@Import` 用于导入一个或多个 Java 配置类。更进一步，它可以把多个 Java 配置类组织起来。当一个 `@Configuration` 类逻辑地导入由另一个类定义的 Bean 时，我们可以使用这个注解。例如：
 ```
 @Configuration
 @Import({ DataSourceConfig.class, TransactionConfig.class })
@@ -112,7 +114,7 @@ public class AppConfig extends ConfigurationSupport {
 } 
 ```
 ### 3.3 @PropertySource 
-如果你[使用 IDE 或者 STS 创建了一个 Spring Boot 启动器项目](https://javatechonline.com/saving-data-into-database-using-spring-boot-data-jpa-step-by-step-tutorial/#Step_1_Creating_Starter_Project_using_STS)，默认地 `application.properties` 将会被在 `resources` 目录下生成。你可以更方便地通过 `@PropertySource` 提供属性文件（报假案名值对）的名字和位置，更进一步，这个注解提供了一个更方便以及声明式的机制以将一个 `PropertySource` 添加到 Spring 环境，例如：
+如果你[使用 IDE 或者 STS 创建了一个 Spring Boot 启动器项目](https://javatechonline.com/saving-data-into-database-using-spring-boot-data-jpa-step-by-step-tutorial/#Step_1_Creating_Starter_Project_using_STS)，默认地 `application.properties` 将会被在 `resources` 目录下生成。你可以更方便地通过 `@PropertySource` 提供属性文件（包含键值对）的名字和位置，更进一步，这个注解提供了一个更方便以及声明式的机制以将一个 `PropertySource` 添加到 Spring 环境，例如：
 ```
 @Configuration
 @PropertySource("classpath:/com/dev/javatechonline/app.properties")
@@ -136,9 +138,9 @@ public class MyClass { }
 @PropertySource("classpath:/com/dev/javatechonline/app2.properties") 
 public class MyClass { }
 ```
-> **注意：如果由任何名字冲突，比如相同属性名，最后的数据源将被选中**。
+> **注意：如果有任何名字冲突，比如相同属性名，最后的数据源将被选中**。
 ### 3.5 @Value
-我们可以使用这个注解来向 Spring 管理的 Bean 的字段注入值。我们可以在字段，构造函数以及方法级别使用它。例如，让我们定义一个属性文件，然后使用 @Value 注入这些值。
+我们可以使用这个注解来向 Spring 管理的 Bean 的字段注入值。我们可以在**字段，构造函数以及方法参数级别**使用它。例如，让我们定义一个属性文件，然后使用 @Value 注入这些值。
 ```
 server.port=9898
 server.ip= 10.10.10.9
