@@ -601,7 +601,300 @@ void ReportClass::pushEvent(std::string event)
 在介绍智能指针源码前，需要明确的是，智能指针本身是一个栈上分配的对象。根据栈上分配的特性，在离开作用域后，会自动调用其析构方法。智能指针根据这个特性实现了对象内存的管理和自动释放。
 
 本文所分析的智能指针源码基于 `Android ndk-16b` 中 `llvm-libc++` 的 `memory` 文件。
+### 4.1 unique_ptr
+先看下 `unique_ptr` 的声明。`unique_ptr` 有两个模板参数，分别为 `_Tp` 和 `_Dp`。
+- `_Tp` 表示原生指针的类型。
+- `_Dp` 则表示析构器，开发者可以自定义指针销毁的代码。其拥有一个默认值 `default_delete<_Tp>`，其实就是标准的 `delete` 函数。
+函数声明中 `typename __pointer_type<_Tp, deleter_type>::type` 可以简单理解为 `_Tp*`，即原生指针类型。
+```
+template <class _Tp, class _Dp = default_delete<_Tp> >
+class _LIBCPP_TEMPLATE_VIS unique_ptr {
+public:
+  typedef _Tp element_type;
+  typedef _Dp deleter_type;
+  typedef typename __pointer_type<_Tp, deleter_type>::type pointer;
+  //...
+}
+```
+`unique_ptr` 中唯一的数据成员就是原生指针和析构器的 `pair`：
+```
+private:
+  __compressed_pair<pointer, deleter_type> __ptr_;
+```
+下面看下unique_ptr的构造函数。
+```
+template <class _Tp, class _Dp = default_delete<_Tp> >
+class _LIBCPP_TEMPLATE_VIS unique_ptr {
 
+public:
+  // 默认构造函数，用pointer的默认构造函数初始化__ptr_
+  constexpr unique_ptr() noexcept : __ptr_(pointer()) {}
+
+  // 空指针的构造函数，同上
+  constexpr unique_ptr(nullptr_t) noexcept : __ptr_(pointer()) {}
+
+  // 原生指针的构造函数，用原生指针初始化__ptr_
+  explicit unique_ptr(pointer __p) noexcept : __ptr_(__p) {}
+
+  // 原生指针和析构器的构造函数，用这两个参数初始化__ptr_,当前析构器为左值引用
+  unique_ptr(pointer __p, _LValRefType<_Dummy> __d) noexcept
+      : __ptr_(__p, __d) {}
+
+  // 原生指针和析构器的构造函数，析构器使用转移语义进行转移
+  unique_ptr(pointer __p, _GoodRValRefType<_Dummy> __d) noexcept
+      : __ptr_(__p, _VSTD::move(__d)) {
+    static_assert(!is_reference<deleter_type>::value,
+                  "rvalue deleter bound to reference");
+  }
+
+  // 移动构造函数，取出原有unique_ptr的指针和析构器进行构造
+  unique_ptr(unique_ptr&& __u) noexcept
+      : __ptr_(__u.release(), _VSTD::forward<deleter_type>(__u.get_deleter())) {
+  }
+
+  // 移动赋值函数，取出原有unique_ptr的指针和析构器进行构造
+  unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
+    reset(__u.release());
+    __ptr_.second() = _VSTD::forward<deleter_type>(__u.get_deleter());
+    return *this;
+  }
+}
+```
+再看下 `unique_ptr` 几个常用函数的实现。
+```
+template <class _Tp, class _Dp = default_delete<_Tp> >
+class _LIBCPP_TEMPLATE_VIS unique_ptr {
+    // 返回原生指针
+    pointer get() const _NOEXCEPT {
+    return __ptr_.first();
+    }
+
+    // 判断原生指针是否为空
+    _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {
+    return __ptr_.first() != nullptr;
+    }
+
+    // 将__ptr置空，并返回原有的指针
+    pointer release() _NOEXCEPT {
+    pointer __t = __ptr_.first();
+    __ptr_.first() = pointer();
+    return __t;
+    }
+
+    // 重置原有的指针为新的指针，如果原有指针不为空，对原有指针所指对象进行销毁
+    void reset(pointer __p = pointer()) _NOEXCEPT {
+    pointer __tmp = __ptr_.first();
+    __ptr_.first() = __p;
+    if (__tmp)
+        __ptr_.second()(__tmp);
+    }
+}
+```
+再看下 `unique_ptr` 指针特性的两个方法。
+```
+// 返回原生指针的引用
+typename add_lvalue_reference<_Tp>::type
+operator*() const {
+  return *__ptr_.first();
+}
+// 返回原生指针
+pointer operator->() const _NOEXCEPT {
+  return __ptr_.first();
+}
+```
+最后再看下 `unique_ptr` 的析构函数。
+```
+// 通过reset()方法进行对象的销毁
+~unique_ptr() { reset(); }
+```
+### 4.2 shared_ptr
+`shared_ptr` 与 `unique_ptr` 最核心的区别就是比 `unique_ptr` 多了一个引用计数，并由于引用计数的加入，可以支持拷贝。
+
+先看下 `shared_ptr` 的声明。`shared_ptr` 主要有两个成员变量，一个是原生指针，一个是控制块的指针，用来存储这个原生指针的 `shared_ptr` 和 `weak_ptr` 的数量。
+```
+template<class _Tp>
+class shared_ptr
+{
+public:
+    typedef _Tp element_type;
+
+private:
+    element_type*      __ptr_;
+    __shared_weak_count* __cntrl_;
+    //...
+}
+```
+我们重点看下 `__shared_weak_count` 的定义。
+```
+// 共享计数类
+class __shared_count
+{
+    __shared_count(const __shared_count&);
+    __shared_count& operator=(const __shared_count&);
+
+protected:
+    // 共享计数
+    long __shared_owners_;
+    virtual ~__shared_count();
+private:
+    // 引用计数变为0的回调，一般是进行内存释放
+    virtual void __on_zero_shared() _NOEXCEPT = 0;
+
+public:
+    // 构造函数，需要注意内部存储的引用计数是从0开始，外部看到的引用计数其实为1
+    explicit __shared_count(long __refs = 0) _NOEXCEPT
+        : __shared_owners_(__refs) {}
+
+    // 增加共享计数
+    void __add_shared() _NOEXCEPT {
+      __libcpp_atomic_refcount_increment(__shared_owners_);
+    }
+
+    // 释放共享计数，如果共享计数为0（内部为-1），则调用__on_zero_shared进行内存释放
+    bool __release_shared() _NOEXCEPT {
+      if (__libcpp_atomic_refcount_decrement(__shared_owners_) == -1) {
+        __on_zero_shared();
+        return true;
+      }
+      return false;
+    }
+
+    // 返回引用计数，需要对内部存储的引用计数+1处理
+    long use_count() const _NOEXCEPT {
+        return __libcpp_relaxed_load(&amp;__shared_owners_) + 1;
+    }
+};
+```
+
+```
+class __shared_weak_count
+    : private __shared_count
+{
+    // weak ptr计数
+    long __shared_weak_owners_;
+
+public:
+    // 内部共享计数和weak计数都为0
+    explicit __shared_weak_count(long __refs = 0) _NOEXCEPT
+        : __shared_count(__refs),
+          __shared_weak_owners_(__refs) {}
+protected:
+    virtual ~__shared_weak_count();
+
+public:
+    // 调用通过父类的__add_shared，增加共享引用计数
+    void __add_shared() _NOEXCEPT {
+      __shared_count::__add_shared();
+    }
+    // 增加weak引用计数
+    void __add_weak() _NOEXCEPT {
+      __libcpp_atomic_refcount_increment(__shared_weak_owners_);
+    }
+    // 调用父类的__release_shared，如果释放了原生指针的内存，还需要调用__release_weak，因为内部weak计数默认为0
+    void __release_shared() _NOEXCEPT {
+      if (__shared_count::__release_shared())
+        __release_weak();
+    }
+    // weak引用计数减1
+    void __release_weak() _NOEXCEPT;
+    // 获取共享计数
+    long use_count() const _NOEXCEPT {return __shared_count::use_count();}
+    __shared_weak_count* lock() _NOEXCEPT;
+
+private:
+    // weak计数为0的处理
+    virtual void __on_zero_shared_weak() _NOEXCEPT = 0;
+};
+```
+其实 `__shared_weak_count` 也是虚类，具体使用的是 `__shared_ptr_pointer`。`__shared_ptr_pointer` 中有一个成员变量 `__data_`，用于存储原生指针、析构器、分配器。`__shared_ptr_pointer`继承了`__shared_weak_count`，因此它就主要负责内存的分配、销毁，引用计数。
+```
+class __shared_ptr_pointer
+    : public __shared_weak_count
+{
+    __compressed_pair<__compressed_pair<_Tp, _Dp>, _Alloc> __data_;
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    __shared_ptr_pointer(_Tp __p, _Dp __d, _Alloc __a)
+        :  __data_(__compressed_pair<_Tp, _Dp>(__p, _VSTD::move(__d)), _VSTD::move(__a)) {}
+
+#ifndef _LIBCPP_NO_RTTI
+    virtual const void* __get_deleter(const type_info&) const _NOEXCEPT;
+#endif
+
+private:
+    virtual void __on_zero_shared() _NOEXCEPT;
+    virtual void __on_zero_shared_weak() _NOEXCEPT;
+};
+```
+了解了引用计数的基本原理后，再看下shared_ptr的实现。
+```
+// 使用原生指针构造shared_ptr时，会构建__shared_ptr_pointer的控制块
+shared_ptr<_Tp>::shared_ptr(_Yp* __p,
+                            typename enable_if<is_convertible<_Yp*, element_type*>::value, __nat>::type)
+    : __ptr_(__p)
+{
+    unique_ptr<_Yp> __hold(__p);
+    typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
+    typedef __shared_ptr_pointer<_Yp*, default_delete<_Yp>, _AllocT > _CntrlBlk;
+    __cntrl_ = new _CntrlBlk(__p, default_delete<_Yp>(), _AllocT());
+    __hold.release();
+    __enable_weak_this(__p, __p);
+}
+
+// 如果进行shared_ptr的拷贝，会增加引用计数
+template<class _Tp>
+inline
+shared_ptr<_Tp>::shared_ptr(const shared_ptr& __r) _NOEXCEPT
+    : __ptr_(__r.__ptr_),
+      __cntrl_(__r.__cntrl_)
+{
+    if (__cntrl_)
+        __cntrl_->__add_shared();
+}
+
+// 销毁shared_ptr时，会使共享引用计数减1，如果减到0会销毁内存
+template<class _Tp>
+shared_ptr<_Tp>::~shared_ptr()
+{
+    if (__cntrl_)
+        __cntrl_->__release_shared();
+}
+```
+### 4.3 weak_ptr
+了解完 `shared_ptr`，`weak_ptr` 也就比较简单了。`weak_ptr` 也包括两个对象，一个是原生指针，一个是控制块。虽然 `weak_ptr` 内存储了原生指针，不过由于未实现 `operator->` 因此不能直接使用。
+```
+class _LIBCPP_TEMPLATE_VIS weak_ptr
+{
+public:
+    typedef _Tp element_type;
+private:
+    element_type*        __ptr_;
+    __shared_weak_count* __cntrl_;
+
+}
+```
+
+```
+// 通过shared_ptr构造weak_ptr。会将shared_ptr的成员变量地址进行复制。增加weak引用计数
+weak_ptr<_Tp>::weak_ptr(shared_ptr<_Yp> const&amp; __r,
+                        typename enable_if<is_convertible<_Yp*, _Tp*>::value, __nat*>::type)
+                         _NOEXCEPT
+    : __ptr_(__r.__ptr_),
+      __cntrl_(__r.__cntrl_)
+{
+    if (__cntrl_)
+        __cntrl_->__add_weak();
+}
+
+// weak_ptr析构器
+template<class _Tp>
+weak_ptr<_Tp>::~weak_ptr()
+{
+    if (__cntrl_)
+        __cntrl_->__release_weak();
+}
+
+```
 
 ## Reference
 - [C++ 智能指针最佳实践&源码分析](https://cloud.tencent.com/developer/article/1922161)
