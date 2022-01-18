@@ -120,8 +120,126 @@ public class GitHubLookupService {
 
 `GitHub API` 调用耗时可能变化较大，为了稍后在教程中演示，一个一秒的延迟并添加到该服务中。
 ## 使应用可执行
+为了运行示例，你剋创建一个可执行 Jar。Spring 的 `@Async` 注解工作于 Web 应用，但你需要设置一个Web 容器以观察它的益处。下面的代码（`src/main/java/com/example/asyncmethod/AsyncMethodApplication.java`）演示了该如何做：
+```
+package com.example.asyncmethod;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import java.util.concurrent.Executor;
+
+@SpringBootApplication
+@EnableAsync
+public class AsyncMethodApplication {
+
+  public static void main(String[] args) {
+    // close the application context to shut down the custom ExecutorService
+    SpringApplication.run(AsyncMethodApplication.class, args).close();
+  }
+
+  @Bean
+  public Executor taskExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(2);
+    executor.setMaxPoolSize(2);
+    executor.setQueueCapacity(500);
+    executor.setThreadNamePrefix("GithubLookup-");
+    executor.initialize();
+    return executor;
+  }
+}
+```
+> Spring Initializr 为你创建了一个 AsyncMethodApplication，你可以在从 Spring Initializr（（在 src/main/java/com/example/asyncmethod/AsyncMethodApplication.java 中）。）下载的 zip 文件中找到它。涅伊拷贝这个类到你的项目并修改它，或者从前面的列表中拷贝。
+
+@SpringBootApplication 时一个方便的注解，它添加了以下这些：
+- `@Configuration`： 标记类是一个为应用上下文的Bean定义源
+- `@EnableAutoConfiguration`： 告诉 Spring Boot 基于类路径，其它 beans，以及各种属性设置来开始添加 bean。例如， 如果 `spring-webmvc` 在类路径上，这个注解将标记该应用为 Web 应用并激活关键行为，例如设置一个 `DispatcherServlet`。
+- `@ComponentScan`： 告诉 Spring 去 `com/example` 包下查找其它组件，配置和服务，并让它找到控制器。
+
+`main()` 使用 Spring Boot 的 `SpringApplication.run()` 方法来启动一个应用。你注意到这里没有一行 XML？这里也没有 `web.xml`。这个 Web 应用是 100% 纯 Java，你并不需要配置任何管道和基础设施。
+
+`@EnableAsync` 注解切换 Spring 的功能以在后台线程池运行 `@Async` 方法。这个类通过定义一个新的 Bean 以自定义 `Executor`。这里该方法为 `taskExecutor`，因为它是 [Spring 查询的一个特殊方法](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/scheduling/annotation/EnableAsync.html)。在我们的例子中，我们想限制并行运行的线程数为 `2`，队列大小为 `500`。有[许多选项](https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/integration.html#scheduling-task-executor)可以调整。如果你不指定一个 `Executor` bean，Spring 将创建一个 `SimpleAsyncTaskExecuton` 并使用它。
+
+也有一个 CommandLineRunnerhttps://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-command-line-runner，它注入 GitHubLookupService 并调用该服务三次以演示方法的异步执行。
+
+你也需要一个类以运行应用，你可以在 src/main/java/com/example/asyncmethod/AppRunner.java 中找到。下面是具体代码：
+```
+package com.example.asyncmethod;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.CompletableFuture;
+
+@Component
+public class AppRunner implements CommandLineRunner {
+
+  private static final Logger logger = LoggerFactory.getLogger(AppRunner.class);
+
+  private final GitHubLookupService gitHubLookupService;
+
+  public AppRunner(GitHubLookupService gitHubLookupService) {
+    this.gitHubLookupService = gitHubLookupService;
+  }
+
+  @Override
+  public void run(String... args) throws Exception {
+    // Start the clock
+    long start = System.currentTimeMillis();
+
+    // Kick of multiple, asynchronous lookups
+    CompletableFuture<User> page1 = gitHubLookupService.findUser("PivotalSoftware");
+    CompletableFuture<User> page2 = gitHubLookupService.findUser("CloudFoundry");
+    CompletableFuture<User> page3 = gitHubLookupService.findUser("Spring-Projects");
+
+    // Wait until they are all done
+    CompletableFuture.allOf(page1,page2,page3).join();
+
+    // Print results, including elapsed time
+    logger.info("Elapsed time: " + (System.currentTimeMillis() - start));
+    logger.info("--> " + page1.get());
+    logger.info("--> " + page2.get());
+    logger.info("--> " + page3.get());
+
+  }
+}
+```
 ## 构建一个可执行 Jar
+你可以从命令行上利用 Gradle 或 Maven 来运行应用。你也可以构建一个简单可执行 JAR 文件，它包含运行它所有必须的依赖，类，资源。构建一个可执行 JAR 使得在整个开发周期，跨不同环境交付，版本控制，以及部署应用为一个服务变得更容易。
+
+如果你使用 Gradle，你可以使用 `./gradlew bootRun` 来运行应用。另一种方法是你运行 `./gradlew build` 以构建 `jar`，然后按如下方式运行 `jar`：
+```
+java -jar build/libs/gs-async-method-0.1.0.jar
+```
+如果你使用 Maven，你可以使用 `./mvnw spring-boot:run` 来运行应用。另一种方法是你运行 `./mvnw clean package` 以构建 `jar`，然后按如下方式运行 `jar`：
+```
+java -jar target/gs-async-method-0.1.0.jar
+```
+> 这里描述的是构建一个可运行jar，你也可以[构建一个经典 war 文件]https://spring.io/guides/gs/convert-jar-to-war/。
+
+应用显示了日志输出，显示了每一次针对 `GitHub` 的查询。借助 `allOf` 工厂方法，我们创建了一个 `CompletableFuture` 对象数组。通过调用 `join` 方法，可以等到所有 `CompletableFuture` 对象的完成。
+
+下面列出了实例应用的典型输出：
+```
+2016-09-01 10:25:21.295  INFO 17893 --- [ GithubLookup-2] hello.GitHubLookupService                : Looking up CloudFoundry
+2016-09-01 10:25:21.295  INFO 17893 --- [ GithubLookup-1] hello.GitHubLookupService                : Looking up PivotalSoftware
+2016-09-01 10:25:23.142  INFO 17893 --- [ GithubLookup-1] hello.GitHubLookupService                : Looking up Spring-Projects
+2016-09-01 10:25:24.281  INFO 17893 --- [           main] hello.AppRunner                          : Elapsed time: 2994
+2016-09-01 10:25:24.282  INFO 17893 --- [           main] hello.AppRunner                          : --> User [name=Pivotal Software, Inc., blog=https://pivotal.io]
+2016-09-01 10:25:24.282  INFO 17893 --- [           main] hello.AppRunner                          : --> User [name=Cloud Foundry, blog=https://www.cloudfoundry.org/]
+2016-09-01 10:25:24.282  INFO 17893 --- [           main] hello.AppRunner       
+```
+注意头两次调用发生在不同的线程里（`GithubLookup-2`, `GithubLookup-1`），第三次调用一直等待直到两个线程中的一个变得可用。为了与非异步版本比较任务的完成，注释掉 `@Async` 注解并再次运行服务。整个运行时间可以观察到可观的增长，原因在于每个查询花费至少一秒。你也可以增加 `corePoolSize` 的大小以调优 `Executor`。
+
+重要的是，任务花费时间越长，同时运行的任务越多，从异步处理中你就能够看到更多的收益。你的代价是处理 CompletableFuture 接口。它增加了一层抽象，因为你不再直接处理结果。
 ## 总结
+祝贺你！你已经开发了一个异步服务，它可以让你一次扩展多个调用。
 
 [获取教程代码](https://github.com/spring-guides/gs-async-method)
 
