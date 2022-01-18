@@ -899,3 +899,4 @@ weak_ptr<_Tp>::~weak_ptr()
 ## Reference
 - [C++ 智能指针最佳实践&源码分析](https://cloud.tencent.com/developer/article/1922161)
 - [C++ 智能指针最佳实践&源码分析](https://blog.csdn.net/Tencent_TEG/article/details/122053250)
+- [Insert, Push, and Emplace](http://clarkkromenaker.com/post/cpp-emplace/)

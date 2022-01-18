@@ -31,7 +31,7 @@ http://localhost:8080/greeting?name=User
 
 为了跳过基础步骤，按下面的步骤操作：
 + [下载](https://github.com/spring-guides/gs-spring-boot/archive/master.zip)并解压本指南的代码库，货值使用git克隆：`git clone https://github.com/spring-guides/gs-rest-service.git`
-+ cd 到 gs-rest-service/initial
++ cd 到 `gs-rest-service/initial`
 + 进入到[创建一个资源表示类](https://spring.io/guides/gs/rest-service/#initial)
 
 当你完成后，你可以检查你的结果并与`gs-rest-service/complete`中的代码比对。
@@ -124,7 +124,7 @@ test {
 
 思考服务交互，在开始这个过程。
 
-服务将处理对`/greeting`的`GET`请求，在查询字符串带有一个可选的`name`参数。`GET`请求应该在代表问候的JSON载荷中返回200 OK回复。它应该与下面输出相似：
+服务将处理对`/greeting`的`GET`请求，在查询字符串带有一个可选的`name`参数。`GET`请求应该在代表问候的JSON载荷中返回 `200 OK` 回复。它应该与下面输出相似：
 ```
 {
     "id": 1,
