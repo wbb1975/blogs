@@ -19,13 +19,17 @@
 如果你将集群命名空间用于每一个租户，他将帮助减轻管理员负担；但在共享资源的情况下测量各自租户专用资源使用仍然复杂。一个公平的成本分配方法必须考虑每个租户对集群资源随时间按比例的使用情况，包括 CPU, GPU, memory, disk, 和 network。
 
 Kubecost 开源项目被构思出来用于应对此类挑战--提供一个简单的方法来为用户和应用测量集群资源消耗，按 Kubernetes 概念如 `deployment`, `service`, `namespace`, 以及 `label` 来分解各自成本。Kubecost 在一个任意大小的集群内部总是可用的，它可以从[这里](https://www.kubecost.com/install.html)下载。
+
 ## 二. VPA
+
 Kubernetes Vertical Pod Autoscaler (VPA) 是一个自动扩展器，它开启了基于历史资源使用测量的自动 CPU/memory 请求/限制的自动调整。如果正确使用，它可以帮助你在容器级别高效且自动地分配 Kubernetes 集群资源。
 
 当然，和 Kubernetes (K8s) 世界的任何技术一样，从技术角度理解 VPA 如何工作以及准确知道它做了什么可以让你更有效地实施它。
 
 这篇文章将覆盖三种自动扩展器，并将详细解释 VPA 的使用及益处--你可以更接地气地运行 Kubernetes Vertical Pod Autoscaler。
+
 ### 2.1 三种类型 Kubernetes 自动扩展器
+
 有三种类型的 K8s 自动扩展器，每个服务于不同的目的，包括：
 - [水平 Pod 自动扩展器 (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/):调整一个应用的副本数量。HPA 基于 CPU 使用率扩展一个 RC，Deployment，Replica Set，StatefuleSet 中的 Pod 数量。HPA 也可以配置基于自定义或外部度量来作扩展决策。
 - [集群自动扩展器 (CA)](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler#cluster-autoscaler): 调整一个集群中节点数目。当节点没有足够的资源来运行一个 pod （增加节点），或者当一个节点未充分使用，并且其 pod 可被指派到另一个节点（删除节点）时CA 会自动增减集群中的节点数目。
@@ -274,31 +278,40 @@ $ ls -1
 deployment.yaml
 vpa.yaml
 ```
+
 这我们有两个文件：
+
 ```
 deployment.yaml # ---> will have a config for the application.
 vpa.yaml        # ---> will contain the config for the VPA.
 ```
+
 我们将执行下面的步骤来测试 VPA：
+
 1. 部署我们的示例应用，配置 CPU 100m。
 2. 让 Pod 运行至少5分钟并检查 CPU 使用率
 3. 检查 VPA 建议
 4. 手动更新 CPU 到 200m
 5. 应用这个修改
 6. 检查 Pod 状态
+
 ##### 部署我们的示例应用，配置 CPU 100m
+
 ```
 $ kubectl apply -f vpa-demo
 deployment.apps/hamster created
 verticalpodautoscaler.autoscaling.k8s.io/hamster-vpa created
 ```
 ##### 让 Pod 运行至少5分钟并检查 CPU 使用率
+
 ```
 $ kubectl get vpa
 NAME MODE CPU MEM PROVIDED AGE
 hamster-vpa Off 271m 262144k True 5m10s
 ``` 
+
 ##### 检查 VPA 建议
+
 ```
 $kubectl describe vpa hamster-vpa
 ```
@@ -311,7 +324,9 @@ $kubectl describe vpa hamster-vpa
 - 目标估计是我们用于设置资源请求值
 - 所有的估计都是基于最小及最大容器容许策略来封顶的
 - 未封顶的目标估计是如果没有 minAllowed 和 maxAllowed 的情况下给出的目标估计
+ 
 ##### 手动更新 CPU 到 200m
+
 对于这个演示，我们将手动地在 deployment.yaml 文件中把 CPU 从 100m 更新至 180m：
 ```
 ---
@@ -328,14 +343,142 @@ memory: 100Mi
 …
 ...
 ```
+
 ##### 应用这个修改
+
+```
+$ kubectl apply -f deployment.yaml
+deployment.apps/hamster created
+verticalpodautoscaler.autoscaling.k8s.io/hamster-vpa created
+```
+
 ##### 检查 Pod 状态
+
+当我们修改 CPU 的度量，实验 Pod 被终止，带有我们刚声明的新 CPU 值的新 Pod 被启动。
+
+如果你想这个过程自动化，你应该更新 `deployment.yaml` 文件中的“updateMode: off” 参数。
+
+```
+$ kubectl get pods
+NAME READY STATUS RESTARTS AGE
+hamster-5dff8d44d6-w42hm 1/1 Running 0 3s
+hamster-7cfc7d5644-kq4qw 1/1 Terminating 0 77s
+```
+
+检查事件来看看 VPA 在后台做了些什么：
+```
+$ kubectl get event -n kube-system
+```
+示例输出：
+![VPA 示例输出](images/sample-vpa-events.png)
+
 ### 2.8 Kubernetes VPA Auto-Update Mode
+
+VPA 中有多个有效的 updateMode 选项。它们是：
+
+- **Off** – VPA 仅仅提供建议值，它不会自动修改资源需求
+- **Initial** – VPA 仅仅在 Pod 创建时指定资源需求，之后绝对不会修改它们
+- **Recreate** – VPA 在 Pod 创建时指定资源需求，且可通过驱逐并重建它们的方式来在已有 Pod 上更新它们
+- **Auto mode** – 它基于建议创建 Pod
+
+在上面的演示中我们增加了 CPU 度量，并手动应用修改以扩展 Pod。我们可以使用 `updateMode: "Auto"` 参数来自动做这个。
+
+下面是一个使用 `Auto mode` 的例子：
+```
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: nginx-vpa
+  namespace: vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: nginx
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "nginx"
+      minAllowed:
+        cpu: "250m"
+        memory: "100Mi"
+      maxAllowed:
+        cpu: "500m"
+        memory: "600Mi"
+```
+因为我们声明了 `updateMode: "Auto"`，VPA 将会自动基于 VPA 建议扩展集群。
 ### 2.9 将一个容器排除在自动扩展之外（Excluding Scaling for a Container）
+让我们假设有一个 Pod 运行两个容器，我们仅仅只期望有一个容器基于 VPA 扩展。别的容器（比如说性能监控代理容器）不应该扩展，因为他不需要扩展。
+
+我们可以通过撤出不需要扩展的容器来实现目标。在这个例子中，我们对性能监控代理容器采用 `"Off"` 模式，因为它根本不需要扩展。
+
+例如，执行扩展：
+```
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: my-opt-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       my-vpa-deployment
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: newrelic-sidecar-container
+      mode: "Off"
+```
 ### 2.10 VPA 的使用及成本报告
+在一个静态 Kubernetes 集群中很容易测量使用率并计算成本。但当分配给 Pod 的资定期常变化时很变得很艰难。
+
+垂直扩展增加了这个挑战，系统管理员需要依赖特定工具来测量并分配集群租户，应用，环境和标签（[Kubernetes 标签指南](https://blog.kubecost.com/blog/kubernetes-labels/)）对应的资源。
+
+开源 Kubecost 工具解决了这个问题，通过分析使用率度量并与你的实际云费用数据关联，从而提供使用率和成本数据的仪表板及完整报告。下买你的截图展示了主要的 Kubecost 仪表板总结了集群成本，效率及健康。
+![Kubecost 仪表板](images/kubecost-dashboard.png)
+
+Kubecost 易于通过单个 Helm 命令安装，并且可以与你的现有 Prometheus 和 Grafana 安装集成从而帮助数据收集及展示。你可以从[此](https://www.kubecost.com/install.html)开始免费试用。 
 ### 2.11 总结
+在本文中我们已经讨论了 Kubernetes VPA 的许多背景，下面是一些主要的知识点：
+
+- Kubernetes 拥有三种自动扩展方式：水平扩展器，垂直扩展器以及集群自动扩展器。
+- 这三种自动扩展器是不同的，理解不同的自动扩展器如何工作可以帮助你更好的配置集群
+- 使用不带垂直扩展器的水平扩展器可能增加资源浪费--它会复制资源未充分使用的 Pod 以满足增长的负载需求
+- 在很多情况下你可以联合使用 HPA 和 VPA，但是确保使用自定义度量以驱动 HPA。如果你仅仅使用 CPU 和内存度量，那么你不能同时使用  HPA 与 VPA。
+- 由于有状态的工作负载难于水平扩展，VPA 应该用于有状态的工作负载。VPA 提供了一种自动化的方式以扩展集群消耗。
+- 使用 VPA 时，确保在 `Vertical Pod Autoscaler` 对象中对每个 Pod 设置最大资源，因为 VPA 建议的可能超过集群最大可用资源量。
+- 由于引入了资源分配的可变性，VPA 使得测量使用率，成本，效率更具挑战。你可以使用 [Kubecost](https://www.kubecost.com/) 自动化测量及分析过程以克服这些挑战。
+
 ## 三. HPA
+
+扩展性是 Kubernetes (K8s) 最核心优势之一。为了利用这些优势中的大部 （并有效使用 K8s），你需要对 Kubernetes 自动扩展如何工作有坚实的理解。在我们前面的文章中我们讨论了垂直扩展，这里我们来讨论 Kubernetes 中的水平扩展。我们定义 HPA，解释它如何工作，并通过一个使用 HPA 的示例项目来手把手讲解它。
+
+### 3.1 Kubernetes 自动扩展基础
+
+在我们深入 HPA 之前，我们需要大体了解 Kubernetes 自动扩展。自动扩展是一个基于历史资源使用度量自动增减 K8s 工作负载的方法。Kubernetes 的自动扩展有三个维度：
+
+- **水平 Pod 自动扩展器 (HPA)**：调整一个应用的副本数量。
+- **集群自动扩展器 (CA)**: 调整一个集群中节点数目。
+- **垂直 Pod 自动扩展器 (VPA)**: 调整集群中容器资源请求及限制。
+
+### 3.2 什么是 HPA？
+
+### 3.3 HPA 如何工作？
+
+### 3.4 Limitations of HPA 的限制
+
+### 3.5 EKS 示例: 如何实现 HPA
+
+### 3.6 部署一个示例应用
+
+### 3.7 HPA 使用及成本报告
+
+### 3.8 总结
+
 ## 四. CA
 
 ## Reference
+
 - [Kubernetes Autoscaling](https://www.kubecost.com/kubernetes-autoscaling)
