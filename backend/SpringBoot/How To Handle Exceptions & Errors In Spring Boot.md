@@ -125,6 +125,7 @@ NETWORK_AUTHENTICATION_REQUIRED : 511
 2. Step#2 : 创建一个与错误状态码同名的 html 页如 `StatusCode.html` 格式。例如，对状态码 `404` 创建 `404.html` 并将其放在 `error` 子目录下。
 
 你的目录结构应该如下所示：
+
 ![目录结构](images/Exception2-2.jpg)
 
 如果没有状态码对应的页面，它默认将显示 error.html。如果控制器抛出异常，那么默认 Http 状态码将会是 500，即 ”INTERNAL SERVER ERROR“。为了修改错误码至其它状态码，在你的自定义异常上应用 @ResponseStatus(code= HttpStatus.StatusCodeName) 。
@@ -214,6 +215,7 @@ public class InvoiceNotFoundException extends RuntimeException {
 </html>
 ```
 无论何时当异常发生时，404.html 将会被调用，它将会显示错误信息如下有意义的格式：
+
 ![404 错误信息](images/Exception3-1.jpg)
 ## 8 在 Spring Boot 中如何编写自定义错误控制器？
 不同于利用 Spring Boot 已经提供的 `ErrorController` 功能，我们可以实现自己的错误处理器。因为已经提供的 `ErrorController.class` 是一个接口，我们可以创建一个它的实现类从而使这个目标成为可能。如果我们定义 `ErrorController` 的实现类，Spring Boot 将优先选择我们的实现类来展示 `errors/exceptions`。然而在这种情况下，`error.hml`, `4xx.html`, `5xx.html` 或其它任何错误页面就不能再工作了。Spring Boot 默认提供一些错误属性如 `timestamp`, `status`, `message`, `path`, `exception`, `trace` 等，借助 `@Autowired` 注解我们可以在实现类中使用它们。现在来读取请求的属性值，代码如下：
@@ -273,6 +275,7 @@ public class CustomErrorController implements ErrorController {
 ```
 #### 8.1.1 输出
 以下是具体输出：
+
 ![输出](images/Exception5-1.jpg)
 ### 8.2 自定义错误控制器以得到 JSON 格式输出
 为了演示自定义错误控制器如何以 JSON 格式显示错误输出，参看以下代码：
@@ -317,6 +320,7 @@ public class CustomErrorControllerWithJSONResponse implements ErrorController {
 > 谨记在 Spring Boot 中 `@ResponseBody` 的默认输出是字符串或 JSON 格式。任何非字符串的返回类型都会提供 JSON 格式输出。因此确认你的控制器方法返回类型是非字符串（`Lis/Set/Map`）。同时在方法上应用 `@ResponseBody` 注解。
 #### 8.2.1 输出
 下面是输出格式：
+
 ![JSON 输出](images/Exception6-1.jpg)
 
 > 为了看到 JSON 输出，可以使用 Firefox，Google Chrome 的 JSON View 扩展，甚至 Postman 工具。
@@ -335,6 +339,7 @@ public @ResponseBody Map<String, Object> handleError(HttpServletRequest req)
 ```
 ### 9.1 输出
 下面是输出格式：
+
 ![输出格式](images/Exception7-1.jpg)
 ## 10 默认情况下预定义错误控制器如何处理一个 REST 调用抛出的异常？
 为了演示这个，让我们创建一个 Spring Boot 启动器项目，它逐步实现了一个简单的 REST 调用。考虑一个订单处理示例，我们有一个 `RestController` 作为 `InvoiceRestController`，其有一个方法 `getInvoice()`。另外我们还有一个模型类 `Invoice` 以及一个自定义异常类 `InvoiceNotFoundException`。
@@ -504,9 +509,10 @@ public class InvoiceExceptionHandler {
 }
 ```
 ### 12.3 Step#3 : 编写一个新的自定义异常类及 Rest 控制器
-你可以使用前面章节的 `InvoiceNotFoundException.java`。另外，确认 @ResponseStatus 没有在其上应用。同样地，也可以使用前面章节的 InvoiceRestController。
+你可以使用前面章节的 `InvoiceNotFoundException.java`。另外，确认 `@ResponseStatus` 没有在其上应用。同样地，也可以使用前面章节的 `InvoiceRestController`。
 ### 12.4 测试自定义错误属性
 在 Postman 工具中输入路径 `http://localhost:8080/find/24`，选择 `GET` 方法然后点击 `Send` 按钮。接下来你将会看到如下输出。你可以选择你喜欢的任意浏览器来测试这个用例：
+
 ![自定义错误属性输出](images/Exception8-1.jpg)
 ## 13 总结
 在讨论了 “Spring Boot 中如何处理错误和异常？”的理论和实例部分后，最终，我们能够在 Spring Boot 项目中实现 `Exceptions/Errors` 处理。当然，在本文中我们彻底的了解了 Spring Boot 的异常处理。类似地，我们期待你能够进一步扩展这些例子，并在你的项目中相应地实现它们。你也可以从 [spring.io](https://spring.io/blog/2013/11/01/exception-handling-in-spring-mvc) 查找到更多关于 Spring MVC 中异常处理的更多细节。另外，如果将来有更新，我们也会相应地更新本文。另外，请自由地在评论区写下你的评论。

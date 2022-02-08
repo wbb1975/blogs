@@ -3,7 +3,7 @@
 ## 1 关于 Spring 错误和异常的注解
 Spring Boot 证明了通过提供一些注解例如：`@Exception` 处理器, `@ContollerAdvice`, `@ResponseStatus`，异常处理是横切关注点。为了深入学习 Spring Boot 异常处理，请访问我们的博文[在 Spring Boot 中如何处理异常和错误](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/)。
 ### 1.1 @ResponseStatus
-在 Spring Boot 的默认异常处理机制中，当任何运行时一场发生时，我们的网页控制器会在返回的负载中提供一条一般性的错误页面。我们的错误回复总是给我们显示 [HTTP 状态码 500](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/#What_are_some_commonly_used_Http_Response_Status_codes)（指示内部服务器错误）而非一个更具描述性的状态码。我们可以利用 `@ResponseStatus` 的帮助得到一个格式更好的描述性错误回复，而非一般性错误页面。注解允许我们修改我们的回复的 HTTP 状态。它可被用于一下各处：
+在 Spring Boot 的默认异常处理机制中，当任何运行时一场发生时，我们的网页控制器会在返回的负载中提供一条一般性的错误页面。我们的错误回复总是给我们显示 [HTTP 状态码 500](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/#What_are_some_commonly_used_Http_Response_Status_codes)（指示内部服务器错误）而非一个更具描述性的状态码。我们可以利用 `@ResponseStatus` 的帮助得到一个格式更好的描述性错误回复，而非一般性错误页面。注解允许我们修改我们的回复的 HTTP 状态。它可被用于以下各处：
 1. 在异常类本身上
 2. 在方法上与 `@ExceptionHandler` 注解一起出现
 3. 在类上与 `@ControllerAdvice` 注解一起出现
@@ -39,7 +39,7 @@ public class UserController {
 }
 ```
 ### 1.3 @ContollerAdvice 和 @RestControllerAdvice
-带有 @ControllerAdvice 或 @RestControllerAdvice 注解的异常处理类使我们可以将异常处理器应用到程序的多余一个或所有的控制器上。一个控制器建议（controller advice）可以让我们拦截并修改控制器方法的返回值以处理异常。术语 “建议” 来源于面向方面编程（Aspect-Oriented Programming (AOP)），它给我们提供了在已有方法基础上的横切关注点的概念。无需细说，如果我们用 @RestControllerAdvice 代替 @ControllerAdvice，我们不需要在方法级别应用 @ResponseBody。例如，下面的代码展示了 @ControllerAdvice 的用法：
+带有 @ControllerAdvice 或 @RestControllerAdvice 注解的异常处理类使我们可以将异常处理器应用到程序的多于一个或所有的控制器上。一个控制器建议（controller advice）可以让我们拦截并修改控制器方法的返回值以处理异常。术语 “建议” 来源于面向方面编程（Aspect-Oriented Programming (AOP)），它给我们提供了在已有方法基础上的横切关注点的概念。无需细说，如果我们用 @RestControllerAdvice 代替 @ControllerAdvice，我们不需要在方法级别应用 @ResponseBody。例如，下面的代码展示了 @ControllerAdvice 的用法：
 ```
 //@RestControllerAdvice
 @ControllerAdvice

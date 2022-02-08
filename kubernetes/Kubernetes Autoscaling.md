@@ -31,7 +31,7 @@ Kubernetes Vertical Pod Autoscaler (VPA) 是一个自动扩展器，它开启了
 ### 2.1 三种类型 Kubernetes 自动扩展器
 
 有三种类型的 K8s 自动扩展器，每个服务于不同的目的，包括：
-- [水平 Pod 自动扩展器 (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/):调整一个应用的副本数量。HPA 基于 CPU 使用率扩展一个 RC，Deployment，Replica Set，StatefuleSet 中的 Pod 数量。HPA 也可以配置基于自定义或外部度量来作扩展决策。
+- [水平 Pod 自动扩展器 (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/):调整一个应用的复本数量。HPA 基于 CPU 使用率扩展一个 RC，Deployment，Replica Set，StatefuleSet 中的 Pod 数量。HPA 也可以配置基于自定义或外部度量来作扩展决策。
 - [集群自动扩展器 (CA)](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler#cluster-autoscaler): 调整一个集群中节点数目。当节点没有足够的资源来运行一个 pod （增加节点），或者当一个节点未充分使用，并且其 pod 可被指派到另一个节点（删除节点）时CA 会自动增减集群中的节点数目。
 - [垂直 Pod 自动扩展器 (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler): 调整集群中容器资源请求及限制（本文稍后将定义）
 ### 2.2 什么是 Kubernetes VPA?
@@ -82,7 +82,7 @@ Requests 定义了容器需要的最小资源量。例如，一个应用可能�
 3. VPA Recommender 提供 pod 资源建议
 4. VPA Updater 读取pod 资源建议
 5. VPA Updater 出发 pod 终止
-6. Deployment 了解到 pod 终止，它将会创建新的 pod 来匹配其副本配置
+6. Deployment 了解到 pod 终止，它将会创建新的 pod 来匹配其复本配置
 7. 在 pod 重建过程中，VPA Admission Controller 得到 pod 资源建议。因为 Kubernetes 不支持动态改变一个运行中的 pod 的资源限制，VPA 不能更新已有 Pod 的资源限制。它终止了使用过时限制的 pod。当 pod 控制器从 Kubernetes API service 请求替代的时候，VPA Admission Controller 将更新过的资源请求/限制值注入到新的 pod 规范中。
 8. 最终，VPA Admission Controller 重写了 pod 的建议值。在我们的例子中，VPA Admission Controller 增加了 “250m” CPU 给 pod。
 
@@ -459,17 +459,363 @@ Kubecost 易于通过单个 Helm 命令安装，并且可以与你的现有 Prom
 
 在我们深入 HPA 之前，我们需要大体了解 Kubernetes 自动扩展。自动扩展是一个基于历史资源使用度量自动增减 K8s 工作负载的方法。Kubernetes 的自动扩展有三个维度：
 
-- **水平 Pod 自动扩展器 (HPA)**：调整一个应用的副本数量。
+- **水平 Pod 自动扩展器 (HPA)**：调整一个应用的复本数量。
 - **集群自动扩展器 (CA)**: 调整一个集群中节点数目。
 - **垂直 Pod 自动扩展器 (VPA)**: 调整集群中容器资源请求及限制。
 
+不同的自动扩展器工作于两个不同的 Kubernetes 分层：
+
+- **Pod 级别**：HPA 和 VPA 发生在 Pod 级别。HPA 和 VPA 都扩展容器的资源和可用实例。
+- **Cluster 级别**：集群自动扩展器位于集群级别，它增减你的集群的节点数。
+
+现在我们已经聊完了基础，让我们来近距离查看 HPA。
+
 ### 3.2 什么是 HPA？
+
+HPA 是一种基于 CPU 利用率增减 replication controller, deployment, replica set, 或 stateful set 里的 Pod 数目的自动扩展形式--扩展是是平的，因为它影响实例个数而不是分配给单个容器的资源。
+
+HPA 可以基于自定义或外部度量来做出扩展决策，在你的初始配置后自动工作。你所需要做的一切就是定义复本的最小最大值。
+
+一旦配置，水平自动扩展器控制器将负责检查度量并据此增减你的复本数目。默认情况下，HPA 将每个 15 秒钟检查度量。
+
+为了检查度量，HPA 依赖于另一个知名 Kubernetes 资源 Metrics Server。Metrics Server 从 **kubernetes.summary_api** 截获数据如节点与 Pod 的 CPU 和内存使用率从而提供标准资源使用率测量数据。它也可以提供对自定义度量（这可以从外部源收集）的访问，比如用于指示流量的在一个负载均衡器上有多少个活跃会话。
+
+![hpa autoscaling](images/hpa-autoscaling.png)
+
+尽管 HPA 的扩展过程是自动的，但在某些情况下你可能够给出负载波动的预测。例如，你可以：
+
+- 基于一天内的时间调整复本数量
+- 为周末或非高峰期设置不同的容量需求
+- 实现一个基于事件的复本容量调度（例如在代码发布时增加容量）
 
 ### 3.3 HPA 如何工作？
 
+![HPA OVerview](images/hpa-overview.png)
+
+简单来讲，HPA 工作于一个“检查，更新，再检查”风格的循环。下面是循环的每一步是如何工作的。
+
+1. HPA 持续监控 metrics server 以获取资源使用率。
+2. 基于收集到的资源使用率，HPA 将计算需要的复本数。
+3. 接下来，HPA 将扩展应用到期待的复本数。
+4. 最终，HPA 改变了复本期待的数目。
+5. 因为 HPA 是持续监控，该过程从步骤 1 重复。
+
 ### 3.4 Limitations of HPA 的限制
 
+虽然 HPA 是一个功能强大的工具，但不是对每一个用例都是理想的，它也不能解决每一个集群资源问题。下面是最常见的例子：
+
+- HPA 的一个最常见的限制就是它不能工作于 DaemonSets
+- 如果你没有[有效地在 Pod 上设置 CPU和内存限制](https://blog.kubecost.com/blog/requests-and-limits/)，你的 Pod 可能会频繁中止；事情的另一面是你会浪费资源
+- 如果集群容量不够，HPA 不能扩展知道有新的节点加入集群；集群自动扩展器（CA）能够自动化这个过程。我们有一篇文章专门讲 CA，下面是一个快速的背景解释。
+
+集群自动扩展器（CA）基于来自 Pod 的资源请求增减集群中的节点数。不像 HPA，CA 并不查看自动扩展被触发时的可用 CPU 和内存。作为替代，CA 对事件作出反应，每 10 秒检查一次未调度的 Pod。
+
 ### 3.5 EKS 示例: 如何实现 HPA
+
+为了帮助我们学习 HPA，让我们来过几个实际的例子。我们将按照下面的步骤进行：
+
+1. 创建 EKS 集群
+2. 安装 Metrics Server
+3. 部署一个示例应用
+4. 安装 HPA
+5. 监控 HPA 事件
+6. 减轻负载
+
+#### 3.5.1 步骤 1 创建 EKS 集群
+
+这一步我们将使用 [AWS EKS](https://aws.amazon.com/eks/)（亚马逊托管 Kubernetes 服务），因此请确保你能够访问你的 AWS 账号。我们将使用 `eksctl`，一个在 EKS 上创建和管理集群的简单命令行工具。它用 Go 语言编写并使用 CloudFormation 作为后台。
+
+EKS 集群的 `kubeconfig` 文件将被存储在本地目录（你的工作站或笔记本），并且如果命令成功，你将看到一个就绪状态。作为开始，我们将使用下面的 `eksctl create cluster` 命令（此命令中将使用 Kubernetes 版本 `1.20`）：
+
+```
+$ eksctl create cluster  --name example-hpa-autoscaling  --version 1.20  --region us-west-2  --nodegroup-name hpa-worker-instances  --node-type c5.large  --nodes 1
+2021-08-30 12:52:24 [i]  eksctl version 0.60.0
+2021-08-30 12:52:24 [i]  using region us-west-2
+2021-08-30 12:52:26 [i]  setting availability zones to [us-west-2a us-west-2b us-west-2d]
+2021-08-30 12:52:26 [i]  subnets for us-west-2a - public:192.168.0.0/19 private:192.168.96.0/19
+2021-08-30 12:52:26 [i]  subnets for us-west-2b - public:192.168.32.0/19 private:192.168.128.0/19
+2021-08-30 12:52:26 [i]  subnets for us-west-2d - public:192.168.64.0/19 private:192.168.160.0/19
+2021-08-30 12:52:26 [i]  nodegroup "hpa-worker-instances" will use "" [AmazonLinux2/1.20]
+2021-08-30 12:52:26 [i]  using Kubernetes version 1.20
+2021-08-30 12:52:26 [i]  creating EKS cluster "example-hpa-autoscaling" in "us-west-2" region with managed nodes
+...
+...
+2021-08-30 12:53:29 [i]  waiting for CloudFormation stack 
+2021-08-30 13:09:00 [i]  deploying stack "eksctl-example-hpa-autoscaling-nodegroup-hpa-worker-instances"
+2021-08-30 13:09:00 [i]  waiting for CloudFormation stack 
+2021-08-30 13:12:11 [i]  waiting for the control plane availability...
+2021-08-30 13:12:11 [✔]  saved kubeconfig as "/Users/karthikeyan/.kube/config"
+2021-08-30 13:12:11 [i]  no tasks
+2021-08-30 13:12:11 [✔]  all EKS cluster resources for "example-hpa-autoscaling" have been created
+2021-08-30 13:12:13 [i]  nodegroup "hpa-worker-instances" has 1 node(s)
+2021-08-30 13:12:13 [i]  node "ip-192-168-94-150.us-west-2.compute.internal" is ready
+2021-08-30 13:12:13 [i]  waiting for at least 1 node(s) to become ready in "hpa-worker-instances"
+2021-08-30 13:12:13 [i]  nodegroup "hpa-worker-instances" has 1 node(s)
+2021-08-30 13:12:13 [i]  node "ip-192-168-94-150.us-west-2.compute.internal" is ready
+2021-08-30 13:14:20 [i]  kubectl command should work with "/Users/karthikeyan/.kube/config", try 'kubectl get nodes'
+2021-08-30 13:14:20 [✔]  EKS cluster "example-hpa-autoscaling" in "us-west-2" region is ready
+```
+
+接下来验证集群：
+```
+$ aws eks describe-cluster --name my-hpa-demo-cluster --region us-west-2
+```
+
+你也可以登陆到 AWS console 来检查：
+
+![EKS Cluster in AWS Console](images/clusters.png)
+
+为了得到集群登陆上下文，如下读取你的 `kubeconfig` 文件：
+```
+$ cat  ~/.kube/config |grep "current-context"
+current-context: bob@my-hpa-demo-cluster.us-west-2.eksctl.io
+```
+
+列取节点和 Pod：
+```
+$ kubectx bob@example-hpa-autoscaling.us-west-2.eksctl.io
+Switched to context "bob@example-hpa-autoscaling.us-west-2.eksctl.io".
+
+$ kubectl get nodes
+NAME                                           STATUS   ROLES    AGE   VERSION
+ip-192-168-94-150.us-west-2.compute.internal   Ready       15m   v1.20.4-eks-6b7464
+
+
+$ kubectl get pods --all-namespaces
+NAMESPACE     NAME                       READY   STATUS    RESTARTS   AGE
+kube-system   aws-node-f45pg             1/1     Running   0          15m
+kube-system   coredns-86d9946576-2h2zk   1/1     Running   0          24m
+kube-system   coredns-86d9946576-4cvgk   1/1     Running   0          24m
+kube-system   kube-proxy-864g6           1/1     Running   0          15m
+```
+
+kubectx 是一种在不同 Kubernetes 集群间切换的工具。现在我们已经有一个集群建立并运行起来，接下来，我们需要部署 `Metrics Server`。
+
+#### 3.5.2 步骤 2 安装 metrics server
+
+我们可以通过下面的命令来确认 Metrics Server 是否已经安装在我们的 EKS 集群里安装过了。
+```
+$ kubectl get apiservice | grep -i metrics
+```
+
+如果没有输出，我们的 EKS 集群里就没有安装度量服务器。我们可以使用下面的命令来查看我们是否有可用的度量：
+
+```
+$ kubectl top pods -n kube-system
+error: Metrics API not available
+```
+
+> 注意：对于这个过程，我们在我们本地笔记本上创建了一个名为 “/Users/bob/hpa/” 的目录，并将我们本文中用到的配置文件保存到这个目录。我们建议你在你的工作站上创建一个类似的目录以下载需要的文件（下文将提到）。
+
+让我们来安装度量服务器。从 `https://github.com/nonai/k8s-example-files/tree/main/metrics-server` 下载 `YAML` 文件：
+
+```
+$ cd /Users/bob/hpa/metrics-server && ls -l
+total 56
+-rw-r--r--  1 bob  1437157072   136 Aug 30 13:48 0-service-account.yaml
+-rw-r--r--  1 bob  1437157072   710 Aug 30 13:48 1-cluster-roles.yaml
+-rw-r--r--  1 bob  1437157072   362 Aug 30 13:48 2-role-binding.yaml
+-rw-r--r--  1 bob  1437157072   667 Aug 30 13:48 3-cluster-role-bindings.yaml
+-rw-r--r--  1 bob  1437157072   254 Aug 30 13:48 4-service.yaml
+-rw-r--r--  1 bob  1437157072  1659 Aug 30 13:48 5-deployment.yaml
+-rw-r--r--  1 bob  1437157072   331 Aug 30 13:48 6-api-service.yaml
+```
+
+一旦你下载了文件，运行下面的命令以创建所有资源：
+```
+$ kubectl apply -f .
+serviceaccount/metrics-server created
+clusterrole.rbac.authorization.k8s.io/system:aggregated-metrics-reader created
+clusterrole.rbac.authorization.k8s.io/system:metrics-server created
+rolebinding.rbac.authorization.k8s.io/metrics-server-auth-reader created
+clusterrolebinding.rbac.authorization.k8s.io/metrics-server:system:auth-delegator created
+clusterrolebinding.rbac.authorization.k8s.io/system:metrics-server created
+service/metrics-server created
+deployment.apps/metrics-server created
+apiservice.apiregistration.k8s.io/v1beta1.metrics.k8s.io created
+```
+验证 `Metrics Server` 部署：
+```
+$ kubectl get pods --all-namespaces
+NAMESPACE     NAME                             READY   STATUS    RESTARTS   AGE
+kube-system   aws-node-982kv                   1/1     Running   0          14m
+kube-system   aws-node-rqbg9                   1/1     Running   0          13m
+kube-system   coredns-86d9946576-9k6gx         1/1     Running   0          25m
+kube-system   coredns-86d9946576-m67h6         1/1     Running   0          25m
+kube-system   kube-proxy-lcklc                 1/1     Running   0          13m
+kube-system   kube-proxy-tk96q                 1/1     Running   0          14m
+kube-system   metrics-server-9f459d97b-q5989   1/1     Running   0          41s
+```
+
+列出在 `kube-system` 命名空间里的服务：
+```
+$ kubectl get svc -n kube-system
+NAME             TYPE        CLUSTER-IP              EXTERNAL-IP   PORT(S)         AGE
+kube-dns         ClusterIP   10.100.0.10             53/UDP,53/TCP   26m
+metrics-server   ClusterIP   10.100.66.231           443/TCP         82s
+```
+
+使用 `kubectl` 来查看 CPU 和 内存度量：
+```
+$ kubectl top pods -n kube-system
+NAME                             CPU(cores)   MEMORY(bytes)
+aws-node-982kv                   4m           40Mi
+aws-node-rqbg9                   5m           39Mi
+coredns-86d9946576-9k6gx         2m           8Mi
+coredns-86d9946576-m67h6         2m           8Mi
+kube-proxy-lcklc                 1m           11Mi
+kube-proxy-tk96q                 1m           11Mi
+metrics-server-9f459d97b-q5989   3m           15Mi
+```
+
+#### 3.5.3 步骤 3 部署一个示例应用
+
+现在我们将使用一个自定义 Docker 镜像来运行 Apache 和 PHP。 该 Docker 镜像可以公开地访问，所以我们可以从我们的 Kubernetes 部署直接引用它。
+
+让我们部署该应用作为 Kubernetes 集群的一部分，维持最小1个复本，最大10个复本。下面是其配置文件，你可以把它存为 "deployment.yml":
+```
+$ cd /Users/bob/hpa/
+$ cat deployment.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: hpa-demo-deployment
+spec:
+ selector:
+   matchLabels:
+     run: hpa-demo-deployment
+ replicas: 1
+ template:
+   metadata:
+     labels:
+       run: hpa-demo-deployment
+   spec:
+     containers:
+     - name: hpa-demo-deployment
+       image: k8s.gcr.io/hpa-example
+       ports:
+       - containerPort: 80
+       resources:
+         limits:
+           cpu: 500m
+         requests:
+           cpu: 200m
+```
+
+运行下买你的命令以应用它：
+```
+$ kubectl apply -f deployment.yml
+deployment.apps/hpa-demo-deployment created
+
+$ kubectl get pods
+NAME                                   READY   STATUS    RESTARTS   AGE
+hpa-demo-deployment-6b988776b4-b2hkb   1/1     Running   0          20s
+```
+
+我们已经成功地创建了部署，接下来让我们看看部署的状态列表：
+```
+$ kubectl get deploy
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+hpa-demo-deployment   1/1     1            1           9s
+```
+
+**创建 Kubernetes 服务**
+下一步我们必须创建一个服务。示例应用将使用该服务在公开端点上监听。使用下面的内容创建一个服务配置文件：
+```
+$ cd /Users/bob/hpa/
+$ cat service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+ name: hpa-demo-deployment
+ labels:
+   run: hpa-demo-deployment
+spec:
+ ports:
+ - port: 80
+ selector:
+   run: hpa-demo-deployment
+```
+该服务是我们已经创建的部署的前端，我们可以通过 80 端口访问。
+
+使用该修改：
+```
+$ kubectl apply -f service.yaml
+service/hpa-demo-deployment created
+```
+
+我们已经创建了服务，接下来，让我们检查服务是否存在以及其状态：
+```
+$ kubectl get svc
+NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+hpa-demo-deployment   ClusterIP   10.100.124.139                 80/TCP    7s
+kubernetes            ClusterIP   10.100.0.1                     443/TCP   172m
+```
+
+这里我们看到：
+
+- hpa-demo-deployment = 服务名
+- 10.100.124.139，服务的 IP 地址，它在端口 80/TCP 上打开
+
+#### 3.5.4 步骤 4 安装 HPA
+
+现在我们已经拥有示例应用作为我们部署的一部分，并且该服务可在 80 端口访问。为了扩展我们的资源，我们将使用 HPA 在流量增加时扩展集群，在流量减少时缩小集群。
+
+让我们创建 HPA 配置文件如下：
+```
+$ cd /Users/bob/hpa/
+$ cat hpa.yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+ name: hpa-demo-deployment
+spec:
+ scaleTargetRef:
+   apiVersion: apps/v1
+   kind: Deployment
+   name: hpa-demo-deployment
+ minReplicas: 1
+ maxReplicas: 10
+ targetCPUUtilizationPercentage: 50
+```
+
+使用该修改
+```
+$ kubectl apply -f hpa.yaml
+horizontalpodautoscaler.autoscaling/hpa-demo-deployment created
+```
+
+验证 HPA 部署：
+```
+$ kubectl get hpa
+NAME                  REFERENCE                      TARGETS  MINPODS MAXPODS REPLICAS   AGE
+hpa-demo-deployment   Deployment/hpa-demo-deployment 0%/50%    1       10      0          8s
+```
+
+上面的输出显示 HPA 维护由 `hpa-demo-deployment` 控制的 Pod 数目在 `1 ~ 10` 复本之间。在上面的例子中（参见 “TARGETS” 列），50% 目标值是 HPA 需要去维护的平均 CPU 使用率，另一方面 0% 目标值是当前使用率。
+
+如果我们想改变最小最大值，我们可以使用这个命令。
+> 注意：因为我们已经拥有了最小最大值，输出抛出一个错误提到它已经存在。
+
+**增加负载**
+
+到目前为止，我们已经创建了 EKS 集群，安装了 Metrics Server，部署了一个示例应用，并为其创建了一个伴生 Kubernetes 服务。我们也部署了 HPA，它将监控并我们的资源。
+
+为了实时测试 HPA，让我们增加集群负载，并检查 HPA 如何管理资源以反应。
+
+首先，让我们检查部署的当前状态：
+```
+$ kubectl get deploy
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+hpa-demo-deployment           1/1     1            1           23s
+```
+
+
+#### 3.5.5 监控 HPA 事件
+
+
+#### 3.5.6 减轻负载
 
 ### 3.6 部署一个示例应用
 
@@ -482,3 +828,4 @@ Kubecost 易于通过单个 Helm 命令安装，并且可以与你的现有 Prom
 ## Reference
 
 - [Kubernetes Autoscaling](https://www.kubecost.com/kubernetes-autoscaling)
+- [A Practical Guide to Setting Kubernetes Requests and Limits](https://blog.kubecost.com/blog/requests-and-limits/)
