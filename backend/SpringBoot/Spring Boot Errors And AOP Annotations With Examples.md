@@ -1,9 +1,15 @@
 # Spring Boot 错误 & AOP 注解及其实例
-在本文中我们将讨论 `“Spring Boot 注解及其实例”` 之前。无需细说，这些注解在创建 Spring Boot 应用时起到了关键作用。如果你想学习在一个 Spring Boot 项目中常用的所有注解，你可以访问博文 `“Spring Boot 注解及其实例”`。但这里我们将仅仅讨论 `“Spring Boot 注解及其实例”`。
+
+在本文中我们将讨论 `“Spring Boot 错误 & AOP 注解及其实例”` 之前。无需细说，这些注解在创建 Spring Boot 应用时起到了关键作用。如果你想学习在一个 Spring Boot 项目中常用的所有注解，你可以访问博文 [“Spring Boot 注解及其实例”](https://javatechonline.com/spring-boot-annotations-with-examples/)。但这里我们将仅仅讨论 `“Spring Boot 错误 & AOP 注解及其实例”`。
+
 ## 1 关于 Spring 错误和异常的注解
-Spring Boot 证明了通过提供一些注解例如：`@Exception` 处理器, `@ContollerAdvice`, `@ResponseStatus`，异常处理是横切关注点。为了深入学习 Spring Boot 异常处理，请访问我们的博文[在 Spring Boot 中如何处理异常和错误](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/)。
-### 1.1 @ResponseStatus
-在 Spring Boot 的默认异常处理机制中，当任何运行时一场发生时，我们的网页控制器会在返回的负载中提供一条一般性的错误页面。我们的错误回复总是给我们显示 [HTTP 状态码 500](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/#What_are_some_commonly_used_Http_Response_Status_codes)（指示内部服务器错误）而非一个更具描述性的状态码。我们可以利用 `@ResponseStatus` 的帮助得到一个格式更好的描述性错误回复，而非一般性错误页面。注解允许我们修改我们的回复的 HTTP 状态。它可被用于以下各处：
+
+Spring Boot 证明了通过提供一些注解例如：`@Exception` 处理器，`@ContollerAdvice`，`@ResponseStatus`，异常处理是横切关注点。为了深入学习 Spring Boot 异常处理，请访问我们的博文[在 Spring Boot 中如何处理异常和错误](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/)。
+
+### 1.1 `@ResponseStatus`
+
+在 Spring Boot 的默认异常处理机制中，当任何运行时异常发生时，我们的网页控制器会在返回的负载中提供一条一般性的错误页面。我们的错误回复总是给我们显示 [HTTP 状态码 500](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/#What_are_some_commonly_used_Http_Response_Status_codes)（指示内部服务器错误）而非一个更具描述性的状态码。我们可以利用 `@ResponseStatus` 的帮助得到一个格式更好的描述性错误回复，而非一般性错误页面。注解允许我们修改我们的回复的 HTTP 状态。它可被用于以下各处：
+
 1. 在异常类本身上
 2. 在方法上与 `@ExceptionHandler` 注解一起出现
 3. 在类上与 `@ControllerAdvice` 注解一起出现
@@ -15,9 +21,11 @@ public class NoSuchUserFoundException extends RuntimeException {
    ...
 }
 ```
-如果我们以一个非法用户调用我们的异常类，我们将收到 httpStatus.NOT_FOUND（指示错误状态码 404），这是一个更好的回复。
-### 1.2 @ExceptionHandler
-如果你想修改回复负载的整体结构从而使得它对用户更友好，更具描述性，@ExceptionHandler 给我们提供了巨大的弹性以达成目标。我们只需要创建一个方法或者在控制器类自身里或者在一个 @ControllerAdvice 注解类里，然后使用 @ExceptionHandler。现在清楚了--我们可以在类级别或者方法级别应用这个注解。例如，下面的代码展示了 @ExceptionHandler 的使用。我们为这个方法添加了 @ExceptionHandler 和 @ResponseStatus 注解以定义异常，我们期待处理它并返回期待的状态码。而且，@ExceptionHandler 可以接受方法期待返回的异常列表。
+如果我们以一个非法用户调用我们的异常类，我们将收到 `httpStatus.NOT_FOUND`（指示错误状态码 `404`），这是一个更好的回复。
+
+### 1.2 `@ExceptionHandler`
+
+如果你想修改回复负载的整体结构从而使得它对用户更友好，更具描述性，`@ExceptionHandler` 给我们提供了巨大的弹性以达成目标。**我们只需要在一个控制器类自身里或者在一个 `@ControllerAdvice` 注解类里创建一个方法，并对其使用`@ExceptionHandler` 注解**。现在清楚了--我们可以在类级别或者方法级别应用这个注解。例如，下面的代码展示了 `@ExceptionHandler` 的使用。我们为这个方法添加了 `@ExceptionHandler` 和 `@ResponseStatus` 注解以定义异常，我们期待处理它并返回期待的状态码。而且，`@ExceptionHandler` 可以接受方法期待返回的异常列表。
 ```
 @RestController
 @RequestMapping("/user")
@@ -38,8 +46,9 @@ public class UserController {
       }
 }
 ```
-### 1.3 @ContollerAdvice 和 @RestControllerAdvice
-带有 @ControllerAdvice 或 @RestControllerAdvice 注解的异常处理类使我们可以将异常处理器应用到程序的多于一个或所有的控制器上。一个控制器建议（controller advice）可以让我们拦截并修改控制器方法的返回值以处理异常。术语 “建议” 来源于面向方面编程（Aspect-Oriented Programming (AOP)），它给我们提供了在已有方法基础上的横切关注点的概念。无需细说，如果我们用 @RestControllerAdvice 代替 @ControllerAdvice，我们不需要在方法级别应用 @ResponseBody。例如，下面的代码展示了 @ControllerAdvice 的用法：
+### 1.3 `@ContollerAdvice` 和 `@RestControllerAdvice`
+
+带有 `@ControllerAdvice` 或 `@RestControllerAdvice` 注解的异常处理类使我们可以将异常处理器应用到程序的多于一个或所有的控制器上。一个控制器建议（controller advice）可以让我们拦截并修改控制器方法的返回值以处理异常。术语 “建议” 来源于面向方面编程（Aspect-Oriented Programming (AOP)），它给我们提供了在已有方法基础上的横切关注点的概念。无需细说，如果我们用 `@RestControllerAdvice` 代替 `@ControllerAdvice`，我们不需要在方法级别应用 `@ResponseBody`。例如，下面的代码展示了 `@ControllerAdvice` 的用法：
 ```
 //@RestControllerAdvice
 @ControllerAdvice
@@ -54,7 +63,9 @@ public class UserExceptionHandler {
 另外，这个处理器将处理应用中所有的控制器抛出的异常，而不仅仅是 UserController。
 
 为了解更多 Spring Boot 中的异常 & 错误处理，你们可以访问我们的博文 [Spring Boot Errors & Exceptions](https://javatechonline.com/how-to-handle-exceptions-errors-in-spring-boot/)。
+
 ## 2 Spring AOP 注解
+
 在 Spring AOP 中，我们使用由 [AspectJ 库](https://docs.spring.io/spring-framework/docs/3.0.0.RC2/reference/html/ch07s08.html) 提供的注解。为了使用 AOP 特性，我们需要在 pom.xml 中加入一下依赖：
 ```
 <dependency>
