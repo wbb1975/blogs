@@ -218,9 +218,9 @@ null 不应该被引号包围：
 ## 四 JSON Schema
 经常应用需要验证 JSON 对象的有效性，以确保必要的属性存在，以及满足了额外的验证性限制（例如价格不能少于1美元）。这些验证典型地在 JSON Schema 的背景下执行。
 ### 1. 语法 vs 语义验证（Syntactic vs Semantic Validation）
-当没有其 Schema 时，我们验证一个 JSON 文档就仅仅只能验证其语义法。语法的验证仅能保证文档时格式良好的。
+当没有其 Schema 时，我们验证一个 JSON 文档就仅仅只能验证其语法。语法的验证仅能保证文档时格式良好的。
 
-工具如 JSONLint](https://jsonlint.com/) 以及 JSON 解析器仅仅执行语法验证。
+工具如 [JSONLint](https://jsonlint.com/) 以及 JSON 解析器仅仅执行语法验证。
 
 语义验证比语法验证包含更多，它执行语法检查以及数据检查。
 

@@ -800,7 +800,7 @@ hpa-demo-deployment   Deployment/hpa-demo-deployment 0%/50%    1       10      0
 
 **增加负载**
 
-到目前为止，我们已经创建了 EKS 集群，安装了 Metrics Server，部署了一个示例应用，并为其创建了一个伴生 Kubernetes 服务。我们也部署了 HPA，它将监控并我们的资源。
+到目前为止，我们已经创建了 `EKS` 集群，安装了 `Metrics Server`，部署了一个示例应用，并为其创建了一个伴生 Kubernetes 服务。我们也部署了 HPA，它将监控并我们的资源。
 
 为了实时测试 HPA，让我们增加集群负载，并检查 HPA 如何管理资源以反应。
 
@@ -811,19 +811,172 @@ NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
 hpa-demo-deployment           1/1     1            1           23s
 ```
 
+接下来，我们将启动一个容器，并在一个无限循环中向 `php-apache` 服务发送查询，该服务在 `80` 端口监听。打开一个新的终端并执行下面的命令：
+```
+# kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://hpa-demo-deployment; done"
+```
+> 注意：如果你的服务没有 DNS 记录，请代之以服务名。
+
+查看服务名：
+```
+$ kubectl get svc
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+hpa-demo-deployment    ClusterIP   10.100.95.188           80/TCP    10m
+```
+
+在我们增加负载之前，HPA 的状态如下所示：
+```
+$ kubectl get hpa
+NAME                REFERENCE                     TARGETS  MINPODS MAXPODS REPLICAS   AGE
+hpa-demo-deployment Deployment/hpa-demo-deployment 0%/50%   1        10       1        12m
+```
+
+一旦我们触发了负载测试，使用下面的命令，它将每 `30` 秒钟显示 HPA 的状态。
+```
+$ kubectl get hpa -w
+NAME                REFERENCE                      TARGETS MINPODS MAXPODS REPLICAS AGE
+hpa-demo-deployment Deployment/hpa-demo-deployment  0%/50%  1      10      1        15m
+...
+...
+hpa-demo-deployment Deployment/hpa-demo-deployment  38%/50% 1      10      8        25m
+``` 
+
+这里你将看到，随着使用率增加，Pod 数量从 1 增加到 7：
+```
+$ kubectl get deployment php-apache
+NAME                READY   UP-TO-DATE   AVAILABLE     AGE
+hpa-demo-deployment   7/7     7            7           21m
+```
+
+你也能看到 Pod 使用率度量。在这个例子中，负载发生器容器产生负载：
+```
+$ kubectl top pods --all-namespaces
+NAMESPACE     NAME                                   CPU(cores)   MEMORY(bytes)
+default       hpa-demo-deployment-6b988776b4-b2hkb   1m           10Mi
+default       load-generator                         10m          1Mi
+default       hpa-demo-deployment-d4cf67d68-2x89h    97m          12Mi
+default       hpa-demo-deployment-d4cf67d68-5qxgm    86m          12Mi
+default       hpa-demo-deployment-d4cf67d68-ddm54    131m         12Mi
+default       hpa-demo-deployment-d4cf67d68-g6hhw    72m          12Mi
+default       hpa-demo-deployment-d4cf67d68-pg67w    123m         12Mi
+default       hpa-demo-deployment-d4cf67d68-rjp77    75m          12Mi
+default       hpa-demo-deployment-d4cf67d68-vnd8k    102m         12Mi
+kube-system   aws-node-982kv                         4m           41Mi
+kube-system   aws-node-rqbg9                         4m           40Mi
+kube-system   coredns-86d9946576-9k6gx               4m           9Mi
+kube-system   coredns-86d9946576-m67h6               4m           9Mi
+kube-system   kube-proxy-lcklc                       1m           11Mi
+kube-system   kube-proxy-tk96q                       1m           11Mi
+kube-system   metrics-server-9f459d97b-q5989         4m           17Mi
+```
 
 #### 3.5.5 监控 HPA 事件
 
+如果你想查看集群扩展时 HPA 执行了哪些步骤，执行下面的命令并检查事件章部分：
+```
+$ kubectl describe deploy hpa-demo-deployment
+Name:                   hpa-demo-deployment
+Namespace:              default
+CreationTimestamp:      Mon, 30 Aug 2021 17:15:34 +0530
+Labels:                 
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               run=php-apache
+Replicas:               7 desired | 7 updated | 7 total | 7 available | 0 NewReplicaSet:          hpa-demo-deployment-d4cf67d68 (7/7 replicas created)
+...
+...
+Events:
+  Type    Reason             Age    From                   Message
+  ----    ------             ----   ----                   -------
+  Normal  ScalingReplicaSet  12m    deployment-controller  Scaled up replica set hpa-demo-deployment-d4cf67d68 to 1
+  Normal  ScalingReplicaSet  5m39s  deployment-controller  Scaled up replica set hpa-demo-deployment-d4cf67d68 to 4
+  Normal  ScalingReplicaSet  5m24s  deployment-controller  Scaled up replica set hpa-demo-deployment-d4cf67d68 to 5
+  Normal  ScalingReplicaSet  4m38s  deployment-controller  Scaled up replica set hpa-demo-deployment-d4cf67d68 to 7
+```
+
+我们能够看到 Pod 从 `1` 增长到 `4`， 然后是 `5`， 最后增长到 `7`.
 
 #### 3.5.6 减轻负载
 
-### 3.6 部署一个示例应用
+接下来，让我们减轻负载。导航到你执行负载测试的终端，按 `Ctrl+ C` 停止负载产生。
 
-### 3.7 HPA 使用及成本报告
+然后，验证你的资源使用率状态：
+```
+$ kubectl get hpa
+NAME                REFERENCE                       TARGETS  MINPODS MAXPODS REPLICAS  AGE
+hpa-demo-deployment  Deployment/hpa-demo-deployment  0%/50%     1       10    1        25m
 
-### 3.8 总结
+$ kubectl get deployment hpa-demo-deployment
+NAME                  READY   UP-TO-DATE   AVAILABLE       AGE
+hpa-demo-deployment    1/1         1            1           25m
+```
+
+验证状态的另一种方式：
+```
+$ kubectl get events
+```
+
+```
+51m         Normal   SuccessfulCreate    replicaset/hpa-demo-deployment-cf6477c46      Created pod: hpa-demo-deployment-cf6477c46-b56vr
+52m         Normal   SuccessfulRescale   horizontalpodautoscaler/hpa-demo-deployment   New size: 4; reason: cpu resource utilization (percentage of request) above target
+52m         Normal   ScalingReplicaSet   deployment/hpa-demo-deployment                Scaled up replica set hpa-demo-deployment-cf6477c46 to 4
+52m         Normal   SuccessfulRescale   horizontalpodautoscaler/hpa-demo-deployment   New size: 6; reason: cpu resource utilization (percentage of request) above target
+52m         Normal   ScalingReplicaSet   deployment/hpa-demo-deployment                Scaled up replica set hpa-demo-deployment-cf6477c46 to 6
+51m         Normal   SuccessfulRescale   horizontalpodautoscaler/hpa-demo-deployment   New size: 7; reason: cpu resource utilization (percentage of request) above target
+51m         Normal   ScalingReplicaSet   deployment/hpa-demo-deployment                Scaled up replica set hpa-demo-deployment-cf6477c46 to 7
+53m         Normal   Scheduled           pod/load-generator                            Successfully assigned default/load-generator to ip-192-168-74-193.us-west-2.compute.internal
+53m         Normal   Pulling             pod/load-generator                            Pulling image "busybox"
+52m         Normal   Pulled              pod/load-generator                            Successfully pulled image "busybox" in 1.223993555s
+52m         Normal   Created             pod/load-generator                            Created container load-generator
+52m         Normal   Started             pod/load-generator                            Started container load-generator
+```
+
+#### 3.5.7 销毁集群
+
+最后，我们将使用下面的命令销毁演示 EKS 集群：
+```
+$ eksctl delete cluster --name my-hpa-demo-cluster --region us-west-2
+2021-08-30 20:10:09 [i]  eksctl version 0.60.0
+2021-08-30 20:10:09 [i]  using region us-west-2
+2021-08-30 20:10:09 [i]  deleting EKS cluster "my-hpa-demo-cluster"
+...
+...
+2021-08-30 20:12:40 [i]  waiting for CloudFormation stack "eksctl-my-hpa-demo-cluster-nodegroup-ng-1"
+2021-08-30 20:12:41 [i]  will delete stack "eksctl-my-hpa-demo-cluster-cluster"
+2021-08-30 20:12:42 [✔]  all cluster resources were deleted
+```
+
+### 3.6 HPA 使用及成本报告
+
+更多的扩展带来了更多的复杂性，随着更多变量引入等式，水平扩展使得使用及成本报告更复杂。
+
+### 3.7 总结
+
+回顾一下，在本文中我们学到了：
+- HPA 是 Kubernetes 自动扩展的原声方法之一，用于扩展资源如 `deployments`, `replica sets`, `replication controllers`, 以及 `stateful sets`。它基于观测到的度量并与给定阈值以增减 Pod 数目。
+- 每个 HPA 在集群中以 `HorizontalPodAutoscaler` 对象的形式存在。为了与这些对象交互，你可以使用命令如 `“kubectl get hpa”` 或 `“kubectl describe hpa HPA_NAME”`。
+- HPA 在容器级别的资源请求值做出扩展决策，因此对你的所有容器配置了资源请求值是非常重要的。
+- Kubernetes 集群必须安装 Metrics Server 以便 HPA 正常工作。
+- 出于其内部限制，HPA 最好与 `Cluster Autoscaler` 联合工作。当集群现有节点耗尽，HPA 可以扩展资源，因此它需要 `Cluster Autoscaler` 帮助在 Kubernetes 集群中增加节点。
 
 ## 四. CA
+
+自动扩展是 Kubernetes（K8S）最具价值的提议之一 。与 `Vertical Pod Autoscaler (VPA)` 和 `Horizontal Pod Autoscaler (HPA)` 一样，`Cluster Autoscaler (CA)` 是 K8S 中三种自动扩展功能的一种。因此，理解 `Cluster Autoscaler` 是了解你的 Kubernetes 平台不可或缺的一部分。
+
+为了帮助你开始了解 CA，我们将提供一个对 Kubernetes 中 `Cluster Autoscaler` 的介绍，描述其使用及益处，并使用 AWS [Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) 作为例子来实现 `Cluster Autoscaler`。
+
+### 4.1 集群自动扩展器与其它自动扩展器的区别
+
+### 4.2 什么是集群自动扩展器（CA）
+
+### 4.3 集群自动扩展器如何工作
+
+### 4.4 集群自动扩展器的局限
+
+### 4.5 EKS 示例: 如何实现集群自动扩展器
+
+### 4.6 集群自动扩展器使用及成本报告
+
+### 4.7 结论
 
 ## Reference
 
