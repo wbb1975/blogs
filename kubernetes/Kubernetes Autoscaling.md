@@ -966,17 +966,675 @@ $ eksctl delete cluster --name my-hpa-demo-cluster --region us-west-2
 
 ### 4.1 集群自动扩展器与其它自动扩展器的区别
 
+在我们开始探寻 CA 的规范之前，让我们先来看看 Kubernetes 中的三种不同的自动扩展方式。它们是：
+
+- 集群自动扩展器（CA）：当 Pod 不能被调度或节点未被充分使用时，调整集群中的节点数量
+- 水平 Pod 自动扩展器（HPA）：调整应用复本数量
+- 垂直 Pod 自动扩展器（VPA）：调整容器资源请求或限制量
+
+一种思考 Kubernetes 自动扩展功能的简单方法是 HPA 和 VPA 运行于 Pod 级别，相反 CA 运行在集群级别。
+
 ### 4.2 什么是集群自动扩展器（CA）
+
+集群自动扩展器基于 Pod 的资源请求自动增减集群中的节点。集群自动扩展器并不直接测量 CPU 和 内存来作扩展决策。替代地，它每 10 秒钟检查一次以检索处于 pending 状态的 Pod，它表明由于没有足额的集群容量调度器不能将它们指派给一个节点。
 
 ### 4.3 集群自动扩展器如何工作
 
+在扩展的场景中，当由于资源缺乏导致 pending （未调度）Pods 数目增加时 CA 会自动介入并向集群添加新的节点。
+
+![集群自动扩展器如何工作](images/ca-process.png)
+
+上面的截图演示了当需要扩展容量时的 CA 决策过程。缩减场景存在同样的机制，其时 CA 将 Pod 迁移至更少的节点上以释放节点并终止它。
+
+向上扩展一个集群的四个步骤包括：
+
+1. 当 CA 处于活跃状态，它将检查 pending pods。默认扫描间隔是 10 秒，它可以通过 --scan-interval 标记配置。
+2. 如果存在 pending pods 并且集群需要更多的资源，只要它还在管理员配置的限制之内，CA 就将通过启动一个新的节点来扩展集群。公有云供应商如 AWS, Azure, GCP 也支持 Kubernetes 集群自动扩展功能。例如，AWS EKS 使用它的 AWS [Auto Scaling group](https://docs.aws.amazon.com/autoscaling/ec2/userguide/what-is-amazon-ec2-auto-scaling.html) 功能自动增减 EC2虚拟机作为集群节点来与 Kubernetes 集成。
+3. Kubernetes 注册控制平面新起的节点以使它对 Kubernetes 调度器指派 Pod 可用。
+4. 最好，Kubernetes 调度器分配 pending pods 至新的节点。
+
 ### 4.4 集群自动扩展器的局限
+
+当你计划你的实现 CA 有一些限制需要铭记：
+
+- CA 并不基于 CPU 或 内存做出扩展决策。它仅仅检查一个 Pod 的 CPU 和内存资源的请求和限制，这个限制意味着由用户请求的无用计算资源将不会被 CA 检测到，从而导致集群资源浪费和低效的资源利用率。
+- 无论何时当有一个扩展集群的请求时，CA 在30 - 60 秒内向云供应商发布一个扩展请求。云供应商花费的创建一个节点的实际时间可能由几分钟甚至更多。这个延迟意味着你的应用的性能在等待集群容量扩展期间可能会下降。
 
 ### 4.5 EKS 示例: 如何实现集群自动扩展器
 
+接下来，我们将在 AWS Elastic Kubernetes Service (EKS) 中逐步实现 Kubernetes CA 的功能。EKS 使用  [AWS Auto Scaling group](https://docs.aws.amazon.com/autoscaling/ec2/userguide/what-is-amazon-ec2-auto-scaling.html)（我们偶尔会用“ASG”来引用它）的功能来与 CA 集成，并执行添加/删除节点的请求。下面时作为我们的练习的一部分的七步：
+
+1. 检查 CA 的前提条件
+2. 在 AWS 中创建 EKS
+3. 创建 IAM OIDC 提供者
+4. 为 CA 创建 IAM 策略
+5. 为 CA 创建 IAM 角色
+6. 部署 Kubernetes CA
+7. 创建一个 Nginx 部署以测试 CA 功能
+
+#### 4.5.1 前提
+
+下面的截图显示了 ASG 的相关标记（tags）。CA 依赖这些标签来识别它将使用的 AWS ASG。如果这些标签不存在，CA 就不能发现 ASG，也就不能从 EKS 集群增加/删除节点。
+
+![Tags (in the form of key-value pairs) assigned to our autoscaling group](images/outscaling-key-value.png)
+
+#### 4.5.2 STEP 1: 创建 EKS 集群
+
+这个预演将在 AWS 中创建 EKS 集群，它带有两个 ASG，以此来演示 CA 如何使用 ASG 管理 EKS 集群。在创建 EKS 集群时，AWS 自动创建 EC2 ASG，但你必须确保它们含有 CA 发现它们所必需的标签。
+
+首先，使用下面的内容创建 EKS 集群配置文件。
+```
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: demo-ca-cluster
+  region: us-east-1
+  version: "1.20"
+availabilityZones:
+- us-east-1a
+- us-east-1b
+managedNodeGroups:
+- name: managed-nodes
+  labels:
+    role: managed-nodes
+  instanceType: t3.medium
+  minSize: 1
+  maxSize: 10
+  desiredCapacity: 1
+  volumeSize: 20
+nodeGroups:
+- name: unmanaged-nodes
+  labels:
+    role: unmanaged-nodes
+  instanceType: t3.medium
+  minSize: 1
+  maxSize: 10
+  desiredCapacity: 1
+  volumeSize: 20
+```
+
+这里我们为集群创建了两个 ASG（其下 AWS EKS 使用了 [node groups](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html) 来简化节点的生命周期管理）：
+
+- 管理节点（Managed-nodes）
+- 未受管理节点（Unmanaged-nodes）
+
+我们稍后将在我们的练习中的测试环节使用未受管理节点来验证 CA 是否正常工作。
+
+接下来，利用 [eksctl](https://eksctl.io/) 来使用下面的命令创建 EKS 集群：
+
+```
+$ eksctl create cluster -f eks.yaml
+```
+
+#### 4.5.3 STEP 2: 验证 EKS 集群和 ASG
+
+我们可以使用 kubectl 命令行来验证：
+
+```
+$ kubectl get svc
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.100.0.1           443/TCP   14m
+```
+
+我们也可以从 AWS 控制台验证我们集群的存在：
+
+![AWS 控制台中的 EKS 集群](images/cluster-aws.png)
+
+我们也可以从 AWS 控制台证明 ASG 也正确创建了：
+
+![AWS 控制台中的 ASG 标签](images/asg-aws.png)
+
+#### 4.5.4 STEP 3: 创建 IAM OIDC 提供者
+
+IAM OIDC 用于授权 CA 在 ASG 中启动/终止实例。在这一节，我们将看到如何在 EKS 集群中配置它.
+
+在 EKS 集群控制台，导航到配置属性页，如下所示复制 `OpenID connect URL`：
+
+![OpenID of EKS](images/openid-aws.png)
+
+然后导航到 IAM 控制台，如下选择 `Identity provider`：
+
+![provider-aws](images/provider-aws.png)
+
+点击 “Add provider”，选择 “OpenID Connect”，然后如下点击 “Get thumbprint”：
+
+![provider-thumbprint-aws](images/provider-thumbprint-aws.png)
+
+然后进入 `“Audience”`（我们的例子中 `sts.amazonaws.com` 指向 `AWS STS`，也被称为 `Security Token Service`）并添加 `provider`（从[这里](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)了解更多 OpenID）：
+
+![provider-add-aws](images/provider-add-aws.png)
+
+> 注意：你需要将 IAM 角色附加到这个 Provider--我们将接下来审查这个。
+
+![identity-provider-info](images/identity-provider-info.png)
+
+#### 4.5.5 STEP 4: 创建 IAM 策略
+
+接下来，我们需要创建 [IAM policy](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)，它将允许 CA 增减集群中节点数目。
+
+为了创建带有必需权限的策略，保存下面的内容为 `“AmazonEKSClusterAutoscalerPolicy.json”` 或任何你喜欢的名字：
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Action": [
+              "autoscaling:DescribeAutoScalingGroups",
+              "autoscaling:DescribeAutoScalingInstances",
+              "autoscaling:DescribeLaunchConfigurations",
+              "autoscaling:DescribeTags",
+              "autoscaling:SetDesiredCapacity",
+              "autoscaling:TerminateInstanceInAutoScalingGroup",
+              "ec2:DescribeLaunchTemplateVersions"
+          ],
+          "Resource": "*",
+          "Effect": "Allow"
+      }
+  ]
+}
+```
+然后，运行下面的 AWS CLI 命令来创建策略（可以从[这里](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html)了解更多 AWS CLI 安装和配置知识）：
+```
+$ aws iam create-policy --policy-name AmazonEKSClusterAutoscalerPolicy --policy-document file://AmazonEKSClusterAutoscalerPolicy.json
+```
+策略的验证：
+```
+$ aws iam list-policies --max-items 1
+{
+    "NextToken": "eyJNYXJrZXIiOiBudWxsLCAiYm90b190cnVuY2F0ZV9hbW91bnQiOiAxfQ==",
+    "Policies": [
+        {
+            "PolicyName": "AmazonEKSClusterAutoscalerPolicy",
+            "PermissionsBoundaryUsageCount": 0,
+            "CreateDate": "2021-10-24T15:02:46Z",
+            "AttachmentCount": 0,
+            "IsAttachable": true,
+            "PolicyId": "ANPA4KZ4K7F2VD6DQVAZT",
+            "DefaultVersionId": "v1",
+            "Path": "/",
+            "Arn": "arn:aws:iam::847845718389:policy/AmazonEKSClusterAutoscalerPolicy",
+            "UpdateDate": "2021-10-24T15:02:46Z"
+        }
+    ]
+}
+```
+#### 4.5.6 STEP 5: 为 provider 创建 IAM 角色
+
+正如前面讨论过的，我们仍然需要创建一个 [IAM 角色](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html)，并把它与在步骤 3 中创建的 Prodiver 连接到一起。
+
+![select-identity-provider](images/select-identity-provider.png)
+
+选择观众 `“sts.amazonaws.com”` 并附上你创建的策略。
+
+然后，验证 IAM 角色并确认策略已经附上了：
+
+![iam-role-policy](images/iam-role-policy.png)
+
+编辑 `“Trust relationships”`：
+
+![edit-trust-relationships](images/edit-trust-relationships.png)
+
+接下来，修改 `OIDC` 如下所示：
+
+![change-oidc](images/change-oidc.png)
+
+然后点击 `“Update Trust Policy”` 并保存。
+
+#### 4.5.7 STEP 6: 部署 CA
+
+接下来，我们部署 CA。为了实现这个，我们必须实现先前创建的 IAM 角色的 ARN 数字。
+
+为了部署 CA，将下面命令行后面的内容存为一个文件，并运行下面的命令：
+
+```
+$ kubectl  apply -f <path of the file> 
+```
+
+保存至文件的内容如下（确保你复制了全部内容，它包含下面步骤需要的内容）：
+
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-addon: cluster-autoscaler.addons.k8s.io
+    k8s-app: cluster-autoscaler
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::847845718389:role/AmazonEKSClusterAutoscalerRole
+  name: cluster-autoscaler
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-autoscaler
+  labels:
+    k8s-addon: cluster-autoscaler.addons.k8s.io
+    k8s-app: cluster-autoscaler
+rules:
+  - apiGroups: [""]
+    resources: ["events", "endpoints"]
+    verbs: ["create", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/eviction"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["update"]
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    resourceNames: ["cluster-autoscaler"]
+    verbs: ["get", "update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["watch", "list", "get", "update"]
+  - apiGroups: [""]
+    resources:
+      - "pods"
+      - "services"
+      - "replicationcontrollers"
+      - "persistentvolumeclaims"
+      - "persistentvolumes"
+    verbs: ["watch", "list", "get"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets", "daemonsets"]
+    verbs: ["watch", "list", "get"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "replicasets", "daemonsets"]
+    verbs: ["watch", "list", "get"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses", "csinodes"]
+    verbs: ["watch", "list", "get"]
+  - apiGroups: ["batch", "extensions"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create"]
+  - apiGroups: ["coordination.k8s.io"]
+    resourceNames: ["cluster-autoscaler"]
+    resources: ["leases"]
+    verbs: ["get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    k8s-addon: cluster-autoscaler.addons.k8s.io
+    k8s-app: cluster-autoscaler
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create","list","watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["cluster-autoscaler-status", "cluster-autoscaler-priority-expander"]
+    verbs: ["delete", "get", "update", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-autoscaler
+  labels:
+    k8s-addon: cluster-autoscaler.addons.k8s.io
+    k8s-app: cluster-autoscaler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-autoscaler
+subjects:
+  - kind: ServiceAccount
+    name: cluster-autoscaler
+    namespace: kube-system
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    k8s-addon: cluster-autoscaler.addons.k8s.io
+    k8s-app: cluster-autoscaler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cluster-autoscaler
+subjects:
+  - kind: ServiceAccount
+    name: cluster-autoscaler
+    namespace: kube-system
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    app: cluster-autoscaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  template:
+    metadata:
+      labels:
+        app: cluster-autoscaler
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+    spec:
+      serviceAccountName: cluster-autoscaler
+      containers:
+        - image: k8s.gcr.io/autoscaling/cluster-autoscaler:v1.20.0
+          name: cluster-autoscaler
+          resources:
+            limits:
+              cpu: 100m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 500Mi
+          command:
+            - ./cluster-autoscaler
+            - --v=4
+            - --stderrthreshold=info
+            - --cloud-provider=aws
+            - --skip-nodes-with-local-storage=false
+            - --expander=least-waste
+            - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/demo-ca-cluster
+            - --balance-similar-node-groups
+            - --skip-nodes-with-system-pods=false
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /etc/ssl/certs/ca-certificates.crt #/etc/ssl/certs/ca-bundle.crt for Amazon Linux Worker Nodes
+              readOnly: true
+          imagePullPolicy: "Always"
+      volumes:
+        - name: ssl-certs
+          hostPath:
+            path: "/etc/ssl/certs/ca-bundle.crt"
+```
+
+对于这一步，重要的参数包括：
+
+- **--node-group-auto-discovery =** 这被 CA 用于基于其标记发现 ASG。下面这个例子演示了标记格式：`asg:tag=tagKey,anotherTagKey`
+- **V1.20.0 =** 这是我们的例子中使用的 EKS 集群的发布版本。如果你在使用老版本你必须更新
+- **--balance-similar-node =** 如果你将这个设置为 `“true,”`，CA 将检测相似的节点组，并平衡它们之间的节点数目。
+- **--skip-nodes-with-system-pods =** 如果你设置这个标记为 `“true,”`，CA 将永不会删除驻留有与 `kube-system` 相关 Pod 的节点（`DaemonSet` 或镜像 Pod例外）
+
+参考[这个文件](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#what-are-the-parameters-to-ca)可以获取集群配置参数的完整集以备将来使用。
+
+接下来，验证你在使用正确的 kubeconfig：
+```
+$ kubectx
+bob@demo-ca-cluster.us-east-1.eksctl.io
+```
+
+然后，使用根据先前内容保存的 YAML 配置文件如下发布命令以应用修改：
+
+![应用修改](images/apply-changes.png)
+
+下一步，使用下面的命令以验证日志：
+```
+$ kubectl logs -l app=cluster-autoscaler -n kubesystem -f
+```
+
+下面红色高亮的一节指示命令行运行成功：
+
+![验证日志](images/verify-logs.png)
+
+现在 CA 将会检查未调度的 Pod 并努力调度它们。你可以从日志中看到这些行动。运行下面的命令以检查 Pod 的状态：
+
+```
+$ kubectl get pods -n kube-system
+```
+
+期待的结果如下所示：
+
+![Pod 状态](images/pods-status.png)
+
+检查 EKS 集群的节点数目：
+
+![节点数目](images/number-of-nodes.png)
+
+祝贺！你已经部署 CA 成功了。
+
+这里，你看到了两个节点在集群里，其中一个节点在一个管理组中，另一个在非管理组中。这个配置允许我们在稍后的练习中测试 CA 的功能。接下来，我们将部署 Nginx 为一个实例应用 Deployment 以练习自动扩展并观测 CA 的行动。
+
+#### 4.5.8 STEP 7: 创建一个 Nginx deployment 来测试自动扩展器功能
+
+我们将创建两个部署：一个基于管理节点组；另一个基于非管理节点组。
+
+##### 管理节点组
+
+基于下面的内容创建一个配置文件：
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-managed
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-managed
+  template:
+    metadata:
+      labels:
+        app: nginx-managed
+    spec:
+      containers:
+      - name: nginx-managed
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - managed-nodes
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - nginx-managed
+            topologyKey: kubernetes.io/hostname
+            namespaces:
+            - default
+```
+
+注意：上面的配置使用了[节点亲缘性](https://v1-20.docs.kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)，它基于标签 `“role=managed-nodes”` 以选择节点组，从而帮助调度器控制 Pod 被调度的位置。
+
+使用该修改：
+
+```
+$ kubectl apply -f 1-nginx-managed.yaml
+deployment.apps/nginx-managed created
+```
+
+##### 非管理节点组
+
+对于非管理节点组，基于下面的内容创建一个配置文件：
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-unmanaged
+  namespace: default
+spec:  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-unmanaged
+  template:
+    metadata:
+      labels:
+        app: nginx-unmanaged
+    spec:
+      containers:
+      - name: nginx-unmanaged
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - unmanaged-nodes
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - nginx-unmanaged
+            topologyKey: kubernetes.io/hostname
+            namespaces:
+            - default
+```
+
+使用该修改：
+
+```
+$ kubectl apply -f 2-nginx-unmanaged.yaml
+deployment.apps/nginx-unmanaged created
+```
+
+检查 Pod 状态：
+
+```
+$ kubectl get pods -n default
+NAME                               READY   STATUS    RESTARTS   AGE
+nginx-managed-7cf8b6449c-mctsg     1/1     Running   0          60s
+nginx-managed-7cf8b6449c-vjvxf     0/1     Pending   0          60s
+nginx-unmanaged-67dcfb44c9-gvjg4   0/1     Pending   0          52s
+nginx-unmanaged-67dcfb44c9-wqnvr   1/1     Running   0          52s
+```
+
+现在，你可以看到，四个 Pod 中仅有两个在运行，其原因在于我们的集群中仅有两个节点。请注意我们使用了一个 [Pod 亲缘性](https://v1-20.docs.kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)配置以防止 Kubernetes 同一个 deployment 的多个 Pod 被调度到同一个节点（从而避免了为了演示 CA功能添加额外的容量）上。
+
+CA 将会检查 Pod 的状态。发现一些处于  “pending” 状态，并试着向集群添加新的节点。几分钟后，你将看到第三个节点出现了:
+
+![Pod 状态](images/pods-status-2.png)
+
+##### 基于标签列出 ASG
+
+下面的 WS CLI 命令显示了 ASG 拥有特定标记从而被选择。你可以从结果中发现仅仅一个 ASG 组（管理组）被显示：
+
+```
+$ aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[? Tags[? (Key=='k8s.io/cluster-autoscaler/enabled') && Value=='true']]".AutoScalingGroupName --region us-east-1
+[
+    "eks-44be5953-4e6a-ac4a-3189-f66d76fa2f0d"
+]
+
+$ aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[? Tags[? (Key=='k8s.io/cluster-autoscaler/demo-ca-cluster') && Value=='owned']]".AutoScalingGroupName --region us-east-1
+[
+    "eks-44be5953-4e6a-ac4a-3189-f66d76fa2f0d"
+]
+```
+
+##### 添加标记
+
+现在，让我们为我们先前从AWS 控制台创建的非管理组手动添加标记：
+
+![添加标记](images/adding-labels.png)
+
+现在，管理组和非管理组都包含需要的标记：
+
+```
+$ aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[? Tags[? (Key=='k8s.io/cluster-autoscaler/enabled') && Value=='true']]".AutoScalingGroupName --region us-east-1
+[
+    "eks-44be5953-4e6a-ac4a-3189-f66d76fa2f0d",
+ "eksctl-demo-ca-cluster-nodegroup-unmanaged-nodes-NodeGroup-187AQL8VGA6WA"
+]
+
+$ aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[? Tags[? (Key=='k8s.io/cluster-autoscaler/demo-ca-cluster') && Value=='owned']]".AutoScalingGroupName --region us-east-1
+[
+    "eks-44be5953-4e6a-ac4a-3189-f66d76fa2f0d",
+ "eksctl-demo-ca-cluster-nodegroup-unmanaged-nodes-NodeGroup-187AQL8VGA6WA"
+]
+```
+
+##### *Pod 的验证
+
+让我们再次检查节点的状态以验证我们大部分最近的配置修改如何影响 CA 向我们的集群添加节点的方式。如下我们可以看到第四个节点已经被添加到我们的集群：
+
+![Pod 的状态](images/pods-status-3.png)
+
+
+当你检查 Pod 的状态，因为我们的集群中有四个节点因此四个 Pod 都在运行：
+
+![Pod 的状态](images/pods-status-4.png)
+
+如果你从 AWS 控制台检查 ASG，你将会看到四个节点确实已经就位：
+
+![asg example](images/asg-example.png)
+
+##### 缩减节点
+
+我们也可以验证 CA 可以移除节点。为了观测这个，我们删除 Nginx deployments （Pod）并观测到 CA 从集群中移除节点以反应从而容纳缩减的集群容量需求。我们适应下面的 kubectl 命令以删除    deployments：
+
+```
+$ kubectl delete -f 1-Nginx-managed.yaml
+deployment.apps "nginx-managed" deleted
+
+$ kubectl delete -f 2-nginx-unmanaged.yaml
+deployment.apps "nginx-unmanaged" deleted
+```
+
+当你删除 deployment 之后，等待几分钟，然后从 AWS 控制台检查 ASG 以验证期待的节点缩减：
+
+![autoscaling-groups](images/autoscaling-groups.png)
+
+##### 完成教程后清理
+
+一旦你完成了你的测试，记得使用下面的命令删除你的练习中使用的 EKS 集群：
+
+```
+$ eksctl delete cluster --name=demo-ca-cluster --region us-east-1
+2021-10-25 00:45:38 [ℹ]  eksctl version 0.60.0
+2021-10-25 00:45:38 [ℹ]  using region us-east-1
+2021-10-25 00:45:38 [ℹ]  deleting EKS cluster "demo-ca-cluster"
+...
+...
+2021-10-25 00:49:24 [ℹ]  will delete stack "eksctl-demo-ca-cluster-cluster"
+2021-10-25 00:49:24 [✔]  all cluster resources were deleted
+```
+
 ### 4.6 集群自动扩展器使用及成本报告
 
+伴随扩展以及自动化是增长的监控复杂性--测量使用及分配成本变得更复杂--CA 通过增减节点改变了集群中的资源量。
+
+记得阅读我们的 [Kubernetes 标记指南](https://blog.kubecost.com/blog/kubernetes-labels/)以学习实现标记策略的最佳实践，它可以增强你的 Kubecost 成本分配报告。你可以借助 [Helm chart](https://www.kubecost.com/install.html) 一个命令行就安装 Kubecost。Kubecost 对于单个集群无论其大小永远免费。
+
 ### 4.7 结论
+
+通过添加节点到集群以确保足够的计算资源以及通过删除节点以节省基础设置成本，CA 在此扮演了一个非常重要的角色。CA 通过检查处于 pending 状态（它告诉 CA 需要向上扩展以增加容量）的 Pod 和简称未充分利用的节点（告诉 CA 向下缩减）以执行这些功能。CA 比 HPA 和 VPA 易于实现及维护，但这并不意味它应该代替它们。Kubernetes 自动扩展当三种自动扩展方式相互呼应时工作得最好。选择使用 CA 依赖于你的应用的架构（例如，你的应用是否基于微服务）以及扩展频率。因此，我们建议你使用我们的指南以理解 Kubernetes 支持的每一种自动扩展方式，从而能够选择满足你的需求的自动扩展器。
 
 ## Reference
 
