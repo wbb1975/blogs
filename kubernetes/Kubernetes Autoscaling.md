@@ -1640,3 +1640,4 @@ $ eksctl delete cluster --name=demo-ca-cluster --region us-east-1
 
 - [Kubernetes Autoscaling](https://www.kubecost.com/kubernetes-autoscaling)
 - [A Practical Guide to Setting Kubernetes Requests and Limits](https://blog.kubecost.com/blog/requests-and-limits/)
+- [Cluster AutoScaler Frequently Asked Questions](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md)
