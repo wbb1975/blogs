@@ -395,6 +395,73 @@ http://api.example.com/device-management/managed-devices?region=USA&brand=XYZ&so
 ## 五 Idempotence
 ## 六 Security Essentials
 
+REST API 安全不是事后诸葛亮，它是任何开发项目的一个必需部分，[REST](https://restfulapi.net/) API 同样如此。
+
+有许多方法可以使得 RESTful API 更安全，例如，[basic auth](https://howtodoinjava.com/resteasy/jax-rs-resteasy-basic-authentication-and-authorization-tutorial/), [OAuth](https://oauth.net/) 等，但可以确信的一点是 RESTful APIs 应该是无状态的--因此请求的认证授权应该不依赖于会话。
+
+取而代之的是，每个 API 请求应该带有某种认证凭证，它可被服务端用于每个请求的验证。
+
+### 6.1 REST 安全设计原则
+
+由 Jerome Saltzer 和 Michael Schroeder 撰写的[计算机系统信息安全](http://web.mit.edu/Saltzer/www/publications/protection/)提出了计算机系统信息安全的八个设计原则，如下节所述：
+
+- **最小权限**：一个实体应该只有完成其获得授权的行动所需的必必要权限，没有更多。权限可以在需要时添加，但当其不再使用时应该被撤销
+- **失败回退默认权限**：一个用户对系统资源的默认访问级别应该是“拒绝”，除非他被显式赋予“允许”权限
+- **机制的经济性**：实现应该尽可能简单。所有组件接口和交互应该简单易于理解
+- **完整仲裁**：一个系统应该所有对其资源的访问权限以确保它们是被允许的，不应该依赖缓存的许可距阵。如果对一个资源的访问级别已被撤销，但它却未在许可矩阵中反映出来，它就违反了安全性。
+- **开放设计**：这个原则的亮点在于以开放的方式构建一个一个系统--没有机密，保密的算法
+- **权限分离**：授予对一个实体的许可不应该仅仅基于一个单一的情况，基于资源类型考虑多种情况是一个更好的主意。
+- **最小公共机制**：它担心存在于不同组件间的共享状态。如果一个人可以破坏该状态，它就可以破坏依赖于它的所有其它组件。
+- **心里接受度**：它描述了安全机制不应该使得对资源的访问比没有安全机制时更困难。一句话，安全性不应该影响用户体验。
+
+### 6.2 REST APIs 安全最佳实践
+
+下面的观点可以用作设计 REST APIs 安全机制的一个检查列表。
+
+#### 6.2.1 保持其简单
+
+使得 API/系统安全--只需要使其达到所需的安全。每次你使得你的方案不必要的复杂，你就有可能留下了一个大坑。
+
+#### 6.2.2 总是使用 HTTPS
+
+总是使用 SSLhttps://www.digicert.com/ssl/，认证凭证可以简化为随机产生的访问令牌。令牌在 HTTP Basic Auth 中的用户名（username ）字段中发送。它用起来相对简单，而且你得到了许多安全特性。
+
+如果你使用 [HTTP 2](https://http2.github.io/)，为了提升性能，你甚至可以[通过一个连接发送多个请求](https://en.wikipedia.org/wiki/HTTP_persistent_connection)，如此你可以在后续请求中避免完整 TCP 和 SSL 握手的负担。 
+
+#### 6.2.3 使用密码哈希
+
+密码必须总是经过哈希以保护系统（或最小化破坏）即使它可能在某些骇客攻击中失效。存在许多[哈希算法](https://howtodoinjava.com/security/how-to-generate-secure-password-hash-md5-sha-pbkdf2-bcrypt-examples/)已经证明了在密码安全方面的有效性，比如 PBKDF2, bcrypt, 和 scrypt 算法。
+
+#### 6.2.4 永远不要在 URLs 中暴露信息
+
+用户名，密码，会话令牌，以及 API Key 应该永远不会出现在 URL 上，因为它们可以被服务器端日志捕获，这使得它们很容易被利用。
+
+```
+https://api.domain.com/user-management/users/{id}/someAction?apiKey=abcd123456789  //Very BAD !!
+```
+
+上面的 URL 暴露了 API key。因此，永远不要使用这种安全形式。
+
+#### 6.2.5 考虑 OAuth
+
+虽然基础认证https://en.wikipedia.org/wiki/Basic_access_authentication对于大多数 API 足够好了，只要正确实施，它也足够安全--你可能仍会考虑 [OAuth](https://tools.ietf.org/html/rfc6749)。
+
+OAuth 2.0 授权框架允许第三方应用获得对 HTTP 服务的优先访问（权限），或者代表资源拥有着在资源拥有者和 HTTP 服务之间编排合适的交互，或者允许第三方应用代表其自己获取权限。
+
+#### 6.2.6 考虑 在请求中添加时间戳
+
+与其它请求参数一道，你可能在 HTTP 请求中添加请求时间戳作为一个自定义 HTTP 头部。
+
+服务器将比较当前时间戳与请求时间戳，并仅仅接受一个在其后的时间范围里（可能30秒钟）的请求。
+
+这可以防范基本的[回放攻击](https://en.wikipedia.org/wiki/Replay_attack)，其意图不改变时间戳来[暴力破解](https://en.wikipedia.org/wiki/Brute-force_attack)你的系统。
+
+#### 6.2.7 输入参数验证
+
+在到达应用逻辑前的每个第一步验证请求参数，施加严格的验证，如果验证失败立即拒绝请求。
+
+在 API 回复中，发送相关错误消息，以及正确的输入格式以提升用户体验。
+
 ## 七 版本变迁（Versioning）
 
 为了管理复杂性，版本化你的 API。当需要的修改可以在 API 级别识别时，版本可以帮我们快速迭代。
