@@ -2,6 +2,7 @@
 > 这个 Java 教程是为 JDK 8 写的。这个页面里描述的例子和实践并未利用之后的发布版本引入的改进，也可能利用了一些不再使用的技术。
 > 参考 [Java 语言变化](https://docs.oracle.com/pls/topic/lookup?ctx=en/java/javase&id=java_language_changes) 以查看Java SE 9 机器后续发布引入的更新的语言特性总结。
 > 参考 [JDK 发布指南](https://www.oracle.com/technetwork/java/javase/jdk-relnotes-index-2162236.html) 以获取所有 JDK 发布的新特性，增强，移除或标记为废弃选项的信息。
+> **注意：方法引用是一种特殊类型的 lambda 表达式。**
 
 你使用 [lambda 表达式](https://docs.oracle.com/javase/tutorial/java/javaOO/lambdaexpressions.html) 来创建匿名方法。但是，有时候一个 lambda 表达式仅仅调用一个已经存在的方法。在这种情况下，通过名字引用已经存在的方法经常会更清晰。方法引用使你实现上述目标成为可能。它们是简洁的，针对方法名的易读的 lambda 表达式。
 
