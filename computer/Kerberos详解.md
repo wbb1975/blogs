@@ -9,6 +9,7 @@
 Kerberos 是一种网络认证协议，在互不信任的网络中，Kerberos 提供了一种可靠的中心化认证协议，以便网络中的各个机器之间能够相互访问。
 
 它的目的：
+
 - 用户的密码从不会在网络中传输，从不会以任何形式存储在客户端机器上，使用完之后立即删除，也从不会把明文密码存储在认证服务器(KDC)上的数据库里。
 - 实现单点登录（Single Sign-On），用户在每一个 `work session` 仅仅会输入一次密码或者指定 `keytab`，之后用户就可以免密显示地访问他们授权的所有服务了。
 - Kerberos认证管理是中心化管理的。所有会有一个认证服务器，即KDC。
@@ -59,6 +60,7 @@ component1/component2/…/componentN@REALM
 ##### 用户principal
 
 用户principal的形式：
+
 ```
 Name[/Instance]@REALM
 ```
@@ -94,10 +96,12 @@ Service/Hostname@REALM
 #### Ticket
 
 Ticket 分两种：
+
 - **Ticket Granting Ticket(票据授予票据)**，**TGT**：这是 KDC 中的 `Authentication Server`(简称AS) 产生的，TGT 是向 `Ticket Granting Server`(TGS) 用于表明自己真实身份的东西
 - **Service Ticket(服务授予票据)**：这是 KDC 中的 `Ticket Granting Server`(简称TGS) 产生的，`Service Ticket` 是用于向应用服务器表明自己身份的东西
 
 虽然这是两种不同的 Ticket，但是我们也把 `Ticket Granting Server` 当做一个应用服务器，所以 Ticket 是客户端提供给应用服务器用于表明自己真实身份的东西。加密Ticket 的密钥是 AS 或者 TGS 与应用服务器之间共享的密钥加密的(后面直接说即 service 的密钥)，因此即使请求 ticket 的客户端也不能查看或更改它的内容。ticket 包括的主要信息包括：
+
 - **Pc**：发出请求的用户的 principal（通常就是用户名）
 - **Ps**：想要访问的服务的 principal
 - **IP_list**：想要使用这个 ticket 的客户端所在机器的IP地址。在 Kerberos 5 中这个字段是可选的，并且可是有多个，以便可以在 NAT 或者多宿主主机（multihomed）下使用，
@@ -118,6 +122,7 @@ Ticket 分两种：
 #### 密钥分发中心(KDC)
 
 在 Kerberos 环境中，KDC具有分发 ticket 的功能，被称为密钥分发中心(Key Distribution Center)，或者简称为 KDC。因为它整个在一个物理的服务器上，其中包含三个组件：
+
 - principal 数据库
 - 认证服务器(Authentication Server)
 - 票据分发服务器(Ticket Granting Server)
@@ -125,7 +130,8 @@ Ticket 分两种：
 ##### 数据库
 
 数据库中存储着与用户 principal 和服务 principal 有关的条目(entry)。每个条目包括以下的信息：
-- 这个条目相关联的principal
+
+- 这个条目相关联的 principal
 - 密钥和相关的kvno（译注: 注意这里并不是密码，而是密钥）;
 - 与这个principal相关联的ticket最长可用时间
 - 与这个principal相关联的ticket的最长的renew时间，这个是指这个ticket通过renew机制累计可用的时间，只在kerberos 5中可用)
@@ -161,7 +167,7 @@ KDC 的 TGS 组件用于为拥有可用的TGT的客户端分发 `service ticket`
 
 #### Replay Cache
 
-以下的可能性仍然存在：一个冒名顶替者同时窃取了ticket和authenticator，并且authenticator可用的2分钟内使用它。这很难，但不是不可能。为了在Kerberos 5中解决这个问题，引入了Replay Cache。应用服务器application server(也在TGS中)可以记住过去两分种内到达的authenticator，并且拒绝重复的authenticator。只有冒名顶替者没有能力在合法请求到达前复制ticket和authenticator然后发送它们到service，他的攻击就不能得逞。如果他能够做到的话，那么真正的用户就会被拒绝，而冒名顶替者将会成功获取服务。
+以下的可能性仍然存在：一个冒名顶替者同时窃取了ticket和authenticator，并且authenticator可用的2分钟内使用它。这很难，但不是不可能。为了在Kerberos 5中解决这个问题，引入了 `Replay Cache`。应用服务器 `application server`(也在TGS中)可以记住过去两分种内到达的 `authenticator`，并且拒绝重复的 `authenticator`。只有冒名顶替者没有能力在合法请求到达前复制ticket和authenticator然后发送它们到 service，他的攻击就不能得逞。如果他能够做到的话，那么真正的用户就会被拒绝，而冒名顶替者将会成功获取服务。
 
 #### Credential Cache
 
@@ -187,20 +193,276 @@ keytab是一个包含了Kerberos princpals和加密的密钥的一个文件，�
 ![kerberos工作原理图-详细版](images/modb_20220214_05e03424-8d55-11ec-bdc5-fa163eb4f6be.png)
 
 ### AS_REQ
+
+这个阶段是初始化验证请求，client 为了 TGT(Ticket Granting Ticket)向 KDC_AS，这个过程就是 `kinit` 触发的。
+
+```
+AS_REQ = { Pc ，Ps ， IP_list ， Lifetime }
+```
+
+- Pc：正在寻求验证的 client 用户的 principal。例如：root@REALM.com
+- Ps：一般指要访问的应用服务的 principal，因为接下来要访问TGS，所以这里指的是TGS 的 principal。一般是 krbtgt/REALM@REALM.com。
+- IP_list：可能使用ticket的所有主机IP。
+- Lifttime: ticket的有效时间
+
 ### AS_REP
+
+当KDC_AS接受到 `AS_REQ` 请求之后，AS 首先要 check Pc 和 Ps 是否存在 KDC 的 `database` 中，如果其中至少有一个不在，就会发出错误信息给 client。否则 AS 将进行下列步骤：
+
+- 随机生成一个 client 和 TGS 共享的 `session key`，简称为 `SK_TGS`
+- 创建一个 TGT，其中包含客户端用户的 Pc，TGS的 principal(krbtgt/REALM@REALM)，IP_list，Timestamp，lifetime，SK_TGS
+
+  ```
+  TGT = { Pc，krbtgt/REALM@REALM，IP_list，Timestamp，Lifetime，SK_TGS}
+  ```
+
+- 然后生成AS_REP，其中TGT用 TGS 的密钥 K_TGS 加密。 {Ps，Timestamp，Lifetime，SK_TGS} 用客户端用户的密钥 K_User 加密。
+  
+  ```
+  AS_REP = {Ps，Timestamp，Lifetime，SK_TGS}K_User + {TGT}K_TGS
+  ```
+
+当客户端接受到 KDC 的回复信息之后，会要求用户输入密码，利用正确的密码和 string2key func，生成一个 key，这个key可以用来解密 K_User，既可提取出 SK_TGS。接着把 SK_TGS 和 {TGT}K_TGS 存储在用户的 `credential cache` 中。
+
 ### TGS_REQ
+
+在这个时候，用户已经证明他们的身份，在这个用户的 `credential cache` 中会有一个 TGT 和一个 SK_TGS。但是想要访问其他服务如何 HDFS，还是没有合适的 `service ticket`。这是就要发送一个 `request（TGS_REQ）`给 KDC_TGS，client 执行以下步骤：
+
+- 创建一个 `Authenticator`，其中包括 `Pc` 和客户端的 timestamp，并且用 client 和TGS共享的 SK_TGS加密。
+  ```
+  Authenticator = { Pc， Timestamp }SK_TGS
+  ```
+- 创建一个 `TGS_REQ`，其中包括 `service ticket` 需要的 `Ps`，`lifetime`，`authenticator`，和加密的 `TGT`：
+  ```
+  TGS_REQ = { Ps， Lifetime， Authenticator} + { TGT }K_TGS
+  ```
+
 ### TGS_REP
+
+当 KDC 接受到 `TGS_REQ`，TGS 首先到 database 验证 `Ps` 是否存在，如果存在，则用 TG S的 `(krbtgt/REAM@REALM)key` 去解密 K_TGS，获取到TGT，TGT中包含
+
+```
+TGT = { Pc， krbtgt/REALM@REALM， IP_list， Timestamp， Lifetime， SK_TGS}
+```
+
+其中 SK_TGS，可以用来解密 `Authenticator`， {Pc， Timestamp}SK_TGS。
+
+如果要产生 `server ticket`，需要做以下一些步骤：
+
+- 检查 TGT 没有过期
+- 检查 authenticator 中的 Pc 和 TGT 中的 Pc 是同一个
+- `authenticator` 在 `replay cache` 不存在，且也没过期。
+- 如果 `IP_list` 不是 `null` 的话，将要检查 TGS_REQ 的源 IP 包含在 `IP_list` 中。
+
+以上条件通过证实了 TGT 确实是发出请求的用户，因此 TGS 开始处理回复：
+
+- 随机生成一个 client 和 appservice 共享的 `session key`，简称 `SK_Service`。
+- 创建一个 `appservice ticket`，简称 `T_Service`，其中存放着 `Pc`，`Ps`，`IP_list`，`Timestamp`，`timestamp`，`lifetime` (as the minimum between the lifetime of the TGT and that associated with the service principal) ，`SK_Service`。
+
+  ```
+  T_Service = (Pc，Ps，IP_list，Timestamp，Lifetime，SK_Service)
+  ```
+
+- 发送回复信息 TGS_REP 给client，其中 T_Service 用 `applicaion service` 密钥 `K_Service` 加密，`Ps`，`Timestamp`，`Lifetime`，`SK_Service` 用TGT中的 SK_TGS 加密。
+  
+  ```
+  TGS_REP = {Ps，Timestamp，Lifetime，SK_Service}SK_TGS + {T_Service}K_Service
+  ```
+
+当客户端接收到 KDC_TGS 的回复信息时，通过 `credential cache`中的 `SK_TGS` 解密 {Ps，Timestamp，Lifetime，SK_Service}SK_TGS ，并且提取出 `SK_Service`，接着把 `SK_Service` 和 {T_Service}K_Service 存储起来。
+
 ### AP_REQ
+
+client因为有了 `SK_Service` 和 {T_Service}K_Service 了，就可以访问 appservice 的资格了，Client 通过向 appservice 发送 `AP_REQ` 即可访问 applicaion 服务中的资源了。这一步请求格式并没有具体的标准，因 application 的不同而不同。流程也是客户端用它的 credential 去证明它的身份，并访问资源，下面举一个例子：
+
+- client创建一个 `authenticator`，其中包含 `Pc`，`timestamp`，并且使用 `SK_Service` 对 `authenticator` 进行加密。
+  
+  ```
+  Authenticator = {Pc， Timestamp}SK_Service
+  ```
+
+- client创建 `AP_REQ`，
+  
+  ```
+  AP_REQ = Authenticator + {T_Service}K_Service
+  ```
+
 ### AP_REP
 
+当 `application server` 接受到 `AP_REQ`，`application server` 用密钥解密 K_Service，获得 T_Service
+
+```
+T_Service = (Pc，Ps，IP_list，Timestamp，Lifetime SK_Service)
+```
+
+然后通过其中的SK_Service，解密SK_Service，获得 {Pc，Timestamp}。
+
+为了确保请求的用户是真实可信的，以便允许对application service的访问。需要检查以下条件：
+
+- 检查 `service ticket（T_Service）`没有过期
+- 检查 authenticator中的Pc和T_Service中的Pc是同一个
+- authenticator在replay cache不存在，且也没过期。
+- 如果IP_list（从T_Service获得的）不是null的话，将要check AP_REQ的源IP包含在IP_list中。
+
+之后就可以把请求的数据返回的客户端。
+
+> 如果你观察仔细可以看出 `AP_REP` 这段对于请求数据的用户的真实性验证和 `TGS_REP` 的check请求一个 `service ticket` 用户的真实性验证 这两个过程是很相似的。所以你也可以把TGS当做一个 `application server` 看待。
+
 ## 缺点
+
 - KDC 有单点故障的问题
 - Keytab 文件和TGT cache 文件必须要被严格保护。不然会被其他用户使用获取服务应用里的数据。
-- Kerberos是为了客户端和那些长期运行的服务所设计的，而对于 `spark executor` 这些服务，Kerberos不能应用到这些临时服务。
+- Kerberos是为了客户端和那些长期运行的服务所设计的，而对于 `spark executor` 这些服务，Kerberos 不能应用到这些临时服务。
 
 ## 常用命令
 
+- **kinit**：获取并缓存 principal 的初始TGT。如果 principal 没有指定，则选择credential cache中的合适的 principal 或者调用 kinit 的本地用户的 principal
+- **kdestroy**：删除用户ticket
+- **klist**：列出缓存在 `credentials cache` 中的 principal 和 tickets，或列出在 keytab 中的 keys
+- **Kadmin，kadmin.local**：用于对Kerberos V5管理系统的命令行接口，可以对 principal 增删改查等等其他操作。Kadmin 可在kerberos 集群中使用，kadmin.local在KDC上使用。
+  
+```
+############## 对principal增删改查
+[root@ctc-hdp2-node1 ~]# kadmin
+Authenticating as principal admin/admin@CTCHDP2.COM with password.
+Password for admin/admin@CTCHDP2.COM:
+kadmin:  addprinc test
+WARNING: no policy specified for test@CTCHDP2.COM; defaulting to no policy
+Enter password for principal "test@CTCHDP2.COM":
+Re-enter password for principal "test@CTCHDP2.COM":
+Principal "test@CTCHDP2.COM" created.
+kadmin:  listprincs
+...
+test@CTCHDP2.COM
+...
+kadmin:  ?
+Available kadmin requests:
+
+add_principal， addprinc， ank
+                         Add principal
+delete_principal， delprinc
+                         Delete principal
+modify_principal， modprinc
+                         Modify principal
+rename_principal， renprinc
+                         Rename principal
+change_password， cpw     Change password
+get_principal， getprinc  Get principal
+list_principals， listprincs， get_principals， getprincs
+                         List principals
+add_policy， addpol       Add policy
+modify_policy， modpol    Modify policy
+delete_policy， delpol    Delete policy
+get_policy， getpol       Get policy
+list_policies， listpols， get_policies， getpols
+                         List policies
+get_privs， getprivs      Get privileges
+ktadd， xst               Add entry(s) to a keytab
+ktremove， ktrem          Remove entry(s) from a keytab
+lock                     Lock database exclusively (use with extreme caution!)
+unlock                   Release exclusive database lock
+purgekeys                Purge previously retained old keys from a principal
+get_strings， getstrs     Show string attributes on a principal
+set_string， setstr       Set a string attribute on a principal
+del_string， delstr       Delete a string attribute on a principal
+list_requests， lr， ?     List available requests.
+quit， exit， q            Exit program.
+############## 生成MSTRSVRSvc principal的keytab
+[root@ctc-hdp2-node1 ~]# kadmin -q "ktadd -k /etc/security/keytabs/MSTRSVRSvc.keytab MSTRSVRSvc@CTCHDP2.COM"
+Authenticating as principal admin/admin@CTCHDP2.COM with password.
+Password for admin/admin@CTCHDP2.COM:
+Entry for principal MSTRSVRSvc@CTCHDP2.COM with kvno 12， encryption type aes256-cts-hmac-sha1-96 added to keytab WRFILE:/etc/security/keytabs/MSTRSVRSvc.keytab.
+Entry for principal MSTRSVRSvc@CTCHDP2.COM with kvno 12， encryption type aes128-cts-hmac-sha1-96 added to keytab WRFILE:/etc/security/keytabs/MSTRSVRSvc.keytab.
+Entry for principal MSTRSVRSvc@CTCHDP2.COM with kvno 12， encryption type des3-cbc-sha1 added to keytab WRFILE:/etc/security/keytabs/MSTRSVRSvc.keytab.
+Entry for principal MSTRSVRSvc@CTCHDP2.COM with kvno 12， encryption type arcfour-hmac added to keytab WRFILE:/etc/security/keytabs/MSTRSVRSvc.keytab.
+############## 初始化MSTRSVRSvc用户
+[root@ctc-hdp2-node1 ~]# kinit -k -t /etc/security/keytabs/MSTRSVRSvc.keytab  MSTRSVRSvc@CTCHDP2.COM
+############## 查看当前的初始过的用户
+[root@ctc-hdp2-node1 ~]# klist
+Ticket cache: FILE:/tmp/krb5cc_0
+Default principal: MSTRSVRSvc@CTCHDP2.COM
+
+Valid starting     Expires            Service principal
+07/15/18 03:04:42  07/16/18 03:04:42  krbtgt/CTCHDP2.COM@CTCHDP2.COM
+    renew until 07/15/18 03:04:42
+```
+
+## 使用示例
+
+举个例子：在有 kerberos 的 hadoop 集群中启动一个spark 程序 `sparktest`
+
+kerberos-hadoop集群中的/var/kerberos/krb5kdc/kdc.conf 文件内容如下：
+
+```
+[kdcdefaults]
+kdc_ports = 88
+kdc_tcp_ports = 88
+
+[realms]
+CTCCDH2.COM = {
+  #master_key_type = aes256-cts
+  acl_file = /var/kerberos/krb5kdc/kadm5.acl
+  dict_file = /usr/share/dict/words
+  admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
+  max_life = 1d
+  max_renewable_life = 7d
+  supported_enctypes = aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal
+  default_principal_flags = +renewable， +forwardable
+}
+```
+
+1. 增加用于启动 sparktest 的 principal文件（KDC）
+   ```
+   kadmin: addprinc MSTRSVRSvc
+   WARNING: no policy specified for MSTRSVRSvc@CTCCDH2.COM; defaulting to ni policy
+   Enter password for principal "MSTRSVRSvc@CTCCDH2.COM":
+   Re-enter password for principal "MSTRSVRSvc@CTCCDH2.COM":
+   Principal "MSTRSVRSvc@CTCCDH2.COM" created!
+   ```
+2. 创建一个 hadoop 用户组用户，`MSTRSVRSvc`（all node）
+   ```
+   useradd -G hadoop MSTRSVRSvc
+   ```
+3. 改变 sparktest 文件夹及其文件的访问权限（sparktest node）
+   ```
+   chown -R MSTRSVRSvc /opt/sparktest
+   ```
+   如果没有-R，在启动sparktest时就会报警告，警告没有权限对 `/opt/sparktest/log/sparktest.out.1` 文件的重写。
+4. 用 superuser 权限在 `hdfs` 上创建一个文件夹 `/user/MSTRSVRSvc`，并且改变 `/user/MSTRSVRSvc` 权限
+   ```
+   kinit superuser
+   hadoop fs -mkdir /user/MSTRSVRSvc
+   hadoop fs -chmod 777 /user/MSTRSVRSvc
+   hadoop fs -chown MSTRSVRSvc:hadoop /user/MSTRSVRSvc
+   ```
+   注意：没有 `:hadoop`，当启动sparktest的时候将会出如下错误。
+5. 生成 MSTRSVRSvc 用户 principal 的 keytab 文件（如果要用kadmin.local，就在KDC执行以下语句，如果用kadmin就在任意一台node上执行既可）
+   ```
+   kadmin.local -q "ktadd -k /etc/security/keytabs/MSTRSVRSvc.keytab MSTRSVRSvc@CTCCDH2.COM"
+
+   scp /etc/security/keytabs/MSTRSVRSvc.keytab ctc-cdh2-node2:/etc/security/keytabs/  
+   ```
+6. 配置 sparktest。下面这些配置都会加到 SparkConf()中。
+   ```
+   spark.yarn.token.renew.interval=50000
+   spark.yarn.security.tokens.hdfs.enabled=true
+   spark.yarn.principal=MSTRSVRSvc@CTCCDH2.COM
+   spark.yarn.eytab=/etc/security/keytabs/MSTRSVRSvc.keytab
+   ```
+7. 初始化或者续租ticket（sparktest node）
+   ```
+   kinit -k -t /etc/security/keytabs/MSTRSVRSvc.keytab MSTRSVRSvc@CTCCDH2.COM
+   ```
+8. 这个时候就可以启动 sparktest 了。
+
 ## 总结
+
+kerberos作为网络认证服务，使用对称加密算法，对各种传输的数据加密，并且还通过authenticator，Replay Cache保证了用户的真实，并且利用Credential Cache，keytab防止明文密码出现在realm中。所以Kerberos是在集群中常用的用户认证服务，会为hadoop等没有用户安全的集群应用起到用户安全的作用。
 
 ## 参考
 - [Kerberos详解](https://www.modb.pro/db/323372)
+- [kerberos tutorial](http://kerberos.org/software/tutorial.html)
+- [Kerberos的组件和术语(翻译和注解)](https://www.cnblogs.com/devos/p/5448938.html)
+- [Use a keytab](https://kb.iu.edu/d/aumh)
+- [崔永泉第四讲kerberos协议ppt课件](https://www.docin.com/p-2855487876.html)
+- [Kerberos: The Network Authentication Protocol](http://web.mit.edu/kerberos/www/)
