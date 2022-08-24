@@ -6,7 +6,7 @@
 
 一个 keytab 是一个包含了Kerberos princpals 和加密密钥（从Kerberos 密码派生而来）的一个文件。你可以使用 keytab 文件来认证各种各样的远程 Kerberos 系统而无需输入密码。但是，当你修改了你的 Kerberos 密码，你就需要重新生成你的所有 keytabs。
 
-Keytab 文件常用于脚本通过 Kerberos 来自动化认证，不需要人机交互，也不需要访问存储在纯文本文件中的密码。之后脚本可以使用获取到的 credentials 来访问存储于远程系统上的文件。
+Keytab 文件常用于脚本通过 Kerberos 来自动化认证，不需要人机交互，也不需要访问存储在纯文本文件中的密码。之后脚本可以使用获取到的凭证（credentials）来访问存储于远程系统上的文件。
 
 > 重要: 对一个 keytab 文件拥有读权限的用户可以使用该文件中的所有密钥。为了防止误用，严格限制你创建的任何 keytab 文件的访问权限。关于相关指令，请参见[类UNIX系统的文件权限管理](https://kb.iu.edu/d/abdb)。
 
