@@ -716,7 +716,299 @@ at sun.security.krb5.KrbTgsRep.<init>(KrbTgsRep.java:55)
 !connect jdbc:hive2://172.31.112.15:10000/;principal=hive/cdswdemo-1.gce.cloudera.com@ALIBABA.COM
 ```
 
+## 10. 安全化 Apache HBase 客户端访问（Secure Client Access to Apache HBase）
+
+Apache HBase 的较新版本 (>= 0.92) 支持客户端可选的 SASL 认证，可参考 Matteo Bertozzi 的文章[理解Apache HBase 中的用户认证和授权](https://blog.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/)。
+
+这里描述了如何设置 Apache HBase 及其客户端安全连接以保护 HBase 资源。
+
+### 10.1 前提
+
+- **Hadoop 认证配置**
+  
+  为了以强认证运行 HBase RPC，你必须设置 `hbase.security.authentication` 为 `kerberos`。在本例中，你也必须在 `core-site.xml` 设置 `hadoop.security.authentication` 为 `kerberos`。否则，你将会为 HBase 设置了强认证，但底层 HDFS 却没有强认证，这会使得一切归零。
+- **Kerberos KDC**
+
+  你需要有一台可工作的 Kerberos KDC。
+
+### 10.2 安全操作的服务端配置
+
+首先，参考安全前提，确保你的底层 HDFS 是安全的。
+
+将下面的配置加到集群中的每一台服务器 `hbase-site.xml` 中：
+
+```
+<property>
+  <name>hbase.security.authentication</name>
+  <value>kerberos</value>
+</property>
+<property>
+  <name>hbase.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+<name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.token.TokenProvider</value>
+</property>
+```
+
+当部署以上修改后，必须完整的停止和重启 HBase 服务。
+
+### 10.3 安全操作的客户端配置
+
+首先，参考安全前提，确保你的底层 HDFS 是安全的。
+
+在每一个客户端将下面的修改加入到 `hbase-site.xml` 中：
+
+```
+<property>
+  <name>hbase.security.authentication</name>
+  <value>kerberos</value>
+</property>
+```
+
+在 2.2.0 之前版本，在与 HBase 集群通讯发生之前，客户端环境必须通过 KDC 或者 keytab 由 `kinit` 命令登录。
+
+从 2.2.0 开始，客户端可以在 `hbase-site.xml` 中指定以下配置：
+
+```
+<property>
+  <name>hbase.client.keytab.file</name>
+  <value>/local/path/to/client/keytab</value>
+</property>
+
+<property>
+  <name>hbase.client.keytab.principal</name>
+  <value>foo@EXAMPLE.COM</value>
+</property>
+```
+
+然后应用能够**自动承担登录以及刷新凭证而不需要人工介入**。
+
+这是一个可选特性，升级到 2.2.0 的客户端能够保留它们在旧版本中的登录及凭证刷新逻辑，只要你保证 `hbase.client.keytab.file` 和 `hbase.client.keytab.principal` 未被去掉。
+
+注意如果客户端或服务端 site 文件中 `hbase.security.authentication` 不匹配，客户但就不能与集群通讯。
+
+一旦 HBase 被配置为安全的 RPC，它可以选择性地配置加密通讯。为了实现这个，在每一个客户端的 `hbase-site.xml` 中添加下面的修改：
+
+```
+<property>
+  <name>hbase.rpc.protection</name>
+  <value>privacy</value>
+</property>
+```
+
+这个配置属性也可以在每个连接的基础上设置。在传递给 `Table` 的 `Configuration` 中设置：
+
+```
+Configuration conf = HBaseConfiguration.create();
+Connection connection = ConnectionFactory.createConnection(conf);
+conf.set("hbase.rpc.protection", "privacy");
+try (Connection connection = ConnectionFactory.createConnection(conf);
+     Table table = connection.getTable(TableName.valueOf(tablename))) {
+  .... do your stuff
+}
+```
+
+加密通讯会带来约 ~10% 的性能下降。
+
+### 10.4 安全操作的客户端配置 - Thrift Gateway
+
+对每一个 `Thrift gateway`，在 `hbase-site.xml` 文件中添加以下内容：
+
+```
+<property>
+  <name>hbase.thrift.keytab.file</name>
+  <value>/etc/hbase/conf/hbase.keytab</value>
+</property>
+<property>
+  <name>hbase.thrift.kerberos.principal</name>
+  <value>$USER/_HOST@HADOOP.LOCALDOMAIN</value>
+  <!-- TODO: This may need to be  HTTP/_HOST@<REALM> and _HOST may not work.
+   You may have  to put the concrete full hostname.
+   -->
+</property>
+<!-- Add these if you need to configure a different DNS interface from the default -->
+<property>
+  <name>hbase.thrift.dns.interface</name>
+  <value>default</value>
+</property>
+<property>
+  <name>hbase.thrift.dns.nameserver</name>
+  <value>default</value>
+</property>
+```
+
+分别替换合适的凭证和 keytab 中的 `$USER` 和 `$KEYTAB`。
+
+为了使用 `Thrift API principal` 与 HBase 交互，有必要将 `hbase.thrift.kerberos.principal` 添加到 acl 表。例如， 为了给 `Thrift API principal`, `thrift_server` 管理员权限，一个如下命令就足够了：
+
+```
+grant 'thrift_server', 'RWCA'
+```
+
+关于 ACLs 的更多信息，请参见[访问控制标签节](https://hbase.apache.org/book.html#hbase.accesscontrol.configuration)。
+
+`Thrift gateway` 将使用提供的凭证与 HBase 认证。`Thrift gateway` 自身没有任何认证。经由 `Thrift gateway` 的客户端访问将会使用 `Thrift gateway` 的凭证并拥有其权限。
+
+### 10.5 配置 Thrift Gateway 以代表客户认证
+
+上一节描述了如何使用一个固定用户向 HBase 认证 Thrift 客户。作为一个备选，你可以配置 `Thrift gateway` 代表客户向 HBase 认证，并使用代理用户访问 HBase。对 Thrift 1 这在 [HBASE-11349](https://issues.apache.org/jira/browse/HBASE-11349) 里实现，Thrift 2 在 [HBASE-11474](https://issues.apache.org/jira/browse/HBASE-11474) 里实现.
+
+> Thrift Framed Transport 的限制：如果你使用 framed transport，你将不能使用这个特性，这是因为在这个时间点，SASL 不能与 Thrift Framed Transport 一起工作。
+
+为了开启它，执行以下操作：
+
+1. 遵从 安全操作的客户端配置 - `Thrift Gateway` 确保 Thrift 运行于安全模式下
+2. 如 `REST Gateway 个性化配置` 描述确保 HBase 配置允许代理用户
+3. 对于运行 `Thrift gateway` 的每一个集群节点，在 `hbase-site.xml` 中设置属性 `hbase.thrift.security.qop` 为以下三种植的一个：
+   + `privacy` - 认证，集成，以及凭证检查
+   + `integrity` - 认证与集成检查
+   + `authentication` - 仅仅认证检查
+4. 重启 `Thrift gateway` 进程以使得修改生效。如果一个节点运行 Thrift，jps 命令的输出将包含 `ThriftServer` 进程。为了在该节点停止 Thrift，运行命令 `bin/hbase-daemon.sh stop thrift`。为了在一个节点启动 Thrift，运行命令 `bin/hbase-daemon.sh start thrift`。
+
+### 10.6 配置 Thrift Gateway 以使用 `doAs` 特性
+
+上面的配置 `Thrift Gateway` 以代表客户认证描述了如何配置 `Thrift gateway` 以代表客户认证 HBase，并通过代理用户访问 HBase。这种方法的限制在于但客户以一套特殊的凭证发起会话后，它不能在会话过程中更改这些凭证。doAs 特性提供了一种弹性方式模拟多个凭证使用相同的客户端。在 `Thrift 1` 中，这个特性在 [HBASE-12640](https://issues.apache.org/jira/browse/HBASE-12640) 中实现，在 `Thrift 2` 中当前无对应实现。
+
+为了启用 doAs 特性，在每一个 `Thrift gateway` 上向 `hbase-site.xml` 文件添加下面的内容：
+
+```
+<property>
+  <name>hbase.regionserver.thrift.http</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.thrift.support.proxyuser</name>
+  <value>true</value>
+</property>
+```
+
+使用 `doAs` 模拟时为了允许代理用户，对每一个 HBase 节点的 `hbase-site.xml` 文件增加下面的内容：
+
+```
+<property>
+  <name>hadoop.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hadoop.proxyuser.$USER.groups</name>
+  <value>$GROUPS</value>
+</property>
+<property>
+  <name>hadoop.proxyuser.$USER.hosts</name>
+  <value>$GROUPS</value>
+</property>
+```
+
+看看[demo client](https://github.com/apache/hbase/blob/master/hbase-examples/src/main/java/org/apache/hadoop/hbase/thrift/HttpDoAsClient.java)以综合了解在你的代码中如何使用这个特性。
+
+### 10.7 安全操作的客户端配置 - REST Gateway
+
+向每一个 REST gateway 的 hbase-site.xml 文件增加如下设置：
+
+```
+<property>
+  <name>hbase.rest.keytab.file</name>
+  <value>$KEYTAB</value>
+</property>
+<property>
+  <name>hbase.rest.kerberos.principal</name>
+  <value>$USER/_HOST@HADOOP.LOCALDOMAIN</value>
+</property>
+```
+
+分别替换合适的凭证和 keytab 中的 `$USER` 和 `$KEYTAB`。
+
+为了使用 `REST API principal` 与 HBase 交互，有必要将 `hbase.thrift.kerberos.principal` 添加到 acl 表。例如， 为了给 `REST API principal`, `rest_server` 管理员权限，一个如下命令就足够了：
+
+```
+grant 'rest_server', 'RWCA'
+```
+
+关于 ACLs 的更多信息，请参见[访问控制标签节](https://hbase.apache.org/book.html#hbase.accesscontrol.configuration)。
+
+对于客户端访问 Gateway `HBase REST gateway` 支持 [SPNEGO HTTP 认证](https://hadoop.apache.org/docs/stable/hadoop-auth/index.html)。为了给客户端访问开启 `REST gateway Kerberos` 认证，向每个 `REST gateway` 的 `hbase-site.xml` 文件添加下面的内容：
+
+```
+<property>
+  <name>hbase.rest.support.proxyuser</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.type</name>
+  <value>kerberos</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.kerberos.principal</name>
+  <value>HTTP/_HOST@HADOOP.LOCALDOMAIN</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.kerberos.keytab</name>
+  <value>$KEYTAB</value>
+</property>
+<!-- Add these if you need to configure a different DNS interface from the default -->
+<property>
+  <name>hbase.rest.dns.interface</name>
+  <value>default</value>
+</property>
+<property>
+  <name>hbase.rest.dns.nameserver</name>
+  <value>default</value>
+</property>
+```
+
+为 HTTP 用 keytab 替换 $KEYTAB。
+
+`HBase REST gateway` 支持不同的 `hbase.rest.authentication.type`: `simple`, `kerberos`。你可以通过实现 `Hadoop AuthenticationHandler` 来实现一个自定义认证；然后制定全类名给 `hbase.rest.authentication.type`。更过信息，请参考 [SPNEGO HTTP authentication](https://hadoop.apache.org/docs/stable/hadoop-auth/index.html)
+
+### 10.8 `REST Gateway` 模拟配置
+
+默认地 `REST gateway` 不支持模拟。在用户配置和前面章节一样的情况下它代表客户访问 HBase。对 HBase 服务器来说，所有的请求来自 `REST gateway` 用户，实际用户未知。你可以开启模拟支持。当其开启时，`REST gateway` 用户死一个代理用户。HBase 服务器知道每个请求的实际用户，因此它可以应用合适的授权。
+
+为了开启 `REST gateway` 模拟，我们需要配置 HBase 服务器（masters 和 region servers）以允许代理用户。配置 `REST gateway` 以启用模拟。
+
+为了允许代理用户，向每一个 HBase 服务器的 `hbase-site.xml` 文件增加如下设置：
+
+```
+<property>
+  <name>hadoop.security.authorization</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hadoop.proxyuser.$USER.groups</name>
+  <value>$GROUPS</value>
+</property>
+<property>
+  <name>hadoop.proxyuser.$USER.hosts</name>
+  <value>$GROUPS</value>
+</property>
+```
+
+为 `$USER` 替换掉 `REST gateway` 代理用户；`$GROUPS` 替换为允许的组列表。
+
+为了开启 `REST gateway` 模拟，对每一个 `REST gateway` 上的 `hbase-site.xml` 文件添加下面的配置：
+
+```
+<property>
+  <name>hbase.rest.authentication.type</name>
+  <value>kerberos</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.kerberos.principal</name>
+  <value>HTTP/_HOST@HADOOP.LOCALDOMAIN</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.kerberos.keytab</name>
+  <value>$KEYTAB</value>
+</property>
+```
+
+为 HTTP 用 keytab 替换 $KEYTAB。
+
 ## Reference
 
 - [在 CDP 集群启用 Kerberos 手册](https://www.modb.pro/db/115753)
 - [在 CDP 集群启用 Kerberos 手册](https://cloud.tencent.com/developer/article/1886263)
+- [Kerberos: The Network Authentication Protocol](https://web.mit.edu/kerberos/)
+- [60. Secure Client Access to Apache HBase](https://hbase.apache.org/book.html#hbase.secure.configuration)
