@@ -26,6 +26,7 @@
    ```
 
 2. 为你的第一个 Go 源代码创建一个 hello 目录
+
    例如，使用下面的命令：
    ```
    mkdir hello
@@ -35,9 +36,9 @@
    
    当你的代码从其它模块里导入包时，你通过你代码自身的模块管理这些依赖。模块由一个叫 `go.mod` 的文件定义，它追踪提供这些包的模块。文件 `go.mod` 与你的代码一起位于你的源代码仓库里。
 
-   为了创建 `go.mod` 文件从而为你的代码开启依赖追踪，运行 [go mod init](https://go.dev/ref/mod#go-mod-init) 命令，并传递你的代码所处的模块名。名字时模块的模块路径。
+   为了创建 `go.mod` 文件从而为你的代码开启依赖追踪，运行 [go mod init](https://go.dev/ref/mod#go-mod-init) 命令，并传递你的代码所处的模块名。名字是模块的模块路径。
 
-   在实际开发中，模块路径典型的是你的代码保存的仓库地址。例如 ，模块路径可能是 `github.com/mymodule`。如果你计划发布你的代码给他人使用，模块路径必须是一个Go 能够从那里下载你的模块的地址。想要了解更多模块命令及模块路径，参阅[管理依赖](https://go.dev/doc/modules/managing-dependencies#naming_module)。
+   在实际开发中，模块路径典型的是你的代码保存的仓库地址。例如，模块路径可能是 `github.com/mymodule`。如果你计划发布你的代码给他人使用，模块路径必须是一个 Go 能够从那里下载你的模块的地址。想要了解更多模块命令及模块路径，参阅[管理依赖](https://go.dev/doc/modules/managing-dependencies#naming_module)。
 
    处于本教程的目的，仅仅使用 `example/hello`：
    ```
