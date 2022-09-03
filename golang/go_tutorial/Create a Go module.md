@@ -583,55 +583,141 @@ Go 对单元测试的内在支持使得你测试 Go 变得容易。特别是，�
      + `TestHelloName` 调用了 `Hello` 函数，传递一个 `name` 值；函数据此应该返回一个有效地回复消息。如果函数返回一个错误或者一条不期待的回复消息（没有包含你传递进去的名字），你就可以使用 `t` 参数的 [Fatalf 方法](https://pkg.go.dev/testing/#T.Fatalf) 来在终端打印消息并终止执行。
      + `TestHelloEmpty` 以一个空值测试 `Hello` 函数，这个测试是为了确认那你的错误处理正常工作。如果调用返回一个非空字符串或者没有错误，你使用 `t` 参数的 `Fatalf` 方法来在终端打印消息并终止执行。
 
-2. 在你的 `hello/hello.go` 调用代码中，传递一个名字切片，打印你得到的名字消息映射。
-   
-   修改你的 `hello.go` 代码如下所示：
+3. 在 `greetings` 目录中，在命令行终端运行 [go test 命令](https://go.dev/cmd/go/#hdr-Test_packages) 以执行测试。
+
+   `go test` 执行测试文件（其名字以 `_test.go` 结尾）中的测试函数（它们以 `Test` 开头）。你可以添加 `-v` 标记以得到更多输出--所有的测试及其结果将会被输出。
+
+   测试应该成功：
 
     ```
-    package main
+    $ go test
+    PASS
+    ok      example.com/greetings   0.364s
 
-    import (
-        "fmt"
-        "log"
+    $ go test -v
+    === RUN   TestHelloName
+    --- PASS: TestHelloName (0.00s)
+    === RUN   TestHelloEmpty
+    --- PASS: TestHelloEmpty (0.00s)
+    PASS
+    ok      example.com/greetings   0.372s
+   ```
 
-        "example.com/greetings"
-    )
+4. 分隔 `greetings.Hello` 功能以查看失败的测试。
 
-    func main() {
-        // Set properties of the predefined Logger, including
-        // the log entry prefix and a flag to disable printing
-        // the time, source file, and line number.
-        log.SetPrefix("greetings: ")
-        log.SetFlags(0)
+   `TestHelloName` 函数针对你为 `Hello` 函数指定的参数值名字检查其返回值。为了查看失败测试结果，修改 `greetings.Hello` 函数让其不包括名字。
 
-        // A slice of names.
-        names := []string{"Gladys", "Samantha", "Darrin"}
+   在 `greetings/greetings.go` 中，粘贴下面的代码以替代 `Hello` 函数。注意下面高亮显示部分修改了函数返回值，就像 `name` 被无意间移除了。
 
-        // Request greeting messages for the names.
-        messages, err := greetings.Hellos(names)
-        if err != nil {
-            log.Fatal(err)
+   ```
+    // Hello returns a greeting for the named person.
+    func Hello(name string) (string, error) {
+        // If no name was given, return an error with a message.
+        if name == "" {
+            return name, errors.New("empty name")
         }
-        // If no error was returned, print the returned map of
-        // messages to the console.
-        fmt.Println(messages)
+        // Create a message using a random format.
+        // message := fmt.Sprintf(randomFormat(), name)
+        message := fmt.Sprint(randomFormat())
+        return message, nil
     }
    ```
 
-   在这些修改里，你：
+5. 在 `greetings` 目录中，在命令行终端运行 `go test` 命令以执行测试。
 
-   - 创建了一个切片类型的变量 `names` 来容纳三个名字
-   - 传递 `names` 变量给 `Hellos` 函数作为参数
-3. 在命令行切换到包含 `hello/hello.go` 的目录，然后使用 `go run` 来确认代码能够工作。
-
-   输出包括一个名字与欢迎词的关联的映射的字符串表示，如下所示：
+   这一次，不带 `-v` 标记运行 `go test`。输出将仅仅包含失败测试的结果，这在你拥有很多测试时很有帮助。`TestHelloName` 应该失败，但 `TestHelloEmpty` 仍能通过。
 
    ```
-   $ go run .
-   map[Darrin:Hail, Darrin! Well met! Gladys:Hi, Gladys. Welcome! Samantha:Hail, Samantha! Well met!]
+    $ go test
+    --- FAIL: TestHelloName (0.00s)
+        greetings_test.go:15: Hello("Gladys") = "Hail, %v! Well met!", <nil>, want match for `\bGladys\b`, nil
+    FAIL
+    exit status 1
+    FAIL    example.com/greetings   0.182s
    ```
 
 ## 7. 编译和安装应用
+
+在本主题，你将学到一些新的 go 命令。当你频繁修改代码时，`go run` 是一个非常有用的编译并运行的快捷方式，但它并不产生二进制可执行文件。
+
+本文将介绍两个额外的命令以构建代码：
+
+- [go build 命令](https://go.dev/cmd/go/#hdr-Compile_packages_and_dependencies)编译包及其依赖，但并不安装结果
+- [go install 命令](https://go.dev/ref/mod#go-install)编译并安装包。
+
+1. 在 `hello` 目录，从命令行运行 `go build` 将代码编译成可执行文件。
+
+   ```
+   $ go build
+   ```
+
+2. 在 `hello` 目录，运行新创建的 `hello` 可执行文件以确认代码能够工作。
+
+   取决于你是否更改过你的 `greetings.go`，你的结果可能稍有不同。
+
+   - Linux 或 Mac
+
+     ```
+     $ ./hello
+     map[Darrin:Great to see you, Darrin! Gladys:Hail, Gladys! Well met! Samantha:Hail, Samantha! Well met!]
+     ```
+   - Windows
+     ```
+     $ hello.exe
+     map[Darrin:Great to see you, Darrin! Gladys:Hail, Gladys! Well met! Samantha:Hail, Samantha! Well met!]
+     ```
+
+    你已经将你的应用编译成了一个可执行文件，现在你可以运行它了。但为了正确地运行它，你的命令提示符应该位于可执行文件所在目录，或者指定可执行文件路径。
+
+    下一步，你将安装可执行文件，然后你不用指定路径就可运行它。
+
+3. 发现 Go 安装路径，go 命令将当前包安装至那里。
+
+   你可以通过运行 [go list 命令](https://go.dev/cmd/go/#hdr-List_packages_or_modules)来发现安装路径，如下所示：
+
+   ```
+   $ go list -f '{{.Target}}'
+   ```
+
+   例如，命令输出可能会说 `/home/gopher/bin/hello`，意味着二进制文件被安装到 `/home/gopher/bin`，在下一步你将需要这个安装路径。
+ 
+4. 将 Go 安装目录添加至你的系统 `shell` 路径。
+
+   通过这种方式，你可以不指定可执行文件路径即可运行你的应用的可执行文件。
+
+   - Linux 或 Mac
+     ```
+     $ export PATH=$PATH:/path/to/your/install/directory
+     ```
+   - Windows
+     ```
+     $ set PATH=%PATH%;C:\path\to\your\install\directory
+     ```
+
+   作为一个备选方案，如果你已经有一个目录如 `$HOME/bin` 已经在你的 `shell` 路径里，并且你期望安装 Go 程序至那里，你可以使用 [go env 命令](https://go.dev/cmd/go/#hdr-Print_Go_environment_information) 设置 `GOBIN` 变量来改变安装目标。
+
+     ```
+     $ go env -w GOBIN=/path/to/your/bin
+     ```
+   或
+     ```
+     $ go env -w GOBIN=C:\path\to\your\bin
+     ```
+
+5. 一旦你已经更新了 `shell` 路径，运行 `go install` 以编译并安装包。
+
+   ```
+   $ go install
+   ```
+
+6. 简单地输入应用名以运行它，为了使这看起来更有趣，新开一个命令终端并在别的目录下运行 `hello` 可执行程序。
+
+   ```
+   $ hello
+   map[Darrin:Hail, Darrin! Well met! Gladys:Great to see you, Gladys! Samantha:Hail, Samantha! Well met!]
+   ```
+
+此次 Go 教程至此圆满结束。
 
 ## Appendix. 结论
 
