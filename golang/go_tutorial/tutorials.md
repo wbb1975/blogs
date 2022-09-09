@@ -8,7 +8,7 @@
 --------|--------
 [开始入门](https://go.dev/doc/tutorial/getting-started.html)|利用 Go 说 “Hello, World”
 [创建模块](https://go.dev/doc/tutorial/create-module.html)|从 Go 的视角多部分介绍了公共编程语言特性
-[从多模块工作空间开始](https://go.dev/doc/tutorial/workspaces.html)|介绍了 Go 中创建和使用多模块工作空间的基础。多模块工作空间对于阔多个模块的变更时有用的
+[多模块工作空间入门](https://go.dev/doc/tutorial/workspaces.html)|介绍了 Go 中创建和使用多模块工作空间的基础。多模块工作空间对于阔多个模块的变更时有用的
 [访问关系数据库](https://go.dev/doc/tutorial/database-access)|介绍了使用标准库访问数据库的基础
 [利用Go 和 Gin来开发RESTful API](https://go.dev/doc/tutorial/web-service-gin)|介绍了利用 Go 和 Gin Web 框架编写RESTful web service API的基础
 [泛型基础](https://go.dev/doc/tutorial/generics)|介绍了 Go 泛型基础。利用泛型，你可以声明并使用函数或类型起可以适用于调用方提供的任何类型
