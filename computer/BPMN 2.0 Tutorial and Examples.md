@@ -66,6 +66,6 @@ BPMN 图形有四类主要符号：流对象（flow objects），连接对象（
 
 ## Reference
 
+- [Camunda 官方快速入门教程（中文完整版）](https://blog.csdn.net/ztx114/article/details/123549773)
 - [BPMN 2.0 Tutorial and Examples](https://www.processmaker.com/blog/bpmn-2-0-tutorial-and-examples/)
 - [Understanding BPMN Diagrams and Symbols](https://www.processmaker.com/blog/bpmn-diagram-and-symbols/)
-- [camunda入门（一个流程的欣赏）](https://www.jianshu.com/p/b01d605b089b)
