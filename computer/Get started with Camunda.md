@@ -166,7 +166,7 @@ java -version
 
 接下来，我们将创建一个新的 `ExternalTaskClient`，它订阅了 `charge-card` 主题。
 
-当流程引擎碰到了一个服务任务配置为外部处理，他将创建一个外部任务实例，我们的处理器将会针对这个实例工作。我们将在 `ExternalTaskClient` 里使用[长轮询](https://docs.camunda.org/manual/latest/user-guide/process-engine/external-tasks/#long-polling-to-fetch-and-lock-external-tasks) 使通信效率更高。
+当流程引擎碰到了一个服务任务配置为外部处理，它将创建一个外部任务实例，我们的处理器将会针对这个实例工作。我们将在 `ExternalTaskClient` 里使用[长轮询](https://docs.camunda.org/manual/latest/user-guide/process-engine/external-tasks/#long-polling-to-fetch-and-lock-external-tasks) 使通信效率更高。
 
 接下来，我们将创建一个包，例如 `org.camunda.bpm.getstarted.chargecard`，并添加一个 Java 类，例如 `ChargeCardWorker`。
 
@@ -218,7 +218,7 @@ public class ChargeCardWorker {
 
 你可以通过点击类 `ChargeCardWorker` 选择 `Run as Java` 来运行你的 Java 程序。
 
-注意：注意这个工作者将在这个快速指南的整个过程中保持运行。
+> 注意：注意这个工作者将在这个快速指南的整个过程中保持运行。
 
 ### 1.3 部署流程
 
@@ -451,13 +451,403 @@ JSON 载荷看起来像这样：
 
 接下来，重复这一步骤但只一次，拒绝支付。你也可以创建一个实例，其数量小于 `1000` 来确认第一个网关可以正确工作。
 
-
 ### 1.6 决策自动化
+
+在这一节，你将学到通过 [BPMN 2.0 业务规则任务](https://docs.camunda.org/manual/latest/reference/bpmn20/tasks/business-rule-task/) 和 [DMN 1.3 决策表](https://docs.camunda.org/manual/latest/reference/dmn11/) 来向你的流程添加决策自动化。
+
+#### 1.6.1 [向流程添加业务规则任务](https://docs.camunda.org/get-started/quick-start/decision-automation/#add-a-business-rule-task-to-the-process)
+
+#### 1.6.2 [使用 Camunda Modeler 创建一个 DMN 表](https://docs.camunda.org/get-started/quick-start/decision-automation/#create-a-dmn-table-using-the-camunda-modeler)
+
+#### 1.6.3 [指定 DMN 表](https://docs.camunda.org/get-started/quick-start/decision-automation/#specify-the-dmn-table)
+
+#### 1.6.4 [部署 DMN 表](https://docs.camunda.org/get-started/quick-start/decision-automation/#deploy-the-dmn-table)
+
+#### 1.6.5 [使用驾驶舱验证部署](https://docs.camunda.org/get-started/quick-start/decision-automation/#verify-the-deployment-with-cockpit)
+
+#### 1.6.6 [使用驾驶舱和人物列表检验](https://docs.camunda.org/get-started/quick-start/decision-automation/#inspect-using-cockpit-and-tasklist)
 
 ## 2. RPA Orchestration
 
 ## 3. Spring Boot
 
+## 4. Spring Framework
+
+## 5. DMN
+
+## 6. Java 流程应用（Java Process Application）
+
+这个教程将知道你基于 `Camunda Platform` 建模并实现你的第一个 `BPMN 2.0` 流程。
+
+### 6.1 下载和安装
+
+首先，你需要设置你的开发环境，安装 `Camunda Platform` 和 `Camunda Modeler`。
+
+#### 前提
+
+请确保你已经安装了以下工具：
+
++ Java JDK 1.8+
++ Apache Maven（可选, 如果没有安装你可以使用 Eclipse 里嵌入的 Maven）
++ 一个现代 Web 浏览器（最近的 Firefox, Chrome 或 Microsoft Edge 都可以很好地工作）
++ Eclipse 集成开发环境（(IDE）
+
+#### [Camunda 平台](https://docs.camunda.org/get-started/quick-start/install/#camunda-platform)
+
+首先，下载一个 `Camunda Platform` 发布。你可以为[不同的应用服务器](https://docs.camunda.org/manual/latest/installation/full/)从不同的发布中选择。在这个教程中，我们将使用基于 Apache Tomcat 的发布。从[下载页面](https://camunda.com/download?__hstc=12929896.c4aa629522d594361168db2b707e121f.1662537055065.1663206549959.1663214963846.14&__hssc=12929896.1.1663214963846&__hsfp=389442867)下载它。
+
+下载发布之后，在你选择的一个目录里解压它。我们称这个目录为 $CAMUNDA_HOME。
+
+在你成功解压 `Camunda Platform` 发布之后，执行脚本 `start.bat` (对 `Windows` 用户) 或者 `start.sh` (对 `Unix` 用户)。
+
+这个脚本将启动应用服务器，并在你的浏览器中打开一个欢迎页面。如果页面没打开，直接转向 http://localhost:8080/camunda-welcome/index.html。
+
+#### [Camunda Modeler](https://docs.camunda.org/get-started/quick-start/install/#camunda-modeler)
+
+遵从 [Camunda Modeler](https://docs.camunda.org/manual/latest/installation/camunda-modeler) 一节的指令安装。
+
+### 6.2 项目设置
+
+现在你已经准备好在你新换的 IDE 里设置你的第一个流程应用项目，下面的描述使用 Eclipse。
+
+#### 6.2.1 [创建一个新的 `Maven` 项目](https://docs.camunda.org/get-started/java-process-app/project-setup/#create-a-new-maven-project)
+
+在 Eclipse，点击 `File / New / Other ....`，这打开了新项目向导。在新项目向导中选择 `Maven/Maven` 项目。点击 `Next`。
+
+![eclipse-new-project](images/eclipse-new-project.png)
+
+在新 Maven 项目向导的第一页选择创建一个简单项目（跳过 `archetype` 选择）。点击 `Next`。
+
+在第二页（见截屏），为项目配置 Maven 坐标。因为我们在设置一个 `WAR` 项目，确保选中 Packaging: `war`。
+
+当你完成后，点击 `Finish`。Eclipse 设置了一个新的 Maven 项目。该项目在 `Project Explorer` 视图中可见。
+
+#### 6.2.2 [添加 `Camunda` Maven 依赖](https://docs.camunda.org/get-started/java-process-app/project-setup/#add-camunda-maven-dependencies)
+
+下一步包括为你新的流程应用设置 Maven 依赖。你的项目 `pom.xml` 应该看起来像这样：
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.camunda.bpm.getstarted</groupId>
+  <artifactId>loan-approval</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>war</packaging>
+
+  <properties>
+    <camunda.version>7.17.0</camunda.version>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.camunda.bpm</groupId>
+        <artifactId>camunda-bom</artifactId>
+        <version>${camunda.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.camunda.bpm</groupId>
+      <artifactId>camunda-engine</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>4.0.1</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.3.2</version>
+        <configuration>
+          <failOnMissingWebXml>false</failOnMissingWebXml>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+```
+
+现在，你可以执行你的首次构建。在 `Package Explorer` 中选择 `pom.xml`，右击并选择 `Run As/Maven Install`。
+
+#### 6.2.3 [添加流程应用类](https://docs.camunda.org/get-started/java-process-app/project-setup/#add-a-process-application-class)
+
+接下来，我们将创建一个包，例如 `org.camunda.bpm.getstarted.loanapproval`，并添加一个流程应用类。流程应用类构成了你的应用和流程引擎之间的接口。
+
+```
+package org.camunda.bpm.getstarted.loanapproval;
+
+import org.camunda.bpm.application.ProcessApplication;
+import org.camunda.bpm.application.impl.ServletProcessApplication;
+
+@ProcessApplication("Loan Approval App")
+public class LoanApprovalApplication extends ServletProcessApplication {
+  // empty implementation
+}
+```
+
+#### 6.2.4 [添加一个 META-INF/processes.xml 部署描述符](https://docs.camunda.org/get-started/java-process-app/project-setup/#add-a-meta-inf-processes-xml-deployment-descriptor)
+
+设置流程应用的最后一步是添加 `META-INF/processes.xml` 部署描述符文件。这个文件允许我们提供一个我们的流程应用对流程引擎所作部署的声明式配置。
+
+这个文件需要被加进到一个 Maven 项目的 `src/main/resources/META-INF` 目录：
+
+```
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<process-application
+    xmlns="http://www.camunda.org/schema/1.0/ProcessApplication"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <process-archive name="loan-approval">
+    <process-engine>default</process-engine>
+    <properties>
+      <property name="isDeleteUponUndeploy">false</property>
+      <property name="isScanForProcessDefinitions">true</property>
+    </properties>
+  </process-archive>
+
+</process-application>
+```
+
+你可以让 META-INF/processes.xml 文件为空。在这种情况下，默认值被使用。参考[用户指南](https://docs.camunda.org/manual/latest/user-guide)中的[空 Processes.xml](https://docs.camunda.org/manual/latest/user-guide/process-applications/the-processes-xml-deployment-descriptor/#empty-processes-xml)以获取更多信息。
+
+### 6.3 流程建模
+
+在这一节，你将学会如何利用 `Camunda Modeler` 创建你的第一个 `BPMN 2.0` 流程。让我们从打开 `Camunda Modeler` 开始。
+
+#### 6.3.1 [创建一个新的 BPMN 图形](https://docs.camunda.org/get-started/java-process-app/model/#create-a-new-bpmn-diagram)
+
+通过点击 `File > New File > BPMN Diagram` 来创建一个新的 BPMN 图形。
+
+![new bpmn diagram](images/modeler-new-bpmn-diagram_1.png)
+
+#### 6.3.2 [开始一个简单流程](https://docs.camunda.org/get-started/java-process-app/model/#start-with-a-simple-process)
+
+从建模一个简单流程开始。
+
+![moder step1](images/modeler-step_1.png)
+
+在 `Start Event` 上双击。一个文本框将会出现，输入 `“Loan Request Received”`。
+
+> 提示：当你编辑标签时，你可以使用 `Shift + Enter` 添加换行符。
+
+点击开始事件，从其上下文菜单，选中活动（activity）形状（矩形）并将其拖曳到一个好的位置，将其命名为 `Approve Loan`。通过点击活动图形使用扳手按钮将活动类型修改为用户任务（`User Task`）。
+
+![modeler-step2](images/modeler-step2_1.png)
+
+添加一个结束事件（`End Event`）命名为 `Loan Request Approved`。
+
+![modeler-step3](images/modeler-step3_1.png)
+
+#### 6.3.3 [配置一个用户任务](https://docs.camunda.org/get-started/java-process-app/model/#configure-a-user-task)
+
+![modeler-step4](images/modeler-step4_1.png)
+
+接下来，打开属性视图，如果它当前不可见，点击你的屏幕右手边的标签，然后属性试图见会出现。
+
+在画布上选中用户任务，这将在属性试图中更新你的选择。滚动到 Assignee 属性，输入 john。
+
+当你完成后，保存你的修改。
+
+#### 6.3.4 [配置执行属性](https://docs.camunda.org/get-started/java-process-app/model/#configure-properties-for-execution)
+
+![modeler-step5](images/modeler-step5_1.png)
+
+因为我们正在对一个可执行流程建模，我们应该给它一个 `ID`，并设置 `isExecutable` 属性为 `true`。在画布的右手边，你可找到属性面板。当你在建模画布的空白处点击时，属性面板将显示流程自身的属性。
+
+首先，为流程配置一个 `ID`。在属性字段 `Id` 输入 `approve-loan`。属性 `ID` 被流程引擎是为可执行流程的标识符，最佳实践时将其设为一个对人易读的名字。
+
+其次，配置流程名。在属性字段 `Name` 输入 `Loan Approval`。
+
+最好，确保紧挨这可执行属性的选择框是选中的。如果你不选中它，流程定义将会被流程引擎忽略。
+
+#### 6.3.5 [保存 BPMN 图形](https://docs.camunda.org/get-started/java-process-app/model/#save-the-bpmn-diagram)
+
+当你完成后，点击 `File > Save File As...` 来保存你的修改。当对话框出现时，导航到 `loan` 应用项目目录（默认地它是你的 `Eclipse workspace` 路径）。在项目目录中，将你的模型存放在 `src/main/resources` 下。
+
+返回 Eclipse。右击项目目录并点击 `Refresh`，这将与 Eclipse 同步新的 BPMN 文件。
+
+#### 6.3.6 [调整部署描述符](https://docs.camunda.org/get-started/java-process-app/model/#adjust-the-deployment-descriptor-file)
+
+```
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<process-application
+        xmlns="http://www.camunda.org/schema/1.0/ProcessApplication"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <process-archive name="loan-approval">
+    <process-engine>default</process-engine>
+    
+    <resource>loan-approval.bpmn</resource>
+    
+    <properties>
+      <property name="isDeleteUponUndeploy">false</property>
+      <property name="isScanForProcessDefinitions">true</property>
+    </properties>
+  </process-archive>
+
+</process-application>
+```
+
+### 6.4 部署和测试
+
+下面的步骤包括构建，部署和测试流程。
+
+#### 6.4.1 [用 Maven 构建 Web 应用](https://docs.camunda.org/get-started/java-process-app/deploy/#build-the-web-application-with-maven)
+
+从 Package Explorer 选中 pom.xml，右击并选择 Run As/Maven Install。这将在你的 Maven 项目 target/ 目录下产生一个名为 loan-approval-0.1.0-SNAPSHOT.war 的 WAR 文件。
+
+如果你在上一节保存你的 bpmn 文件在 src/main/resources 下，war 文件也将包含 bpmn 文件。
+
+> 注意：当执行 Maven 构建之后如果 loan-approval-0.1.0-SNAPSHOT.war 文件仍不可见，你需要在 eclipse 中刷新项目（F5）。
+
+#### 6.4.2 [部署至 Apache Tomcat](https://docs.camunda.org/get-started/java-process-app/deploy/#deploy-to-apache-tomcat)
+
+为了部署流程应用，从你的 Maven 项目拷贝粘贴 loan-approval-0.1.0-SNAPSHOT.war 至 $CAMUNDA_HOME/server/apache-tomcat/webapps 目录。
+
+检查 $CAMUNDA_HOME/server/apache-tomcat/logs 目录下 Apache Tomcat 服务器的日志文件。选中名为 catalina.out 的文件。滚动到文件尾端，如果你能看到下面的消息，部署就成功了。
+
+```
+INFO org.camunda.commons.logging.BaseLogger.logInfo
+ENGINE-07015 Detected @ProcessApplication class 'org.camunda.bpm.getstarted.loanapproval.LoanApprovalApplication'
+INFO org.camunda.commons.logging.BaseLogger.logInfo
+ENGINE-08024 Found processes.xml file at ../webapps/loan-approval-0.1.0-SNAPSHOT/WEB-INF/classes/META-INF/processes.xml
+INFO org.camunda.commons.logging.BaseLogger.logInfo
+ENGINE-08023 Deployment summary for process archive 'loan-approval':
+
+        loan-approval.bpmn
+
+INFO org.camunda.commons.logging.BaseLogger.logInfo
+ENGINE-08050 Process application Loan Approval App successfully deployed
+```
+
+#### 6.4.3 [用驾驶舱验证](https://docs.camunda.org/get-started/java-process-app/deploy/#verify-the-deployment-with-cockpit)
+
+接下来，利用驾驶舱验证是否成功部署。导航到 `http://localhost:8080/camunda/app/cockpit/`，以安全凭证 `demo/demo` 登录，你的流程 `Loan Approval` 应该在 `dashboard` 上可见。
+
+![cockpit-loan-approval](images/cockpit-loan-approval.png)
+
+#### 6.4.4 [开启一个流程实例](https://docs.camunda.org/get-started/java-process-app/deploy/#start-a-process-instance)
+
+导航到任务列表（http://localhost:8080/camunda/app/tasklist/），以 “demo/demo” 登录。点击 “Start process“ 以开启一个流程实例。这打开了一个对话框，你可以从列表中选择 `Loan Approval`。你还可以使用一个通用表单为流程实例设置变量。
+
+![start-form-generic](images/start-form-generic.png)
+
+无论何时当你没有为你的用户任务或 `Start Event` 添加专用表单，你就可以使用通用表单。点击 `Add a variable` 按钮一创建一个新行。在表单里输入如截图里的内容。当你完成后， 点击 `Start`。
+
+如果你回到 [Camunda Cockpit](http://localhost:8080/camunda/app/cockpit)，你将看到新创建的在用户任务中等待的流程实例。
+
+#### 6.4.5 [配置流程启动授权](https://docs.camunda.org/get-started/java-process-app/deploy/#configure-process-start-authorizations)
+
+为了允许用户 `john` 看到流程定义 `Loan Approval`，你可以导航到 [Camunda Admin](http://localhost:8080/camunda/app/admin/default/#/authorization?resource=6)。接下来，点击 `Create new authorization` 按钮来为资源流程定义添加一个新的授权。现在你可以给用户 `john` 流程定义 `approve-loan` 的所有权限。当你完成后，提交这个新的授权。
+
+![create-process-definition-authorization](images/create-process-definition-authorization.png)
+
+现在，为流程实例资源创建第二个授权，设置权限为 `CREATE`。
+
+![create-process-instance-authorization](images/create-process-instance-authorization.png)
+
+关于授权以及如何管理它们的更多信息，请访问用户指南中的下列章节：[授权服务](https://docs.camunda.org/manual/latest/user-guide/process-engine/authorization-service)和[授权管理](https://docs.camunda.org/manual/latest/webapps/admin/authorization-management)。
+
+#### 6.4.5 [测试一下](https://docs.camunda.org/get-started/java-process-app/deploy/#work-on-the-task)
+
+登出 Admin，导航到任务列表（http://localhost:8080/camunda/app/tasklist/），以 “john/john” 重新登录。现在，你能够在你的任务列表中看到 Approve Loan 任务。选择该任务并点击 Diagram 属性页。这展示了流程图，它高亮显示了等待继续工作的用户任务。
+
+![diagram](images/diagram.png)
+
+为了在任务上继续工作，选中表单属性页。再一次，没有发现任何与流程相关的任务表单。下面显示了你在第一步输入的变量：
+
+![task-form-generated](images/task-form-generic_1.png)
+
+### 6.5 表单（Forms）
+
+下一步，我们将为应用添加任务表单。
+
+#### 6.5.1 [增加一个开始表单](https://docs.camunda.org/get-started/java-process-app/forms/#add-a-start-form)
+
+在 `Camunda Modeler` 里创建一个新的表单，并设置其 `id` 为 `request-loan`。
+
+- 增加一个文本字段，设置字段标签为 `Customer ID`， 键为 `customerId`。
+- 增加一个数字字段，设置字段标签为 `Amount` 键为 `amount`。
+- 将表单命名为 `request-loan.form` 保存至 `src/main/resources`。
+
+![form-builder-start-form](images/form-builder-start-form.png)
+
+在 `modeler` 中打开流程。点击 `Start Event`。在属性面板，点击表单选择 `Camunda Form` 作为类型，在表单的 `reference` 字段设置为 `request-loan`，为 `binding` 选择 `latest`。这意味着任务列表使用表单的最新部署版本。在 Eclipse 项目中保存图形并刷新。
+
+![modeler-start-form](images/modeler-start-form.png)
+
+#### 6.5.2 [增加一个任务表单](https://docs.camunda.org/get-started/java-process-app/forms/#add-a-task-form)
+
+你可以以同样的方式增加和配置任务表单，区别在于你设置其 `id` 为 `approve-loan`，为两个字段选择 `Disabled` 复选框。
+
+将表单以文件名 `approve-loan.form` 保存至 `src/main/resources`。
+
+之后，用 `modeler` 打开流程。点击用户任务。在属性面板，点击表单选择 `Camunda Form` 作为类型，在表单的 `reference` 字段设置为 `approve-loan`，为 `binding` 选择 `latest`。
+
+#### 6.5.3 [调整部署描述符文件](https://docs.camunda.org/get-started/java-process-app/forms/#adjust-the-deployment-descriptor-file)
+
+调整 META-INF/processes.xml 部署描述符文件增加表单资源：
+
+```
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<process-application
+        xmlns="http://www.camunda.org/schema/1.0/ProcessApplication"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <process-archive name="loan-approval">
+    <process-engine>default</process-engine>
+    
+    <resource>loan-approval.bpmn</resource>
+    <resource>request-loan.form</resource>
+    <resource>approve-loan.form</resource>
+    
+    <properties>
+      <property name="isDeleteUponUndeploy">false</property>
+      <property name="isScanForProcessDefinitions">true</property>
+    </properties>
+  </process-archive>
+
+</process-application>
+```
+
+#### 6.5.4 [重新构建和部署](https://docs.camunda.org/get-started/java-process-app/forms/#re-build-and-deploy)
+
+当你完成后，选择所有资源，[执行一个 Maven 构建](https://docs.camunda.org/get-started/java-process-app/deploy/#build-the-web-application-with-maven)，并[重新部署](https://docs.camunda.org/get-started/java-process-app/deploy/#deploy-to-apache-tomcat)流程应用。
+
+现在导航到[任务列表](http://localhost:8080/camunda/app/tasklist)为 `loan approval` 流程开启一个新的实例。你会注意到自定义表单出现了。
+
+![start-form-embedded](images/start-form-embedded.png)
+
+在开启一个新的流程实例后，一个新的任务 `Approve Loan` 被指派给 `john`。为了开始这个任务，在任务列表中选择它，然后你将会注意到自定义表单出现了。
+
+![task-form-embedded](images/task-form-embedded.png)
+
+### 6.6 Java服务任务
+
+## 7. Java EE7
+
+## 8. Maven Coordinates
 
 ## Reference
 
