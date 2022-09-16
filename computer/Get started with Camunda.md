@@ -457,15 +457,81 @@ JSON 载荷看起来像这样：
 
 #### 1.6.1 [向流程添加业务规则任务](https://docs.camunda.org/get-started/quick-start/decision-automation/#add-a-business-rule-task-to-the-process)
 
+使用 `Camunda Modeler` 打开 `Payment Retrieval` 流程，然后点击 `Approve Payment` 任务。使用扳手按钮菜单将活动类型改变为**业务规则任务**。
+
+![modeler-businessrule-task1](images/modeler-businessrule-task1.png)
+
+接下来，通过在属性面板中把 `Implementation` 改为 `DMN`，`Decision Ref` 为 `approve-payment` 来将业务规则任务与 DMN 表连接到一起。为了检索求值结果，并将其自动存储为我们的流程中的一个流程变量，我们也需要在属性面板中将 `Result Variable` 改变为 `approved` 并使用 `singleEntry` 作为 `Map Decision Result` 的值。
+
+![modeler-businessrule-task2](images/modeler-businessrule-task2.png)
+
+在 `Camunda Modeler` 中保存你的修改并使用 `Deploy` 按钮部署你的更新过的流程。
+
 #### 1.6.2 [使用 Camunda Modeler 创建一个 DMN 表](https://docs.camunda.org/get-started/quick-start/decision-automation/#create-a-dmn-table-using-the-camunda-modeler)
+
+首先，通过点击 `File > New File > DMN Diagram` 来创建一个 DMN 图。
+
+![modeler-new-dmn-diagram](images/modeler-new-dmn-diagram.png)
+
+现在，新创建的图将已经有了一个决策元素。点击它以选择它，给它命名为 `Approve Payment`，`id` 为 `approve-payment`（决策 ID 必须匹配 BPMN 流程中的 `Decision Ref`）。
+
+![modeler-new-dmn-diagram-properties](images/modeler-new-dmn-diagram-properties.png)
+
+接下来，点击 `Table` 按钮创建一个新的 DMN 表。
+
+![modeler-new-dmn-table.png](images/modeler-new-dmn-table.png)
 
 #### 1.6.3 [指定 DMN 表](https://docs.camunda.org/get-started/quick-start/decision-automation/#specify-the-dmn-table)
 
+首先，指定 DMN 表的输入表达式。在这个例子中，我们给予条目名来决定一个支付是否批准。你的规则能够使用 `FEEL Expression Language`, `JUEL` 或 `Script`。如果你喜欢，你可以在 DMN 引擎阅读更多关于[表达式的信息](https://docs.camunda.org/manual/latest/user-guide/dmn-engine/expressions-and-scripts/)。
+
+双击 `Input` 来配置输入栏，使用 `Item` 作为输入标签以及输入表达式。
+
+![modeler-dmn2](images/modeler-dmn2.png)
+
+接下来，设置输出栏。使用 `Approved` 作为输出标签 `approved` 作为 `“Approved”` 输出栏的输出名。
+
+![modeler-dmn3](images/modeler-dmn3.png)
+
+在 DMN 表左边点击 `+` 号来创建一些规则。我们也将修改输出栏的数据类型为 `boolean`。
+
+![modeler-dmn4](images/modeler-dmn4.png)
+
+设置完成之后，你的 DMN 表应该看起来像这样：
+
+![modeler-dmn5](images/modeler-dmn5.png)
+
 #### 1.6.4 [部署 DMN 表](https://docs.camunda.org/get-started/quick-start/decision-automation/#deploy-the-dmn-table)
+
+为了部署决策表，在 `Camunda Modeler` 中点击 `Deploy` 按钮，给他一个部署名 “Payment Retrieval Decision”，然后点击 `Deploy` 按钮。
+
+![modeler-dmn6](images/modeler-dmn6.png)
 
 #### 1.6.5 [使用驾驶舱验证部署](https://docs.camunda.org/get-started/quick-start/decision-automation/#verify-the-deployment-with-cockpit)
 
-#### 1.6.6 [使用驾驶舱和人物列表检验](https://docs.camunda.org/get-started/quick-start/decision-automation/#inspect-using-cockpit-and-tasklist)
+接下来，利用驾驶舱验证决策表是否成功部署。导航到 `http://localhost:8080/camunda/app/cockpit/`，以安全凭证 `demo/demo` 登录，导航到 `“Decisions”` 一节。你的决策表 `Approve Payment` 应该在 `dashboard` 应该在显示的决策列表中可见。
+
+![cockpit-approve-payment](images/cockpit-approve-payment.png)
+
+#### 1.6.6 [使用驾驶舱和任务列表检验](https://docs.camunda.org/get-started/quick-start/decision-automation/#inspect-using-cockpit-and-tasklist)
+
+加下来，使用任务列表来开启两个流程实例并验证取决于你的输入，流程实例将被路由到不同的方向。为了实现这个，导航到 `http://localhost:8080/camunda/app/tasklist/`，以安全凭证 `demo/demo` 登录。
+
+点击 `“Start process“` 以开启一个流程实例并选择 `Payment` 实例。使用通用表单添加变量如下：
+
+![tasklist-dmn1](images/tasklist-dmn1.png)
+
+点击 `Start Instance` 按钮。
+
+再次点击 `“Start process“` 以开启一个流程实例并选择 `Payment` 实例。使用通用表单添加变量如下：
+
+![tasklist-dmn2](images/tasklist-dmn2.png)
+
+你将看到取决于你的输入，工作者将修改或不修改信用卡。你可以使用 `Camunda Cockpit` 来验证 DMN 表被正确求值了。导航到 `http://localhost:8080/camunda/app/cockpit/`，以安全凭证 `demo/demo` 登录，导航到 `“Decisions”` 一节并点击 `Approve Payment`。通过点击表中的不同 `ID` 来检查被求值的不同的决策实例。
+
+一个简单执行过的的 DMN 表在 `Camunda Cockpit` 中可能看起来像这样：
+
+![cockpit-dmn-table](images/cockpit-dmn-table.png)
 
 ## 2. RPA Orchestration
 
@@ -845,6 +911,57 @@ ENGINE-08050 Process application Loan Approval App successfully deployed
 
 ### 6.6 Java服务任务
 
+在这个教程的最后一节，我们将学到如何从 `BPMN 2.0` 服务任务调用一个 Java 类。
+
+#### 6.6.1 [为流程添加一个服务任务](https://docs.camunda.org/get-started/java-process-app/service-task/#add-a-service-task-to-the-process)
+
+使用 `Camunda Modeler` 在用户任务之后添加一个服务任务。为了实现按这个，选择活动形状（圆角矩形）并将其拖曳至顺序流（见截图）。将其命名为 `Process Request`，点击它并使用扳手按钮将活动类型改变为服务任务。。
+
+![modeler-service-task1](images/modeler-service-task1.png)
+
+![modeler-service-task2](images/modeler-service-task2.png)
+
+#### 6.5.2 [添加 JavaDelegate 实现](https://docs.camunda.org/get-started/java-process-app/service-task/#add-a-javadelegate-implementation)
+
+现在我们需要增加实际服务任务实现。在 Eclipse 项目，在包 `org.camunda.bpm.getstarted.loanapproval` 中增加一个类 `ProcessRequestDelegate` 来实现 `JavaDelegate` 接口。
+
+```
+package org.camunda.bpm.getstarted.loanapproval;
+
+import java.util.logging.Logger;
+import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.camunda.bpm.engine.delegate.JavaDelegate;
+
+public class ProcessRequestDelegate implements JavaDelegate {
+
+  private final static Logger LOGGER = Logger.getLogger("LOAN-REQUESTS");
+
+  public void execute(DelegateExecution execution) throws Exception {
+    LOGGER.info("Processing request by '" + execution.getVariable("customerId") + "'...");
+  }
+
+}
+```
+
+#### 6.5.3 [在流程中配置类](https://docs.camunda.org/get-started/java-process-app/service-task/#configure-the-class-in-the-process)
+
+使用属性试图来引用流程中的服务任务（见截图）。你需要在 `Java Class` 属性字段提供 Java 类的全域名。在我们的例子中，它是 `org.camunda.bpm.getstarted.loanapproval.ProcessRequestDelegate`。
+
+![modeler-service-task3](images/modeler-service-task3.png)
+
+保存流程模型并在 Eclipse 里更新它。[构建](https://docs.camunda.org/get-started/java-process-app/deploy/#build-the-web-application-with-maven)，[部署](https://docs.camunda.org/get-started/java-process-app/deploy/#deploy-to-apache-tomcat)并[执行](https://docs.camunda.org/get-started/java-process-app/forms/#re-build-and-deploy)流程应用。在完成 `Approve Loan` 步骤之后，检查 `Apache Tomcat` 服务器日志文件：
+
+```
+INFO org.camunda.bpm.getstarted.loanapproval.ProcessRequestDelegate.execute
+Processing request by 'GFPE-23232323'...
+```
+
+共享流程引擎的类加载：流程引擎从应用类加载器解析 `ProcessRequestDelegate`。这允许你：
+
+- 对每个流程应用可以有不同的类加载器
+- 你的应用于库打包在一起
+- 运行时（重新）部署（不需要停止或重启流程引擎）
+
 ## 7. Java EE7
 
 ## 8. Maven Coordinates
@@ -859,3 +976,4 @@ ENGINE-08050 Process application Loan Approval App successfully deployed
 - [Start and Step Through a Process with REST (feat. SwaggerUI)](https://camunda.com/blog/2021/10/start-and-step-through-a-process-with-rest-feat-swaggerui/)
 - [Start Process Instance](https://docs.camunda.org/manual/7.17/reference/rest/process-definition/post-start-process-instance/)
 - [Process Engine API](https://docs.camunda.org/manual/latest/user-guide/process-engine/process-engine-api/)
+- [Invoking services from a Camunda 7 process](https://docs.camunda.io/docs/components/best-practices/development/invoking-services-from-the-process-c7/)
