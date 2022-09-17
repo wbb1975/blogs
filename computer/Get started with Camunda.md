@@ -977,3 +977,6 @@ Processing request by 'GFPE-23232323'...
 - [Start Process Instance](https://docs.camunda.org/manual/7.17/reference/rest/process-definition/post-start-process-instance/)
 - [Process Engine API](https://docs.camunda.org/manual/latest/user-guide/process-engine/process-engine-api/)
 - [Invoking services from a Camunda 7 process](https://docs.camunda.io/docs/components/best-practices/development/invoking-services-from-the-process-c7/)
+- [BPMN Tutorial for Beginners](http://www.mastertheboss.com/bpm/bpmn-20/bpmn-tutorial-for-beginners/)
+- [Camunda Platform Javadocs 7.17.5-ee](https://docs.camunda.org/javadoc/camunda-bpm-platform/7.17/index.html)
+- [BPMN 2.0 Symbol Reference](https://camunda.com/bpmn/reference/)
