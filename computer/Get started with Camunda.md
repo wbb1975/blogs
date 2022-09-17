@@ -79,7 +79,7 @@ java -version
 
 #### 1.2.3 [配置一个服务任务](https://docs.camunda.org/get-started/quick-start/service-task/#configure-the-service-task)
 
-有不同的方式使用 `Camunda Platform` 来执行[服务任务](https://docs.camunda.org/manual/latest/reference/bpmn20/tasks/service-task/)。在这个指南中，我们将使用[外部任务模式](https://docs.camunda.org/manual/latest/user-guide/process-engine/external-tasks/)。在 `Camunda Modeler` 里打开属性面板，点击你刚创建的服务任务。修改其实现为 `External` 并采用 `charge-card` 为标题。
+有不同的方式使用 `Camunda Platform` 来执行[服务任务](https://docs.camunda.org/manual/latest/reference/bpmn20/tasks/service-task/)。在这个指南中，我们将使用[外部任务模式](https://docs.camunda.org/manual/latest/user-guide/process-engine/external-tasks/)。在 `Camunda Modeler` 里打开属性面板，点击你刚创建的服务任务。修改其实现 `Type` 为 `External` 并设置 `Topic` 为 `charge-card`。
 
 ![modeler-step4](images/modeler-step4.png)
 
