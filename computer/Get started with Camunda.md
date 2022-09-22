@@ -537,6 +537,220 @@ JSON 载荷看起来像这样：
 
 ## 3. Spring Boot
 
+### 3.1 设置一个 Spring Boot 项目
+
+首先，让我们在你喜欢的 IDE 中设置一个流程应用项目。下面的描述将会以 Eclipse 为例。
+
+#### 3.1.1 [设置一个 Java 项目](https://docs.camunda.org/get-started/spring-boot/project-setup/#set-up-a-java-project)
+
+我们将在 Eclipse 里设置一个 `Spring Boot` 应用为一个 `Apache Maven` 项目。它包含以下步骤：
+
+- 在 Eclipse 中创建一个新的 Maven 项目
+- 添加 `Camunda & Spring Boot` 依赖
+- 添加一个主类作为启动 `Spring Boot` 应用的入口
+
+#### 3.1.2 [创建一个 Maven 项目](https://docs.camunda.org/get-started/spring-boot/project-setup/#create-a-new-maven-project)
+
+首先，创建一个基于 `Apache Maven` 的项目。让我们称之为 `loan-approval-spring-boot`。下面的截屏展示了我们在 Eclipse 里的设置：
+
+![eclipse-new-project](images/eclipse-new-project.png)
+
+当你完成了这个，点击 `Finish`。Eclipse 就此设置了一个新的 `Maven` 项目，它出现在 `Project Explorer` 视图。
+
+#### 3.1.3 [添加 Camunda Platform & Spring Boot 依赖](https://docs.camunda.org/get-started/spring-boot/project-setup/#add-camunda-platform-spring-boot-dependencies)
+
+下一步包含为这个新项目添加 `Maven` 依赖。`Maven` 依赖需要被添加到项目的 `pom.xml` 文件。我们在“依赖管理”一节为 `Webapp` 添加 `Spring Boot BOM 和 Camunda Spring Boot Starter`，它将会在应用里自动添加 `Camunda engine` 和 `webapps`。我们也使用了 `spring-boot-maven-plugin`，它做了打包 `Spring Boot` 应用内容在一起的魔术操作。
+
+```
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.camunda.bpm.getstarted</groupId>
+  <artifactId>loan-approval-spring-boot</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+
+  <properties>
+    <camunda.spring-boot.version>7.17.0</camunda.spring-boot.version>
+    <spring-boot.version>2.6.6</spring-boot.version>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
+  
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  
+  <dependencies>
+    <dependency>
+      <groupId>org.camunda.bpm.springboot</groupId>
+      <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+      <version>${camunda.spring-boot.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.xml.bind</groupId>
+      <artifactId>jaxb-impl</artifactId>
+      <version>2.3.5</version>
+    </dependency>
+  </dependencies>
+
+   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring-boot.version}</version>
+        <configuration>
+          <layout>ZIP</layout>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+```
+
+#### 3.1.4 [为 Spring Boot 应用添加主类](https://docs.camunda.org/get-started/spring-boot/project-setup/#add-main-class-to-our-spring-boot-application)
+
+接下来，我们将添加一个包含 `main` 方法的应用类，该方法将用作启动 `Spring Boot` 应用的入口。该类拥有 `@SpringBootApplication` 注解，它隐式地添加了几个特性（自动配置，组件扫描，等，请参看 Spring Boot 文档）。类被添加到 `src/main/java` 目录下的 `org.camunda.bpm.getstarted.loanapproval` 包里。
+
+```
+package org.camunda.bpm.getstarted.loanapproval;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class WebappExampleProcessApplication {
+	public static void main(String... args) {
+		SpringApplication.run(WebappExampleProcessApplication.class, args);
+	}
+}
+```
+
+#### 3.1.5 [构建及运行](https://docs.camunda.org/get-started/spring-boot/project-setup/#build-and-run)
+
+现在我们可以执行首次构建。从 `Package Explorer` 选择 `pom.xml`，右击并选择 `Run As/Maven Install`。
+
+我们的首个 `Camunda Spring Boot` 应用已经准备好了。做为构建的结果，你的 `target` 目录下有一个 `JAR-file`。`JAR` 是一个 `Spring Boot` 应用，它嵌入了 `Tomcat` 作为 web 容器，`Camunda engine` 以及 `Camunda Web` 应用资源。当启动时，他将使用一个内存 `H2` 数据库以满足 `Camunda Engine` 所需。
+
+你可以右击 `WebappExampleProcessApplication` 并选择 `Run as/Java application` 来运行应用。等待直到 `Console` 上出现如下类似消息：
+
+```
+Started WebappExampleProcessApplication in 10.584 seconds
+```
+
+然后在你的浏览器导航到 `http://localhost:8080/`，你就可以使用 `Camunda webapps` 了。
+
+另一种运行 `app` 的方式时利用 `java -jar` 运行 `JAR-file`。
+
+> **Catch up: Get the Sources of Step-1**
+> [Download as .zip](https://github.com/camunda/camunda-get-started-spring-boot/archive/Step-1.zip) 或者利用 Git 检出对应的标签。
+> 你可以从 [Git Repository](https://github.com/camunda/camunda-get-started-spring-boot)检出当前状态。
+> 如果你还未克隆仓库，请执行下面的命令：
+> `git clone https://github.com/camunda/camunda-get-started-spring-boot.git`
+
+### 3.2 配置一个 Spring Boot 项目
+
+在上一步创建的 `Camunda Spring Boot` 应用使用默认和最佳实践配置，嵌入在启动器（starter）里。有几种方式来定制或覆盖其配置。最简单的方式是在 `application.yaml` (或 `application.properties`) 文件里提供一套参数。完整的配置参数列表可在[这里](https://docs.camunda.org/manual/latest/user-guide/spring-boot-integration/configuration/#camunda-engine-properties)找到。
+
+#### 3.2.1 [自定义配置](https://docs.camunda.org/get-started/spring-boot/configuration/#customize-configuration)
+
+让我们在 `src/main/resources` 创建一个 `application.yaml` 文件，其内容如下：
+
+```
+camunda.bpm:
+  admin-user:
+    id: demo
+    password: demo
+    firstName: Demo
+  filter:
+    create: All tasks
+```
+
+这个配置将导致：
+
+- 管理账号 `“demo”` 及其提供的密码，名字将被创建
+- 名为 `“All tasks”` 的默认过滤器将会为任务列表创建 
+
+#### 3.2.2 [构建和运行](https://docs.camunda.org/get-started/spring-boot/configuration/#build-and-run)
+
+现在你可以再次构建和运行应用。不要忘记在运行 `mvn install` 前再次运行 `mvn clean`。现在在你的浏览器里打开 http://localhost:8080/。 它不再要求你创建管理员账号，但询问登录名和密码。你可以使用我们以前配置的 `“demo/demo”` 以访问 `Camunda web` 应用。
+
+你登陆之后，你可以导航到任务列表，虽然到现在为止没有任何任务，但可以看到一个名为 `“All tasks”` 的过滤器已经被创建。
+
+### 3.3 对一个 BPMN 2.0 流程建模
+
+这一节我们将学到如何部署一个流程，以及如何从一个 `BPMN 2.0` 服务任务调用一个 `Spring Bean`。
+
+#### 3.3.1 [部署及调用 BPMN 流程](https://docs.camunda.org/get-started/spring-boot/model/#deploy-and-invoke-bpmn-process)
+
+现在你已经知道了如何在 `Spring Boot` 应用内开启一个流程引擎，我们可以添加一个 `BPMN 2.0` 流程模型并在 `Spring beans` 内与流程交互。在这一节，我们将：
+
+- 对一个可执行 `BPMN 2.0` 流程建模
+- 使用 `Spring Boot Starter` 对 `BPMN 2.0` 流程的自动部署
+- 创建一个流程应用
+- 从我们的流程应用启动一个流程实例 
+
+#### 3.3.2 [对一个可执行 BPMN 2.0 模型建模并部署它](https://docs.camunda.org/get-started/spring-boot/model/#model-an-executable-bpmn-2-0-process-and-deploy-it)
+
+使用 `Camunda Modeler` 来开始建模一个可执行流程。流程看起来应该如下面的截图所示：
+
+![loan Approval](images/loanApproval.png)
+
+> 提示：如果你对建模一个可执行流程不熟悉，你可以阅读快速入门指南的[对流程建模](https://docs.camunda.org/get-started/quick-start/service-task/)一节。
+
+当你结束后，将流程模型保存在项目的 `src/main/resources` 目录下，并确保刷新了 Eclipse 项目。
+
+一旦它被保存到应用类路径下，在引擎启动时它会被自动部署。
+
+#### 3.3.3 [创建流程应用](https://docs.camunda.org/get-started/spring-boot/model/#create-process-application)
+
+我们推荐在 `Camunda Spring Boot` 应用内声明流程应用，它给了额外的配置可能性，并帮助我们在当前演示中捕捉 `“post-deploy”` 事件，并在那个点开始流程实例。
+
+为了声明流程应用，只要在你的 `WebappExampleProcessApplication` 类上添加  `@EnableProcessApplication` 注解并在 `src/main/resources/META-INF` 下放置一个空的 `processes.xml` 文件。这个文件对于每一个流程应用是 `Camunda Engine` 需要的，但对于我们的例子它保持为空。
+
+#### 3.3.4 [流程应用部署后开启一个流程实例](https://docs.camunda.org/get-started/spring-boot/model/#start-a-process-instance-after-process-application-has-been-deployed)
+
+下一步包含从我们的流程应用类里启动一个流程实例。为了这个，我们将处理 `PostDeployEvent`，只要我们的流程应用被部署到 `Camunda` 引擎它就会被触发。
+
+```
+...
+  @Autowired
+  private RuntimeService runtimeService;
+
+  @EventListener
+  private void processPostDeploy(PostDeployEvent event) {
+    runtimeService.startProcessInstanceByKey("loanApproval");
+  }
+...
+```
+
+祝愿我们可以很容易地通过 `@Autowired` 注解注入 `Camunda` 引擎服务。
+
+#### 3.3.5 [重新构建及测试](https://docs.camunda.org/get-started/spring-boot/model/#rebuild-and-test)
+
+如果你重新构建及重启应用，你将会在 `“All tasks”` 过滤器的任务列表下看到 **“Check the request”** 任务。
+
+![tasklist](images/tasklist.png)
+
 ## 4. Spring Framework
 
 ## 5. DMN
@@ -971,7 +1185,6 @@ Processing request by 'GFPE-23232323'...
 - [Quick Start (Java / JS)](https://docs.camunda.org/get-started/quick-start/)
 - [Camunda 官方快速入门教程（中文完整版）](https://blog.csdn.net/ztx114/article/details/123549773)
 - [camunda-spring-boot-example](https://github.com/huksley/camunda-spring-boot-example)
-- [camunda入门（一个流程的欣赏）](https://www.jianshu.com/p/b01d605b089b)
 - [Camunda工作流引擎简单入门](https://www.cnblogs.com/Tom-shushu/p/15000311.html)
 - [Start and Step Through a Process with REST (feat. SwaggerUI)](https://camunda.com/blog/2021/10/start-and-step-through-a-process-with-rest-feat-swaggerui/)
 - [Start Process Instance](https://docs.camunda.org/manual/7.17/reference/rest/process-definition/post-start-process-instance/)
@@ -980,3 +1193,8 @@ Processing request by 'GFPE-23232323'...
 - [BPMN Tutorial for Beginners](http://www.mastertheboss.com/bpm/bpmn-20/bpmn-tutorial-for-beginners/)
 - [Camunda Platform Javadocs 7.17.5-ee](https://docs.camunda.org/javadoc/camunda-bpm-platform/7.17/index.html)
 - [BPMN 2.0 Symbol Reference](https://camunda.com/bpmn/reference/)
+- [Invoking services from a Camunda 7 process](https://docs.camunda.io/docs/components/best-practices/development/invoking-services-from-the-process-c7/)
+- [Camunda BPM Initializr](https://start.camunda.com/)
+- [Running Spring Boot Application With Embedded Camunda Engine](https://dzone.com/articles/running-spring-boot-application-with-embedded-camu)
+- [BPMN2.0 - camunda workflow spring boot application](https://medium.com/nerd-for-tech/bpmn2-0-camunda-workflow-spring-boot-application-2381f3d42e5f)
+- [Spring Boot Starter for the External Task Client](https://camunda.com/blog/2021/03/external-task-client-spring-bootified/)
