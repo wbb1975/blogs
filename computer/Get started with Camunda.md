@@ -1198,3 +1198,5 @@ Processing request by 'GFPE-23232323'...
 - [Running Spring Boot Application With Embedded Camunda Engine](https://dzone.com/articles/running-spring-boot-application-with-embedded-camu)
 - [BPMN2.0 - camunda workflow spring boot application](https://medium.com/nerd-for-tech/bpmn2-0-camunda-workflow-spring-boot-application-2381f3d42e5f)
 - [Spring Boot Starter for the External Task Client](https://camunda.com/blog/2021/03/external-task-client-spring-bootified/)
+- [**Implement a BPMN Service Task in Camunda**](https://www.javanibble.com/implement-bpmn-service-task-in-camunda/)
+- [Cook Veg Masala Noodles using Camunda Workflow](https://github.com/sourabhparsekar/camunda-masala-noodles)
