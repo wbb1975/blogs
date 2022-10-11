@@ -282,7 +282,7 @@
 
 ## 5. 查询多行
 
-在这一节，你将使用 Go 来执行一个设计多行数据的 SQL 查询。
+在这一节，你将使用 Go 来执行一个设计返回多行数据的 SQL 查询。
 
 对于可能返回多行的 `SQL statements`，你使用 `database/sql` 包里的 `Query` 方法，并循环迭代返回的每一行（稍后你将学习如何查询单行数据）。
 
@@ -329,7 +329,7 @@
    在这段代码中，你：
 
    + 声明了一个你定义的 `Album` 类型的切片 `albums`。这将持有返回的多行数据。结构体字段名字及类型与数据库列名字集类型匹配
-   + 使用 [DB.Query](https://pkg.go.dev/database/sql#DB.Query) 来执行一个 `S`ELECT` 语句一查询一个指定艺术家的所有照片。
+   + 使用 [DB.Query](https://pkg.go.dev/database/sql#DB.Query) 来执行一个 `SELECT` 语句以查询一个指定艺术家的所有唱片。
 
      查询的第一个参数是 `SQL statement`。其后你可以传递 0 个或更多任意类型的参数。这提供了一个地方让你能够为你的 `SQL statement` 中的参数指定值。通过分离 SQL 语句及其参数值（而不是使用 `fmt.Sprintf` 拼接它们），你使得 `database/sql` 包分开发送 SQL 文本和参数值，移除了 SQL 注入风险。
    + Defer 关闭 `rows`，如此它持有的任何资源都会在函数推出后释放。
@@ -371,14 +371,276 @@
 
 ## 6. 查询单行
 
+在这一节，你将使用 Go 来查询数据库中的单行。
+
+对于最多返回一行的 `SQL statements`，你能够使用 `QueryRow` 方法，它比使用查询循环简单。
+
+### 6.1 编写代码
+
+1. 在 `albumsByArtist` 函数之下，粘贴下面的 `albumByID` 函数定义。
+
+   ```
+    // albumByID queries for the album with the specified ID.
+    func albumByID(id int64) (Album, error) {
+        // An album to hold data from the returned row.
+        var alb Album
+
+        row := db.QueryRow("SELECT * FROM album WHERE id = ?", id)
+        if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+            if err == sql.ErrNoRows {
+                return alb, fmt.Errorf("albumsById %d: no such album", id)
+            }
+            return alb, fmt.Errorf("albumsById %d: %v", id, err)
+        }
+        return alb, nil
+    }
+   ```
+
+   在这段代码中，你：
+
+   + 使用 [DB.QueryRow](https://pkg.go.dev/database/sql#DB.QueryRow) 来执行一个 `SELECT` 语句以查询一个指定ID的唱片。
+
+     查询返回一个 `sql.Row`。为了简化调用代码（你的代码），`QueryRow` 并未返回一个错误。作为替代，它安排其后从 `Rows.Scan` 返回任意查询错误（比如 `sql.ErrNoRows`）。
+   + 使用 [Rows.Scan](https://pkg.go.dev/database/sql#Rows.Scan) 将列值拷贝进结构体字段。
+   + 从 Scan 检查是否有错误发生。
+
+     特殊错误 `sql.ErrNoRows` 指示查询没有返回数据。典型地，这里这个错误值得用更特定的文本替代，例如 “no such album”。
+
+2. 更新你的 `main` 函数以调用 `albumByID`。
+
+   在 `main` 函数尾部，添加下面的代码：
+   
+   ```
+    albums, err := albumsByArtist("John Coltrane")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Albums found: %v\n", albums)// Hard-code ID 2 here to test the query.
+    alb, err := albumByID(2)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Album found: %v\n", alb)
+   ```
+
+   在新的代码中，你：
+
+   + 调用了你加入的 `albumByID` 函数。
+   + 打印 album 结果。
+
+### 6.2 运行代码
+
+从命令行进入包含 `main.go` 的目录，运行代码。
+
+   ```
+   Connected!
+   Albums found: [{1 Blue Train John Coltrane 56.99} {2 Giant Steps John Coltrane 63.99}]
+   Album found: {2 Giant Steps John Coltrane 63.99}
+   ```
+
+接下来，你将添加一个唱片到数据库。
 
 ## 7. 添加数据
 
+在这一节，你将使用 Go 来执行 `SQL INSERT` 语句以向数据库添加新一行数据。
+
+你已经看到了使用 `Query 和 QueryRow` 借助 SQL 语句以返回数据，为了执行不返回数据的 SQL 语句，你可使用 `Exec` 方法。
+
+### 7.1 编写代码
+
+1. 在 `albumByID` 函数之下，粘贴下面的 `addAlbum` 函数定义以向数据库增加一个唱片，然后保存 `main.go`。
+
+   ```
+    // addAlbum adds the specified album to the database,
+    // returning the album ID of the new entry
+    func addAlbum(alb Album) (int64, error) {
+        result, err := db.Exec("INSERT INTO album (title, artist, price) VALUES (?, ?, ?)", alb.Title, alb.Artist, alb.Price)
+        if err != nil {
+            return 0, fmt.Errorf("addAlbum: %v", err)
+        }
+        id, err := result.LastInsertId()
+        if err != nil {
+            return 0, fmt.Errorf("addAlbum: %v", err)
+        }
+        return id, nil
+    }
+   ```
+
+   在这段代码中，你：
+
+   + 使用 [DB.Exec](https://pkg.go.dev/database/sql#DB.Exec) 执行了一个 `INSERT` 语句。
+
+     就像查询，`Exec` 需要一个 SQL 语句后跟该 SQL 语句所需参数。
+   + 检查 `INSERT` 是否有错误发生。
+   + 使用 [Result.LastInsertId](https://pkg.go.dev/database/sql#Result.LastInsertId) 检索最新插入的唱片的 ID。
+   + 检查检索 ID 时是否有错误发生。
+
+2. 更新你的 `main` 函数以调用 `addAlbum`。
+
+   在 `main` 函数尾部，添加下面的代码：
+   
+   ```
+    albID, err := addAlbum(Album{
+        Title:  "The Modern Sound of Betty Carter",
+        Artist: "Betty Carter",
+        Price:  49.99,
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("ID of added album: %v\n", albID)
+   ```
+
+   在新的代码中，你：
+
+   + 以一个新的 `album` 调用 `addAlbum` 函数，指定你新加入唱片的 ID 给一个 `albID` 变量。
+
+### 7.2 运行代码
+
+从命令行进入包含 `main.go` 的目录，运行代码。
+
+   ```
+   $ go run .
+   Connected!
+   Albums found: [{1 Blue Train John Coltrane 56.99} {2 Giant Steps John Coltrane 63.99}]
+   Album found: {2 Giant Steps John Coltrane 63.99}
+   ID of added album: 5
+   ```
 
 ## 8. 结论
 
+祝贺你！你刚刚使用 Go 完成了对关系数据库的简单操作。
+
+建议关注下面的主题：
+
++ 看一看数据访问指南，它包括比我们这里接触的更多信息。
++ 如果你是 Go 新手，你将发现在 [Effective Go](https://go.dev/doc/effective_go) 以及 [How to write Go code](https://go.dev/doc/code) 里描述的最佳实践时很有用的。
++ [Go Tour](https://go.dev/tour/) 是一个极好的对 Go 基础的逐步介绍。
 
 ## 9. 完整代码
+
+这一节包含你在这个教程开发的应用的完整代码。
+
+```
+package main
+
+import (
+    "database/sql"
+    "fmt"
+    "log"
+    "os"
+
+    "github.com/go-sql-driver/mysql"
+)
+
+var db *sql.DB
+
+type Album struct {
+    ID     int64
+    Title  string
+    Artist string
+    Price  float32
+}
+
+func main() {
+    // Capture connection properties.
+    cfg := mysql.Config{
+        User:   os.Getenv("DBUSER"),
+        Passwd: os.Getenv("DBPASS"),
+        Net:    "tcp",
+        Addr:   "127.0.0.1:3306",
+        DBName: "recordings",
+    }
+    // Get a database handle.
+    var err error
+    db, err = sql.Open("mysql", cfg.FormatDSN())
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    pingErr := db.Ping()
+    if pingErr != nil {
+        log.Fatal(pingErr)
+    }
+    fmt.Println("Connected!")
+
+    albums, err := albumsByArtist("John Coltrane")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Albums found: %v\n", albums)
+
+    // Hard-code ID 2 here to test the query.
+    alb, err := albumByID(2)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Album found: %v\n", alb)
+
+    albID, err := addAlbum(Album{
+        Title:  "The Modern Sound of Betty Carter",
+        Artist: "Betty Carter",
+        Price:  49.99,
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("ID of added album: %v\n", albID)
+}
+
+// albumsByArtist queries for albums that have the specified artist name.
+func albumsByArtist(name string) ([]Album, error) {
+    // An albums slice to hold data from returned rows.
+    var albums []Album
+
+    rows, err := db.Query("SELECT * FROM album WHERE artist = ?", name)
+    if err != nil {
+        return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+    }
+    defer rows.Close()
+    // Loop through rows, using Scan to assign column data to struct fields.
+    for rows.Next() {
+        var alb Album
+        if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+            return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+        }
+        albums = append(albums, alb)
+    }
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+    }
+    return albums, nil
+}
+
+// albumByID queries for the album with the specified ID.
+func albumByID(id int64) (Album, error) {
+    // An album to hold data from the returned row.
+    var alb Album
+
+    row := db.QueryRow("SELECT * FROM album WHERE id = ?", id)
+    if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+        if err == sql.ErrNoRows {
+            return alb, fmt.Errorf("albumsById %d: no such album", id)
+        }
+        return alb, fmt.Errorf("albumsById %d: %v", id, err)
+    }
+    return alb, nil
+}
+
+// addAlbum adds the specified album to the database,
+// returning the album ID of the new entry
+func addAlbum(alb Album) (int64, error) {
+    result, err := db.Exec("INSERT INTO album (title, artist, price) VALUES (?, ?, ?)", alb.Title, alb.Artist, alb.Price)
+    if err != nil {
+        return 0, fmt.Errorf("addAlbum: %v", err)
+    }
+    id, err := result.LastInsertId()
+    if err != nil {
+        return 0, fmt.Errorf("addAlbum: %v", err)
+    }
+    return id, nil
+}
+```
 
 ## Reference
 
