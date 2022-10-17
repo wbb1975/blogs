@@ -65,7 +65,7 @@
 
    > 注意：在实际开发中，你可以根据你的需求指定一个更特殊的模块路径。更多信息，请参考[管理依赖](https://go.dev/doc/modules/managing-dependencies)。
 
-   接下来，我们将创建一个数据库。
+接下来，我们将创建一个数据库。
 
 ## 2. 设置数据库
 
@@ -249,7 +249,7 @@
 
 1. 开始追踪 MySQL 驱动模块作为一种依赖。
 
-   使用  [go get](https://go.dev/cmd/go/#hdr-Add_dependencies_to_current_module_and_install_them) 来为你的模块添加 `github.com/go-sql-driver/mysql` 依赖。使用点号作为参数，这意味着“为当前目录里的参数获取依赖”。
+   使用  [go get](https://go.dev/cmd/go/#hdr-Add_dependencies_to_current_module_and_install_them) 来为你的模块添加 `github.com/go-sql-driver/mysql` 依赖。使用点号作为参数，这意味着“为当前目录里的代码获取依赖”。
 
    ```
    $ go get .
