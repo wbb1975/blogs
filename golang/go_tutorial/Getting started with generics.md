@@ -216,144 +216,198 @@ Non-Generic Sums: 46 and 62.97
 Generic Sums: 46 and 62.97
 ```
 
+为了运行你的代码，每次调用编译器将会用实际传递的类型替换类型参数。
+
+在调用你写的泛型函数时，你指定类型参数用于告诉编译器什么类型被用于替换类型参数。正如你将在下一节看到的，由于编译器推导，在很多情况下你可以省略类型参数。
+
 ## 4. 调用泛型函数时移除类型参数
 
+在本节，你将添加泛型函数调用的一个修改版本，一点小的修改就可以简化调用代码。你将移除类型参数，在本例中它们实际上不需要。
 
+当 Go 编译器可以推导你想使用的类型时，你可以在调用代码处省掉类型参数。编译器从函数参数推导类型参数。
+
+注意这并不总是可能的。如果你需要调用一个没有参数的泛型函数，你需要在函数调用处包括类型参数。
+
+### 4.1 编写代码
+
+1. 在 `main.go` 中，在你已有的代码之下，粘贴进下面的代码。
+
+   ```
+   fmt.Printf("Generic Sums, type parameters inferred: %v and %v\n", 
+       SumIntsOrFloats(ints),
+       SumIntsOrFloats(floats))
+   ```
+
+   在这段代码中，你：
+   + 省略类型参数调用了泛型代码。
+
+### 4.2 运行代码
+
+从包含 `main.go` 的目录中开启一个命令行终端，运行代码：
+
+```
+$ go run .
+Non-Generic Sums: 46 and 62.97
+Generic Sums: 46 and 62.97
+Generic Sums, type parameters inferred: 46 and 62.97
+```
+
+接下来，通过捕捉 `integers` 和 `floats` 的共性来形成一个你可以使用的类型约束，你可以进一步简化函数。如后面的代码所示。
 
 ## 5. 声明类型限制
 
+下面的章节，你将把你先前定义的约束转化为它们的接口，如此你可以在多处复用它。当约束变得复杂时，这种方式生命约束可以精简代码。
+
+你声明类型约束为一个接口，约束允许任何实现了该接口的类型。例如，如果你声明了一个带三个方法的类型约束接口，把它用作一个泛型函数的类型参数，调用代码时的实际类型参数必须实现了这三种方法。
+
+约束接口可以应用特定类型，正如这一接即将展示的。
+
+### 5.1 编写代码
+
+1. 在 `main` 之上，导入语句之下，粘贴下面的代码以声明一个类型约束。
+
+   ```
+   type Number interface {
+      int64 | float64
+   }
+   ```
+
+   在这段代码中，你：
+   + 声明了 `Number` 接口类型以用作类型约束。
+   + 在接口内部声明了一个 `int64`和`float64`的联合。
+
+     重要的是，你将联合从函数声明那里移至一个新的类型约束。这种方式，当你想要限制一个类型参数为 `int64` 或 `float64` 的时候，你可以使用这个 `Number` 类型约束而无需使用 `int64 | float64`。
+
+2. 在你已有的函数之下，粘贴下面的泛型函数 `SumNumbers`：
+
+   ```
+   // SumNumbers sums the values of map m. It supports both integers
+   // and floats as map values.
+   func SumNumbers[K comparable, V Number](m map[K]V) V {
+       var s V
+       for _, v := range m {
+           s += v
+       }
+       return s
+   }
+   ```
+
+   在这段代码中，你：
+   + 声明了一个和你之前创建的泛型函数一样逻辑的泛型函数，但是使用新的接口类型而非联合作为类型约束。和以前一样，你使用类型参数作为返回值类型。
+
+3. 在 `main.go`，在你已有的代码之下，黏贴下面的代码：
+
+   ```
+   fmt.Printf("Generic Sums with Constraint: %v and %v\n",
+    SumNumbers(ints),
+    SumNumbers(floats))
+   ```
+
+   在这段代码中，你：
+   + 用每个映射调用了 `SumNumbers`并打印各自返回的求和值。
+
+     像前面章节一样，你在调用泛型函数时省略了类型参数（类型名在方括号里）。Go 编译器可以从其它参数里推导出类型参数。
+
+### 5.2 运行代码
+
+从包含 `main.go` 的目录中开启一个命令行终端，运行代码：
+
+```
+$ go run .
+Non-Generic Sums: 46 and 62.97
+Generic Sums: 46 and 62.97
+Generic Sums, type parameters inferred: 46 and 62.97
+Generic Sums with Constraint: 46 and 62.97
+```
+
 ## 6. 结论
 
-祝贺你！你刚刚使用 Go 完成了对关系数据库的简单操作。
+祝贺你！你已经了解了 Go 中泛型的基础知识。
 
 建议关注下面的主题：
 
-+ 看一看数据访问指南，它包括比我们这里接触的更多信息。
-+ 如果你是 Go 新手，你将发现在 [Effective Go](https://go.dev/doc/effective_go) 以及 [How to write Go code](https://go.dev/doc/code) 里描述的最佳实践时很有用的。
 + [Go Tour](https://go.dev/tour/) 是一个极好的对 Go 基础的逐步介绍。
++ 如果你是 Go 新手，你将发现在 [Effective Go](https://go.dev/doc/effective_go) 以及 [How to write Go code](https://go.dev/doc/code) 里描述的最佳实践时很有用的。
 
 ## 7. 完整代码
 
-这一节包含你在这个教程开发的应用的完整代码。
+你可以在 [Go playground](https://go.dev/play/p/apNmfVwogK0?v=gotip) 运行这个应用。在 `playground` 仅仅点击 `Run` 即可启动它。
 
 ```
 package main
 
-import (
-    "database/sql"
-    "fmt"
-    "log"
-    "os"
+import "fmt"
 
-    "github.com/go-sql-driver/mysql"
-)
-
-var db *sql.DB
-
-type Album struct {
-    ID     int64
-    Title  string
-    Artist string
-    Price  float32
+type Number interface {
+    int64 | float64
 }
 
 func main() {
-    // Capture connection properties.
-    cfg := mysql.Config{
-        User:   os.Getenv("DBUSER"),
-        Passwd: os.Getenv("DBPASS"),
-        Net:    "tcp",
-        Addr:   "127.0.0.1:3306",
-        DBName: "recordings",
-    }
-    // Get a database handle.
-    var err error
-    db, err = sql.Open("mysql", cfg.FormatDSN())
-    if err != nil {
-        log.Fatal(err)
+    // Initialize a map for the integer values
+    ints := map[string]int64{
+        "first": 34,
+        "second": 12,
     }
 
-    pingErr := db.Ping()
-    if pingErr != nil {
-        log.Fatal(pingErr)
+    // Initialize a map for the float values
+    floats := map[string]float64{
+        "first": 35.98,
+        "second": 26.99,
     }
-    fmt.Println("Connected!")
 
-    albums, err := albumsByArtist("John Coltrane")
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Albums found: %v\n", albums)
+    fmt.Printf("Non-Generic Sums: %v and %v\n",
+        SumInts(ints),
+        SumFloats(floats))
 
-    // Hard-code ID 2 here to test the query.
-    alb, err := albumByID(2)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("Album found: %v\n", alb)
+    fmt.Printf("Generic Sums: %v and %v\n",
+        SumIntsOrFloats[string, int64](ints),
+        SumIntsOrFloats[string, float64](floats))
 
-    albID, err := addAlbum(Album{
-        Title:  "The Modern Sound of Betty Carter",
-        Artist: "Betty Carter",
-        Price:  49.99,
-    })
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Printf("ID of added album: %v\n", albID)
+    fmt.Printf("Generic Sums, type parameters inferred: %v and %v\n",
+        SumIntsOrFloats(ints),
+        SumIntsOrFloats(floats))
+
+    fmt.Printf("Generic Sums with Constraint: %v and %v\n",
+        SumNumbers(ints),
+        SumNumbers(floats))
 }
 
-// albumsByArtist queries for albums that have the specified artist name.
-func albumsByArtist(name string) ([]Album, error) {
-    // An albums slice to hold data from returned rows.
-    var albums []Album
-
-    rows, err := db.Query("SELECT * FROM album WHERE artist = ?", name)
-    if err != nil {
-        return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+// SumInts adds together the values of m.
+func SumInts(m map[string]int64) int64 {
+    var s int64
+    for _, v := range m {
+        s += v
     }
-    defer rows.Close()
-    // Loop through rows, using Scan to assign column data to struct fields.
-    for rows.Next() {
-        var alb Album
-        if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-            return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
-        }
-        albums = append(albums, alb)
-    }
-    if err := rows.Err(); err != nil {
-        return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
-    }
-    return albums, nil
+    return s
 }
 
-// albumByID queries for the album with the specified ID.
-func albumByID(id int64) (Album, error) {
-    // An album to hold data from the returned row.
-    var alb Album
-
-    row := db.QueryRow("SELECT * FROM album WHERE id = ?", id)
-    if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-        if err == sql.ErrNoRows {
-            return alb, fmt.Errorf("albumsById %d: no such album", id)
-        }
-        return alb, fmt.Errorf("albumsById %d: %v", id, err)
+// SumFloats adds together the values of m.
+func SumFloats(m map[string]float64) float64 {
+    var s float64
+    for _, v := range m {
+        s += v
     }
-    return alb, nil
+    return s
 }
 
-// addAlbum adds the specified album to the database,
-// returning the album ID of the new entry
-func addAlbum(alb Album) (int64, error) {
-    result, err := db.Exec("INSERT INTO album (title, artist, price) VALUES (?, ?, ?)", alb.Title, alb.Artist, alb.Price)
-    if err != nil {
-        return 0, fmt.Errorf("addAlbum: %v", err)
+// SumIntsOrFloats sums the values of map m. It supports both floats and integers
+// as map values.
+func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
+    var s V
+    for _, v := range m {
+        s += v
     }
-    id, err := result.LastInsertId()
-    if err != nil {
-        return 0, fmt.Errorf("addAlbum: %v", err)
+    return s
+}
+
+// SumNumbers sums the values of map m. Its supports both integers
+// and floats as map values.
+func SumNumbers[K comparable, V Number](m map[K]V) V {
+    var s V
+    for _, v := range m {
+        s += v
     }
-    return id, nil
+    return s
 }
 ```
 
