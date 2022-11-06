@@ -26,7 +26,7 @@
 
 让我们开始创建一个 Go 模块。在一个模块中，你为一个分散的有用的函数集创建一个或多个相关的包。例如，你可能编写一个包含包的模块，里面含有金融分析相关的函数，如此编写金融应用的开发者可以使用你的工作成果。关于开发模块的更多知识，请参见[开发和发布模块](https://go.dev/doc/modules/developing)。
 
-Go 代码组织成包；包组织成模块。你的模块指定了你的代码运行所需依赖，Go 版本，以及它需要的其他模块。
+Go 代码组织成包，包组织成模块。你的模块指定了你的代码运行所需依赖，Go 版本，以及它需要的其它模块。
 
 当你为你的模块添加功能或改进时，你发布了新版模块。调用了你的模块代码的开发者可以导入你的模块里更新过的包，在投入产品环境前测试新版本。
 
@@ -238,7 +238,7 @@ Go 代码组织成包；包组织成模块。你的模块指定了你的代码�
 
    在这段代码，你：
 
-   - 改变函数让其返回两个值：一个 `string` 和一个 `error`。你的调用方将检查第二个值以判断是否有错误发生（任何 Go 函数可以返回多个值。跟多信息，请参考[Effective Go](https://go.dev/doc/effective_go.html#multiple-returns)）。
+   - 改变函数让其返回两个值：一个 `string` 和一个 `error`。你的调用方将检查第二个值以判断是否有错误发生（任何 Go 函数可以返回多个值。更多信息，请参考 [Effective Go](https://go.dev/doc/effective_go.html#multiple-returns)）。
    - 导入 Go 标准库 `errors` 包，如此你可以使用它的 [errors.New 函数](https://pkg.go.dev/errors/#example-New)。
    - 添加一个 `if` 语句来检查请求有效性（名字为空字符串），如果请求无效就返回一个错误。`errors.New` 函数返回一个 `error` 并携带你的错误消息。
    - 当成功返回时，添加一个 `nil`(意思是没有错误) 作为第二个返回值。这种方式下，调用方能够知道函数成功了。
@@ -351,11 +351,11 @@ Go 代码组织成包；包组织成模块。你的模块指定了你的代码�
    在这段代码，你：
 
    - 添加一个 `randomFormat` 函数为欢迎消息随机选择一个格式。注意 `randomFormat` 以小写字母开头，使它只能从其包所在代码中访问。
-   - 在 `randomFormat` 中，声明了一个 `formats` 切片，初始化为三个消息格式。当生命一个切片时，你并不需要在括号中指定其大小，如 `[]string` 所示。它告诉　Go 切片底层数组的大小可被动态改变。
+   - 在 `randomFormat` 中，声明了一个 `formats` 切片，初始化为三个消息格式。当声明一个切片时，你并不需要在括号中指定其大小，如 `[]string` 所示。它告诉　Go 切片底层数组的大小可被动态改变。
    - 使用 [math/rand 包](https://pkg.go.dev/math/rand/)来为从切片中选择一条格式产生下标。
    - 加入 `init` 函数以当前时间作为 `rand` 包的种子。Go 在应用启动时在全局变量初始化之后自动运行 `init` 函数。关于 `init` 函数的更多信息，请参见 [Effective Go](https://go.dev/doc/effective_go.html#init)。
    - 在 `Hello` 中，使用 `randomFormat` 函数来为返回的消息得到一个格式，然后利用这个格式和 `name` 值一起来创建这条消息。
-   - 想你以前做的一样返回这条消息（或者错误）
+   - 像你以前做的一样返回这条消息（或者错误）
 
 2. 在 `hello/hello.go` 中，修改代码如下所示：
    
@@ -481,7 +481,7 @@ Go 代码组织成包；包组织成模块。你的模块指定了你的代码�
    - 添加一个 `Hellos` 函数，它的参数为一个名字的切片而非一个单一名字。同时，你修改了其返回值从一个字符串到一个映射（map）。如此你可以返回一个名字到欢迎词的映射。
    - 让 `Hellos` 调用已经存在的 `Hello` 函数，这帮助减少了重复，我们还让两个函数各司其职。
    - 创建一个 `messages` 映射，其键为每个收到的名字，值为一条欢迎消息。在 Go 中，你用 `make(map[key-type]value-type)` 初始化一个映射。现在 `Hellos` 可以返回这个映射。关于更多关于映射的知识，请参见 Go 博客中的 [Go maps in action](https://blog.golang.org/maps)。
-   - 迭代你的函数收到的 `names`，检查每个是否由非空值，并未欸个名字关联一条消息。在这个 for 循环中，`range` 返回两个值：当前项的索引，以及一个当前值的拷贝。你并不需要这个索引，因此你使用 Go 空标识符（一个下划线）来忽略它。更多信息，请参见 [Effective Go](https://go.dev/doc/effective_go.html) 中的 [The blank identifier](https://go.dev/doc/effective_go.html#blank)
+   - 迭代你的函数收到的 `names`，检查每个是否由非空值，并为每一名字关联一条消息。在这个 for 循环中，`range` 返回两个值：当前项的索引，以及一个当前值的拷贝。你并不需要这个索引，因此你使用 Go 空标识符（一个下划线）来忽略它。更多信息，请参见 [Effective Go](https://go.dev/doc/effective_go.html) 中的 [The blank identifier](https://go.dev/doc/effective_go.html#blank)
 
 2. 在你的 `hello/hello.go` 调用代码中，传递一个名字切片，打印你得到的名字消息映射。
    
@@ -577,15 +577,15 @@ Go 对单元测试的内在支持使得你测试 Go 变得容易。特别是，�
    在这段代码，你：
 
    - 在与你的代码的同一个包中，实现了测试功能。
-   - 创建了两个测试函数以测试 `greetings.Hello` 函数。测试函数名有下面的形式 `TestName`，这里 `Name` 是指有关特定测试的一些特质。同时，测试函数接受一个 `testing` 包的 [testing.T类型](https://pkg.go.dev/testing/#T指针作为参数)。你是用这个参数的方法从你的测试中汇报及记录。
+   - 创建了两个测试函数以测试 `greetings.Hello` 函数。测试函数名有下面的形式 `TestName`，这里 `Name` 是指有关特定测试的一些特质。同时，测试函数接受一个 `testing` 包的 [testing.T类型](https://pkg.go.dev/testing/#T指针作为参数)。 你使用这个参数的方法从你的测试中汇报及记录。
    - 实现了两个侧式：
 
      + `TestHelloName` 调用了 `Hello` 函数，传递一个 `name` 值；函数据此应该返回一个有效地回复消息。如果函数返回一个错误或者一条不期待的回复消息（没有包含你传递进去的名字），你就可以使用 `t` 参数的 [Fatalf 方法](https://pkg.go.dev/testing/#T.Fatalf) 来在终端打印消息并终止执行。
-     + `TestHelloEmpty` 以一个空值测试 `Hello` 函数，这个测试是为了确认那你的错误处理正常工作。如果调用返回一个非空字符串或者没有错误，你使用 `t` 参数的 `Fatalf` 方法来在终端打印消息并终止执行。
+     + `TestHelloEmpty` 以一个空值测试 `Hello` 函数，这个测试设计用来确认你的错误处理可以正常工作。如果调用返回一个非空字符串或者没有错误，你使用 `t` 参数的 `Fatalf` 方法来在终端打印消息并终止执行。
 
 3. 在 `greetings` 目录中，在命令行终端运行 [go test 命令](https://go.dev/cmd/go/#hdr-Test_packages) 以执行测试。
 
-   `go test` 执行测试文件（其名字以 `_test.go` 结尾）中的测试函数（它们以 `Test` 开头）。你可以添加 `-v` 标记以得到更多输出--所有的测试及其结果将会被输出。
+   **`go test` 执行测试文件（其名字以 `_test.go` 结尾）中的测试函数（它们以 `Test` 开头）**。你可以添加 `-v` 标记以得到更多输出--所有的测试及其结果将会被输出。
 
    测试应该成功：
 
