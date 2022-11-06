@@ -7,7 +7,7 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Hello, World!")
+    fmt.Println("Hello, World!")
 }
 ```
 ## 2. 基础
@@ -27,12 +27,12 @@ func main() {
 package main
 
 import (
-	"fmt"
-	"math/rand"
+    "fmt"
+    "math/rand"
 )
 
 func main() {
-	fmt.Println("My favorite number is", rand.Intn(10))
+    fmt.Println("My favorite number is", rand.Intn(10))
 }
 ```
 #### 2.1.2 导入
@@ -59,12 +59,12 @@ import "math"
 package main
 
 import (
-	"fmt"
-	"math"
+    "fmt"
+    "math"
 )
 
 func main() {
-	fmt.Println(math.pi)
+    fmt.Println(math.pi)
 }
 ```
 #### 2.1.4 函数
