@@ -2098,6 +2098,7 @@ func main() {
 当 select 中的其它分支都没有准备好时，default 分支就会执行。
 
 为了在尝试发送或者接收时不发生阻塞，可使用 default 分支：
+
 ```
 select {
 case i := <-c:
@@ -2112,28 +2113,30 @@ default:
 package main
 
 import (
-	"fmt"
-	"time"
+    "fmt"
+    "time"
 )
 
 func main() {
-	tick := time.Tick(100 * time.Millisecond)
-	boom := time.After(500 * time.Millisecond)
-	for {
-		select {
-		case <-tick:
-			fmt.Println("tick.")
-		case <-boom:
-			fmt.Println("BOOM!")
-			return
-		default:
-			fmt.Println("    .")
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
+    tick := time.Tick(100 * time.Millisecond)
+    boom := time.After(500 * time.Millisecond)
+    for {
+        select {
+        case <-tick:
+            fmt.Println("tick.")
+        case <-boom:
+            fmt.Println("BOOM!")
+            return
+        default:
+            fmt.Println("    .")
+            time.Sleep(50 * time.Millisecond)
+        }
+    }
 }
 ```
+
 ### 4.6 sync.Mutex
+
 我们已经看到信道非常适合在各个 Go 协程间进行通信。
 
 但是如果我们并不需要通信呢？比如说，若我们只是想保证每次只有一个 Go 协程能够访问一个共享的变量，从而避免冲突？
@@ -2141,58 +2144,65 @@ func main() {
 这里涉及的概念叫做 **互斥（mutual exclusion）**，我们通常使用 **互斥锁（Mutex）** 这一数据结构来提供这种机制。
 
 Go 标准库中提供了 [sync.Mutex](https://go-zh.org/pkg/sync/#Mutex) 互斥锁类型及其两个方法：
+
 ```
 Lock
 Unlock
 ```
+
 我们可以通过在代码前调用 `Lock` 方法，在代码后调用 `Unlock` 方法来保证一段代码的互斥执行。参见 `Inc` 方法。
 
 我们也可以用 `defer` 语句来保证互斥锁一定会被解锁。参见 `Value` 方法。
+
 ```
 // mutex-counter.go
 package main
 
 import (
-	"fmt"
-	"sync"
-	"time"
+    "fmt"
+    "sync"
+    "time"
 )
 
 // SafeCounter 的并发使用是安全的。
 type SafeCounter struct {
-	v   map[string]int
-	mux sync.Mutex
+    v   map[string]int
+    mux sync.Mutex
 }
 
 // Inc 增加给定 key 的计数器的值。
 func (c *SafeCounter) Inc(key string) {
-	c.mux.Lock()
-	// Lock 之后同一时刻只有一个 goroutine 能访问 c.v
-	c.v[key]++
-	c.mux.Unlock()
+    c.mux.Lock()
+    // Lock 之后同一时刻只有一个 goroutine 能访问 c.v
+    c.v[key]++
+    c.mux.Unlock()
 }
 
 // Value 返回给定 key 的计数器的当前值。
 func (c *SafeCounter) Value(key string) int {
-	c.mux.Lock()
-	// Lock 之后同一时刻只有一个 goroutine 能访问 c.v
-	defer c.mux.Unlock()
-	return c.v[key]
+    c.mux.Lock()
+    // Lock 之后同一时刻只有一个 goroutine 能访问 c.v
+    defer c.mux.Unlock()
+    return c.v[key]
 }
 
 func main() {
-	c := SafeCounter{v: make(map[string]int)}
-	for i := 0; i < 1000; i++ {
-		go c.Inc("somekey")
-	}
+    c := SafeCounter{v: make(map[string]int)}
+    for i := 0; i < 1000; i++ {
+        go c.Inc("somekey")
+    }
 
-	time.Sleep(time.Second)
-	fmt.Println(c.Value("somekey"))
+    time.Sleep(time.Second)
+    fmt.Println(c.Value("somekey"))
 }
 ```
+
 ## 5. Appendix
+
 ### 5.1 defer, panic 和 recover
+
 #### 5.1.1
+
 defer 语句用于延迟一个函数或者方法（或者当前锁创建的匿名函数）的执行。她会在外围函数或者方法返回之前但是其返回值（如果有的话）计算之后执行。如果一个函数和方法中由多个 defer 语句，它们会以 LIFO （Last In First Out，后进先出）的顺序执行。
 
 defer 语句最常用的用法是，保证使用完一个后将其关闭，或者将一个不再使用的通道关闭，或者捕获异常。
