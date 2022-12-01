@@ -2022,7 +2022,234 @@ func server() {
 
 ## 15. 错误
 
+库函数很多时候必须将错误信息返回给函数的调用者。如前所述，Go 允许函数可以有多个返回值的特性，使得函数的调用者在得到正常返回值的同时，可以获取到更为详细的错误信息。对库函数的设计者来说，一种推荐的做法是使用该特性来提供详细的异常信息。 例如，`os.Open` 在异常时并不仅仅返回一个 `nil` 指针，它同时会返回一个错误值，用于描述是什么原因导致了异常的发生。
+
+按照约定，错误的类型通常为 `error`，这是一个内置的简单接口：
+
+```
+type error interface {
+    Error() string
+}
+```
+
+库的开发者可以自由地用更丰富的模型实现这个接口，这样不仅可以看到错误，还可以提供一些上下文。如前所述，除了通常的 `*os.File` 返回值外，`os.Open` 还返回一个错误值。如果文件被成功打开，错误将为 `nil`，但是当出现问题时，它将返回一个 `os.PathError` 的错误，就像这样：
+
+```
+// PathError records an error and the operation and
+// file path that caused it.
+type PathError struct {
+    Op string    // "open", "unlink", etc.
+    Path string  // The associated file.
+    Err error    // Returned by the system call.
+}
+
+func (e *PathError) Error() string {
+    return e.Op + " " + e.Path + ": " + e.Err.Error()
+}
+```
+
+`PathError` 的 `Error` 会生成如下错误信息：
+
+```
+open /etc/passwx: no such file or directory
+```
+
+这种错误包含了出错的文件名、操作和触发的操作系统错误。可见即便输出错误信息时已经远离导致错误的调用，它也会非常有用，这比简单的 “不存在该文件或目录” 包含的信息丰富得多。
+
+错误字符串应尽可能地指明它们的来源，例如产生该错误的包名前缀。例如在 `image` 包中，由于未知格式导致解码错误的字符串为 `image: unknown format`（未知的格式）。
+
+若调用者关心错误的完整细节，可使用类型选择或者类型断言来查看特定错误，并抽取其细节。比如 `PathErrors`，它你可能会想检查内部的 `Err` 字段来判断这是否是一个可以被恢复的错误：
+
+```
+for try := 0; try < 2; try++ {
+    file, err = os.Create(filename)
+    if err == nil {
+        return
+    }
+    if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOSPC {
+        deleteTempFiles()  // Recover some space.
+        continue
+    }
+    return
+}
+```
+
+这里的第二条 `if` 是另一种方式，称为[类型断言](https://go.dev/doc/effective_go#interface_conversions)。若它失败，`ok` 将为 `false`，而 `e` 则为 `nil`. 若它成功，`ok` 将为 `true`。类型断言若成功，则该错误必然属于 `*os.PathError` 类型，而 `e` 能够检测关于该错误的更多信息。
+
+### 15.1 Panic
+
+向调用者报告错误的一般方式就是将 `error` 作为额外的值返回。 标准的 `Read` 方法就是个众所周知的实例，它返回一个字节计数和一个 `error`。但如果错误是不可恢复的呢？有时程序就是不能继续运行。
+
+为此，我们提供了内建的 `panic` 函数，它会产生一个运行时错误并终止程序 （但请继续看下一节）。该函数接受一个任意类型的实参（一般为字符串），并在程序终止时打印。 它还能表明发生了意料之外的事情，比如从无限循环中退出了：
+
+```
+// A toy implementation of cube root using Newton's method.
+func CubeRoot(x float64) float64 {
+    z := x/3   // Arbitrary initial value
+    for i := 0; i < 1e6; i++ {
+        prevz := z
+        z -= (z*z*z-x) / (3*z*z)
+        if veryClose(z, prevz) {
+            return z
+        }
+    }
+    // A million iterations has not converged; something is wrong.
+    panic(fmt.Sprintf("CubeRoot(%g) did not converge", x))
+}
+```
+
+这仅仅是个示例，真正的库函数应避免 `panic`。若问题可以被屏蔽或解决， 最好就是让程序继续运行而不是终止整个程序。一个可能的反例就是初始化：若某个库真的不能让自己工作，且有足够理由产生 `Panic`，那就由它去吧：
+
+```
+var user = os.Getenv("USER")
+
+func init() {
+    if user == "" {
+        panic("no value for $USER")
+    }
+}
+```
+
+### 15.2 Recover
+
+当 `panic` 被调用后（包括不明确的运行时错误，例如切片越界访问或类型断言失败），它将立刻中断当前函数的执行，并展开当前 Goroutine 的调用栈，依次执行之前注册的 `defer` 函数。当栈展开操作达到该 Goroutine 栈顶端时，程序将终止。但这时仍然可以使用 Go 的内建 `recover 方法重新获得 Goroutine 的控制权，并将程序恢复到正常执行的状态。
+
+调用 `recover` 方法会终止栈展开操作并返回之前传递给 `panic` 方法的那个参数。由于在栈展开过程中，只有 `defer` 型函数会被执行，因此 `recover` 的调用必须置于 `defer` 函数内才有效。
+
+在下面的示例应用中，调用 `recover` 方法会终止 `server` 中失败的那个 Goroutine，但 `server` 中其它的 Goroutine 将继续执行，不受影响：
+
+```
+func server(workChan <-chan *Work) {
+    for work := range workChan {
+        go safelyDo(work)
+    }
+}
+
+func safelyDo(work *Work) {
+    defer func() {
+        if err := recover(); err != nil {
+            log.Println("work failed:", err)
+        }
+    }()
+    do(work)
+}
+```
+
+在这里例子中，如果 `do(work)` 调用发生了 `panic`，则其结果将被记录且发生错误的那个 Goroutine 将干净地退出，不会干扰其它 Goroutine。你不需要在 `defer` 指示的闭包中做别的操作，仅需调用 `recover` 方法，它将帮你搞定一切。
+
+只有直接在 `defer` 函数中调用 `recover` 方法，才会返回非 `nil` 的值，因此 `defer` 函数的代码可以调用那些本身使用了 `panic` 和 `recover` 的库函数而不会引发错误。还用上面的那个例子说明：`safelyDo` 里的 `defer` 函数在调用 `recover` 之前可能调用了一个日志记录函数，而日志记录程序的执行将不受 `panic` 状态的影响。
+
+有了错误恢复的模式，`do` 函数及其调用的代码可以通过调用 `panic` 方法，以一种很干净的方式从错误状态中恢复。我们可以使用该特性为那些复杂的软件实现更加简洁的错误处理代码。让我们来看下面这个例子，它是 `regexp` 包的一个简化版本，它通过调用 `panic` 并传递一个局部错误类型来报告“解析错误”（`Parse Error`）。下面的代码包括了 `Error` 类型定义，`error` 处理方法以及 `Compile` 函数：
+
+```
+// Error is the type of a parse error; it satisfies the error interface.
+type Error string
+func (e Error) Error() string {
+    return string(e)
+}
+
+// error is a method of *Regexp that reports parsing errors by
+// panicking with an Error.
+func (regexp *Regexp) error(err string) {
+    panic(Error(err))
+}
+
+// Compile returns a parsed representation of the regular expression.
+func Compile(str string) (regexp *Regexp, err error) {
+    regexp = new(Regexp)
+    // doParse will panic if there is a parse error.
+    defer func() {
+        if e := recover(); e != nil {
+            regexp = nil    // Clear return value.
+            err = e.(Error) // Will re-panic if not a parse error.
+        }
+    }()
+    return regexp.doParse(str), nil
+}
+```
+
+如果 `doParse` 方法触发 `panic`，错误恢复代码会将返回值置为 `nil` -- 因为 `defer` 函数可以修改命名的返回值变量；然后，错误恢复代码会对返回的错误类型进行类型断言，判断其是否属于 `Error` 类型。如果类型断言失败，则会引发运行时错误，并继续进行栈展开，最后终止程序 —— 这个过程将不再会被中断。类型检查失败可能意味着程序中还有其他部分触发了 `panic`，如果某处存在索引越界访问等，因此，即使我们已经使用了 `panic` 和 `recover` 机制来处理解析错误，程序依然会异常终止。
+
+有了上面的错误处理过程，调用 `error` 方法（由于它是一个类型的绑定的方法，因而即使与内建类型 `error` 同名，也不会带来什么问题，甚至是一直更加自然的用法）使得“解析错误”的报告更加方便，无需费心去考虑手工处理栈展开过程的复杂问题：
+
+```
+if pos == 0 {
+    re.error("'*' illegal at start of expression")
+}
+```
+
+上面这种模式的妙处在于，它完全被封装在模块的内部，`Parse` 方法将其内部对 `panic` 的调用隐藏在 `error` 之中；而不会将 `panics` 信息暴露给外部使用者。这是一个设计良好且值得学习的编程技巧。
+
+顺便说一下，当确实有错误发生时，我们习惯采取的“重新触发 `panic”（re-panic）`的方法会改变 `panic` 的值。但新旧错误信息都会出现在崩溃报告中，引发错误的原始点仍然可以找到。所以，通常这种简单的重新触发 `panic` 的机制就足够了—所有这些错误最终导致了程序的崩溃—但是如果只想显示最初的错误信息的话，你就需要稍微多写一些代码来过滤掉那些由重新触发引入的多余信息。这个功能就留给读者自己去实现吧！
+
 ## 16. 示例：Web 服务器
+
+让我们以一个完整的 Go 程序示例 —— 一个web服务 —— 来作为这篇文档的结尾。事实上，这个例子其实是一类 “Web re-server”，也就是说它其实是对另一个Web服务的封装。谷歌公司提供了一个用来自动将数据格式化为图表或图形的在线服务，其网址是：`http://chart.apis.google.com`。这个服务使用起来其实有点麻烦 —— 你需要把数据添加到URL中作为请求参数，因此不易于进行交互操作。我们现在的这个程序会为用户提供一个更加友好的界面来处理某种形式的数据：对于给定的一小段文本数据，该服务将调用图标在线服务来产生一个 QR 码，它用一系列二维方框来编码文本信息。可以用手机摄像头扫描该 QR 码并进行交互操作，比如将 URL 地址编码成一个 QR 码，你就省去了往手机里输入这个 URL 地址的时间。
+
+下面是完整的程序代码，后面会给出详细的解释：
+
+```
+package main
+
+import (
+    "flag"
+    "html/template"
+    "log"
+    "net/http"
+)
+
+var addr = flag.String("addr", ":1718", "http service address") // Q=17, R=18
+
+var templ = template.Must(template.New("qr").Parse(templateStr))
+
+func main() {
+    flag.Parse()
+    http.Handle("/", http.HandlerFunc(QR))
+    err := http.ListenAndServe(*addr, nil)
+    if err != nil {
+        log.Fatal("ListenAndServe:", err)
+    }
+}
+
+func QR(w http.ResponseWriter, req *http.Request) {
+    templ.Execute(w, req.FormValue("s"))
+}
+
+const templateStr = `
+<html>
+<head>
+<title>QR Link Generator</title>
+</head>
+<body>
+{{if .}}
+<img src="http://chart.apis.google.com/chart?chs=300x300&cht=qr&choe=UTF-8&chl={{.}}" />
+<br>
+{{.}}
+<br>
+<br>
+{{end}}
+<form action="/" name=f method="GET">
+    <input maxLength=1024 size=70 name=s value="" title="Text to QR Encode">
+    <input type=submit value="Show QR" name=qr>
+</form>
+</body>
+</html>
+`
+```
+
+`main` 函数之前的部分很容易理解。包 `flag` 用来为我们这个服务设置默认的HTTP端口。从模板变量 `templ` 开始进入了比较好玩的部分，它的功能是用来构建一个 `HTML` 模板，该模板被我们的服务器处理并用来显式页面信息；我们后面还会看到更多细节。
+
+`main` 函数使用我们之前介绍的机制来解析 `flag`，并将函数 `QR` 绑定到我们服务的根路径。然后调用 `http.ListenAndServe` 方法启动服务；该方法将在服务器运行过程中一直处于阻塞状态。
+
+`QR` 函数用来接收包含格式化数据的请求信息，并以该数据 `s` 为参数对模板进行实例化操作。
+
+模板包 `html/template` 的功能非常强大；上述程序仅仅触及其冰山一角。本质上说，它会根据传入 `templ.Execute` 方法的参数，在本例中是格式化数据，在后台替换相应的元素并重新生成 HTML 文本。在模板文本（templateStr）中，双大括号包裹的区域意味着需要进行模板替换动作。在 `{{if .}}` 和 `{{end}}` 之间的部分只有在当前数据项，也就是 `.`，不为空时才被执行。也就是说，如果对应字符串为空，内部的模板信息将被忽略。
+
+代码片段 `{{.}}` 表示在页面中显示传入模板的数据 —— 也就是查询字符串本身。HTML 模板包会自动提供合适的处理方式，使得文本可以安全的显示。
+
+模板串的剩余部分就是将被加载显示的普通 HTML 文本。如果你觉得这个解释太笼统了，可以进一步参考 Go 文档中，关于模板包的深入讨论。
+
+看，仅仅用了很少量的代码加上一些数据驱动的 HTML 文本，你就搞定了一个很有用的 web 服务。这就是 Go 语言的牛X之处：用很少的一点代码就能实现很强大的功能。
 
 ## Reference
 
