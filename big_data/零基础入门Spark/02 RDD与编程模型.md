@@ -94,7 +94,7 @@ Spark 有很多算子，[Spark 官网](https://spark.apache.org/docs/latest/rdd-
 - partitioner：分片切割规则
 - dependencies：RDD 依赖
 - compute：转换函数
-- 
+
 深入理解 RDD 之后，你需要熟悉 RDD 的编程模型。在 RDD 的编程模型中，开发者需要使用 Transformations 类算子，定义并描述数据形态的转换过程，然后调用 Actions 类算子，将计算结果收集起来、或是物化到磁盘。
-- 
+
 而延迟计算指的是，开发者调用的各类 Transformations 算子，并不会立即执行计算，当且仅当开发者调用 Actions 算子时，之前调用的转换算子才会付诸执行。
