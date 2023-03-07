@@ -1655,14 +1655,16 @@ type ReadWriter interface {
 
 同样的基本想法也可适用于结构体，但其意义更加深远。`bufio` 包中有 `bufio.Reader` 和 `bufio.Writer` 这两个结构体类型，它们每一个都实现了与 `io` 包中相同意义的接口。此外，`bufio` 还通过结合 `reader/writer` 并将其内嵌到结构体中，实现了带缓冲的 `reader/writer`：在结构体中，只列出了两种类型，但没有给出对应的字段名。
 
+```
 // ReadWriter stores pointers to a Reader and a Writer.
 // It implements io.ReadWriter.
 type ReadWriter struct {
     *Reader  // *bufio.Reader
     *Writer  // *bufio.Writer
 }
+```
 
-**内嵌的元素为指向结构体的指针**，当然它们在使用前必须被初始化为指向有效结构体的指针。`ReadWriter` 结构体可通过如下方式定义：
+**内嵌的元素为指向结构体的指针**，当然它们在使用前必须被初始化为指向有效结构体的指针。`ReadWriter` 结构体可以被写为：
 
 ```
 type ReadWriter struct {
