@@ -736,3 +736,4 @@ Go 对单元测试的内在支持使得你测试 Go 变得容易。特别是，�
 - [模块版本号](https://go.dev/doc/modules/version-numbers)
 - [Effective Go](https://go.dev/doc/effective_go.html)
 - [保持你的模块后向兼容](https://blog.golang.org/module-compatibility)
+- [golang学习2：使用package和module](https://blog.csdn.net/yuanlulu/article/details/115053459)
