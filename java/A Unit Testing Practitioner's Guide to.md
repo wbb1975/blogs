@@ -1,9 +1,9 @@
 # A Unit Testing Practitioner's Guide to Everyday Mockito
-> 使用 Mockito 不是仅仅添加一个额外依赖的事情，它需要你在移除大量模板代码之于，改变你如何看待单元测试的问题。在本文中，哦们将谈到多种 mock 接口，监听调用，匹配器（matcher），参数捕捉器（captors），我们也将直接查看 Mockito 如何使你的测试更干净而且易于理解。
+> 使用 Mockito 不是仅仅添加一个额外依赖的事情，它需要你在移除大量模板代码之余，改变你如何看待单元测试的问题。在本文中，我们将谈到多种 mock 接口，监听调用，匹配器（matcher），参数捕捉器（captors），我们也将直接查看 Mockito 如何使你的测试更干净而且易于理解。
 
-单元测试在敏捷年代已经变成必须的了，有许多工具可用于帮助自动化测试。其中之一就是 Mockito，一个开源框架可以让你为你的测试创建和配置 mocked 对象。
+[单元测试](https://www.toptal.com/unit-testing)在敏捷年代已经变成必须的了，有许多工具可用于帮助自动化测试。其中之一就是 Mockito，一个开源框架可以让你为你的测试创建和配置 mocked 对象。
 
-在本文中，我们将谈到创建和配置 mocks，并使用它们来验证被测试系统的行为符合预期。我们也将设计一些 Mockito 的内部机制以帮我们更好的理解起设计及限制。我们将使用 [JUnit](https://www.toptal.com/java/getting-started-with-junit)作为单元测试框架，但由于 Mockito 未与 JUnit绑定， 因此即使使用不同的框架你仍然可以继续。
+在本文中，我们将谈到创建和配置 mocks，并使用它们来验证被测试系统的行为符合预期。我们也将设计一些 Mockito 的内部机制以帮我们更好的理解其设计及限制。我们将使用 [JUnit](https://www.toptal.com/java/getting-started-with-junit)作为[单元测试框架](https://www.toptal.com/java/getting-started-with-junit)，但由于 Mockito 未与 JUnit绑定， 因此即使使用不同的框架你仍然可以继续。
 
 ## 获取 Mockito
 
@@ -24,13 +24,13 @@ testCompile "org.mockito:mockito−core:2.7.7"
 </dependency>
 ```
 
-当然，这个世界不是只有 Maven 和 Gradle。你可以随意选择任何项目管理工具以从 [Maven 中央仓库](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22mockito-core%22)以获取 Mockito jar 部件。
+当然，这个世界不是只有 Maven 和 Gradle。你可以随意选择任何项目管理工具以从 [Maven 中央仓库](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22mockito-core%22)以获取 `Mockito jar` 部件。
 
 ## 走近 Mockito（Approaching Mockito）
 
-单元测试设计用来测试特定类或方法在没有其它依赖的情况下行为。因为我们在测试最小“单元”的代码，我们并不需要使用这些依赖的实际实现。更进一步，在测试不同行为时，我们将使用这些依赖稍微不同的实现。一种传统的比较知名的方式时创建“桩（stubs）”--适用于特定场景的一个接口的特定实现。这种实现通常拥有硬编码的逻辑。一个桩是一个测试实现，其它包括 fakes, mocks, spies, dummies,等。
+[单元测试](https://www.toptal.com/unit-testing/unit-testing-benefits)设计用来测试特定类或方法在没有其它依赖的情况下的行为。因为我们在测试最小“单元”的代码，我们并不需要使用这些依赖的实际实现。更进一步，在测试不同行为时，我们将使用这些依赖稍微不同的实现。一种传统的比较知名的方式时创建“桩（stubs）”--适用于特定场景的一个接口的特定实现。这种实现通常拥有硬编码的逻辑。一个桩是一个测试实现，其它包括 `fakes`, `mocks`, `spies`, `dummies`,等。
 
-我们将聚焦于两种测试部件（test double）：‘mocks’ 和 ‘spies’，因为它们被 Mockito 大量使用。
+我们将聚焦于两种测试部件（test double）：`mocks` 和 `spies`，因为它们被 Mockito 大量使用。
 
 ### Mocks
 
@@ -38,27 +38,28 @@ testCompile "org.mockito:mockito−core:2.7.7"
 
 你可以使用 Mockito 来创建一个 mock，告诉 Mockito 在特定方法被调用时做什么，然后在你的测试中使用 mock 实例而不是真实对象。测试之后，你可以查询 mock 什么特定方法被调用过，或者检查状态变化呈现的调用的副作用。
 
-默认情况下， Mockito 提供了 mock 对象的每一个方法的实现。
+默认情况下， Mockito 提供了 `mock` 对象的每一个方法的实现。
 
 ### Spies
 
 一个 spy 是 Mockito 创建的另一个测试部件（test double）。与 mocks 相比，创建一个 spy 需要一个实例来监视。默认情况下，一个 spy 把所有方法调用委托给一个真实对象，并记录调用方法及其实际参数。这就是组成一个 spy 的实际内容：它监视一个真实的对象。
 
-只要可能尽可能考虑用 mocks 代替 spies。Spies 可能对测试遗留代码有用，这些遗留代码不能被重新实现使得易于测试，但是需要使用 spy 来部分地 mock 一个类的需求表明这个类做了太多工作，违反了单一职责原理。
+只要可能尽可能考虑用 mocks 代替 spies。Spies 可能对测试遗留代码有用，这些遗留代码不能被重新实现使得易于测试，但是需要使用 spy 来部分地 mock 一个类的需求表明这个类做了太多工作，违反了[单一职责原理](https://www.toptal.com/software/single-responsibility-principle)。
 
 ### 构建一个简单例子
 
 让我们来看一个简单的演示，我们可以为其添加测试。假如我们有一个 `UserRepository` 接口，其有一个方法是通过识别码找到一个用户。我们拥有一个概念一个密码编码器用于将一个明文密码转变成密码哈希。 `UserRepository` 和 `PasswordEncoder` 都是 `UserService` 的通过构造函数注入的依赖（也被称为协作器 `collaborators`）。下面是我们的演示代码：
 
-UserRepository：
+**UserRepository**：
+
 ```
-UserRepository
 public interface UserRepository {
    User findById(String id);
 }
 ```
 
-User：
+**User**：
+
 ```
 public class User {
 
@@ -75,17 +76,18 @@ public class User {
 }
 ```
 
-PasswordEncoder：
+**PasswordEncoder**：
+
 ```
 public interface PasswordEncoder {
    String encode(String password);
 }
 ```
 
-UserService：
+*UserService**：
+
 ```
 public class UserService {
-
    private final UserRepository userRepository;
    private final PasswordEncoder passwordEncoder;
 
@@ -128,22 +130,22 @@ PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
 
 注意我们对 Mockito 的静态导入。在本文余下部分，我们会认为默认情况下这个导入已经添加。
 
-再导入后，我们模仿了 `PasswordEncoder`。`Mockito` 不仅仅可以模仿接口，也可以模仿抽象类及实体非 final 类。开箱即用， Mockito 并不能模仿 final 类，final 或静态方法。但如果你真的需要它，Mockito 2 提供了实验性的 [MockMaker](https://github.com/mockito/mockito/blob/release/2.x/src/main/java/org/mockito/plugins/MockMaker.java) 插件。
+在导入后，我们模仿了 `PasswordEncoder`。`Mockito` 不仅仅可以模仿接口，也可以模仿抽象类及实体非 final 类。开箱即用， Mockito 并不能模仿 final 类，final 或静态方法。但如果你真的需要它，[MockMaker](https://javadoc.io/static/org.mockito/mockito-core/4.5.1/org/mockito/plugins/MockMaker.html) 插件当前已经可用。
 
 同时请注意 `equals()` 和 `hashCode()` 方法不能被模仿。
 
 ### 创建 Spies
 
-为了创建一个 spy，我们需要调用 Mockito 的静态方法 spy() 并传递一个待监视的实例。返回对象的调用方法将会调用真实的方法，除非这些方法是存根方法。这些调用被记录下来，并且这些调用的事实可以被验证（请参看稍后 verify() 的描述）。让我们创建一个 spy：
+为了创建一个 spy，我们需要调用 Mockito 的静态方法 `spy()` 并传递一个待监视的实例。返回对象的调用方法将会调用真实的方法，除非这些方法是存根方法。这些调用被记录下来，并且这些调用的事实可以被验证（请参看稍后 verify() 的描述）。让我们创建一个 `spy`：
 
 ```
 DecimalFormat decimalFormat = spy(new DecimalFormat());
 assertEquals("42", decimalFormat.format(42L));
 ```
 
-创建一个 spy 与创建一个 mock 并没有什么太大的不同。更进一步，所有 Mockito 的用于配置一个 mock 方法也适用于配置一个 spy。
+创建一个 `spy` 与创建一个 `mock` 并没有什么太大的不同。更进一步，所有 Mockito 的用于配置一个 mock 方法也适用于配置一个 spy。
 
-相对于 mocks，spies 用的较少，但你会发现对于不能重构的遗留代码的测试会很有用--这种测试需要部分 mocking。在这种情况下，你可以紧急你创建一个 spy 并对有些方法打桩以得到你期待的行为。
+相对于 mocks，spies 用的较少，但你会发现对于不能重构的遗留代码的测试会很有用--这种测试需要部分 mocking。在这种情况下，你可以只创建一个 spy 并对某些方法打桩以得到你期待的行为。
 
 ### 默认返回值
 
@@ -165,7 +167,7 @@ interface Demo {
 }
 ```
 
-现在考虑下面你的代码片段，它初步展示了从一个 mock 的方法返回的期待的默认值：
+现在考虑下面你的代码片段，它初步展示了从一个 `mock` 对象的方法返回的期待的默认值：
 
 ```
 Demo demo = mock(Demo.class);
@@ -198,13 +200,14 @@ when(passwordEncoder.encode("1")).thenReturn("a");
 doReturn("a").when(passwordEncoder).encode("1");
 ```
 
-上述打桩代码片段应该读作：“返回 a， 当 passwordEncoder 的 encode() 方法以参数 1 被调用时”。
+上述打桩代码片段应该读作：“返回 a，当 passwordEncoder 的 encode() 方法以参数 1 被调用时”。
 
-通常倾向于第一种方式，因为他是类型安全的并更具可读性。但是，虽然罕见，你被迫使用第二种方式，例如当对一个 spy 的真实方法打桩时，因为调用它可能具有意想不到的副作用。
+通常倾向于第一种方式，因为它是类型安全的并更具可读性。但是，虽然罕见，你被迫使用第二种方式，例如当对一个 spy 的真实方法打桩时，因为调用它可能具有意想不到的副作用。
 
 让我们来简单探索 Mockito 提供的打桩方法。我么将会把两种打桩方法都包在我们的示例中：
 
 #### 返回值
+
 `thenReturn` 或 `doReturn()` 用于当方法被调用时指定返回值。
 
 ```
@@ -245,7 +248,7 @@ when(passwordEncoder.encode("1"))
 
 #### 返回自定义回复（RETURNING CUSTOM RESPONSES）
 
-`then()`, `thenAnswer()` 的别名，和 `doAnswer()` 做同样的事情，它用于当方法调用时设置一个自定义回答。例如：
+`then()`, `thenAnswer()` 的别名，和 `doAnswer()` 做同样的事情，它用于当方法调用时设置一个自定义回复。例如：
 
 ```
 when(passwordEncoder.encode("1")).thenAnswer(
@@ -279,7 +282,7 @@ mock.setTime(42);
 assertEquals(42, mock.getTime());
 ```
 
-如果你觉得这看起啦很本中，那么你是对的。Mockito 提供了 `thenCallRealMethod()` 和 `thenThrow()` 来流水化这种类型测试。
+如果你觉得这看起来很笨重，那么你是对的。Mockito 提供了 `thenCallRealMethod()` 和 `thenThrow()` 来流水化这种类型测试。
 
 #### 调用真实方法
 
@@ -301,7 +304,7 @@ assertEquals(42, mock.getTime());
 when(passwordEncoder.encode("1")).thenCallRealMethod();
 ```
 
-Mockito 将会失败并打印下买你的消息：
+Mockito 将会失败并打印如下消息：
 
 ```
 Cannot call abstract real method on java object!
@@ -325,7 +328,7 @@ when(passwordEncoder.encode("1")).thenThrow(new IllegalArgumentException());
 doThrow(new IllegalArgumentException()).when(passwordEncoder).encode("1");
 ```
 
-Mockito 确保抛出的异常对于特定的打桩方法是有效地，如果异常不在方法的检查型一场列表里，它将会抱怨。考虑下面的代码片段：
+Mockito 确保抛出的异常对于特定的打桩方法是有效地，如果异常不在方法的检查型异常列表里，它将会抱怨。考虑下面的代码片段：
 
 ```
 when(passwordEncoder.encode("1")).thenThrow(new IOException());
@@ -340,7 +343,7 @@ Invalid: java.io.IOException
 
 正如你看到的，Mockito 检测到方法 `encode()` 不能够抛出一个 `IOException`。
 
-你也可以传递一个异常的类而不是传递一个异常的一个实例：
+你也可以传递一个异常的类而不是传递异常的一个实例：
 
 ```
 when(passwordEncoder.encode("1")).thenThrow(IllegalArgumentException.class);
@@ -412,7 +415,7 @@ AClass mock = mock(AClass.class);
 when(mock.call("a", anyInt())).thenReturn(true);
 ```
 
-为了修正这个错误，我们必须代替最后一行－－包括一个 `eq` 参数匹配器以代替 `a`，如下所示：
+为了修正这个错误，我们必须代替最后一行 -- 包括一个 `eq` 参数匹配器以代替 `a`，如下所示：
 
 ```
 when(mock.call(eq("a"), anyInt())).thenReturn(true);
@@ -434,13 +437,13 @@ Mockito 将检测到参数匹配器用错了位置，并抛出一个 `InvalidUse
 verify(mock).encode(or(eq("a"), endsWith("b")));
 ```
 
-参数匹配器也不能用作返回值。Mockito 不能返回 `anyString()` 或者任意别的什么；打桩方法被调用时一个精确的值时必须的。
+参数匹配器也不能用作返回值。Mockito 不能返回 `anyString()` 或者任意别的什么；打桩方法被调用时一个精确的值是必须的。
 
 #### 自定义匹配器（CUSTOM MATCHERS）
 
 当你需要一些当前 Mockito 不能提供的匹配逻辑，自定义匹配器来救场了。创建自定义匹配器的决定不能轻易做出，因为需要以非微小的方式匹配参数通常指示设计有问题或者一个测试变得太复杂了。
 
-因此在你编写自定义匹配器之前，检查能否利用某些仁慈的参数匹配器如 `isNull()` 和 `nullable()` 等来简化测试时值得的。如果你觉得你仍需要编写参数匹配器，Mockito 提供了一套方法从做这个：
+因此在你编写自定义匹配器之前，检查能否利用某些仁慈的参数匹配器如 `isNull()` 和 `nullable()` 等来简化测试是值得的。如果你觉得你仍需要编写参数匹配器，Mockito 提供了一套方法来做这个：
 
 考虑下面的代码：
 
@@ -493,9 +496,9 @@ assertNull(passwordEncoder.encode("123"));
 
 ### 验证行为（Verifying Behavior）
 
-一旦一个 mock 或 spy 被使用，我们可以验证特定的交互发生了。字面上讲，我们在说“Hey，Mockito，确保这个方法被以这些参数调用”。
+一旦一个 mock 或 spy 被使用，我们可以验证特定的交互发生了。字面上讲，我们在说 “Hey，Mockito，确保这个方法被以这些参数调用”。
 
-考虑下面的人工示例：
+考虑下面的模拟示例：
 
 ```
 PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
@@ -504,9 +507,9 @@ passwordEncoder.encode("a");
 verify(passwordEncoder).encode("a");
 ```
 
-这里我们设置了一个 mock 并调用其方法 `encode()`。最后一行验证 mock 的方法 `encode()` 被以特定的参数值 `a` 所调用。请注意验证打桩方法调用时冗余的；上面代码片段的目的是展示在某些交互发生后入后做验证。
+这里我们设置了一个 mock 并调用其方法 `encode()`。最后一行验证 mock 的方法 `encode()` 被以特定的参数值 `a` 所调用。请注意验证打桩方法调用是冗余的；上面代码片段的目的是展示在某些交互发生后做验证。
 
-如果我们在最后一行修改其调用参数为 b，前面的测试将会失败，Mockito 将会抱怨实际调用用于不同的参数（`b` 而不是期待的 `a`）。
+如果我们在最后一行修改其调用参数为 `b`，前面的测试将会失败，Mockito 将会抱怨实际调用使用了不同的参数（`b` 而不是期待的 `a`）。
 
 参数匹配器可被用作验证就如同验证打桩：
 
@@ -575,7 +578,7 @@ inOrder.verify(second).encode("s1");
 inOrder.verify(first).encode("f2");
 ```
 
-如果我们重新安培打桩调用的顺序，测试将失败并抛出 `VerificationInOrderFailure`。
+如果我们重新安排打桩调用的顺序，测试将失败并抛出 `VerificationInOrderFailure`。
 
 调用的缺席也可使用 `verifyZeroInteractions()` 验证。这个方法接受一个 mock 或 mocks 作为参数，如果传递 mocks 的任何方法被调用它都将失败。
 
@@ -583,7 +586,7 @@ inOrder.verify(first).encode("f2");
 
 #### 捕捉参数（CAPTURING ARGUMENTS）
 
-除了验证方法北医特定参数调用， Mockito 允许你捕捉这些参数，如此之后你可以在其上运行自定义断言。换句话说，你在讲 “Hey, Mockito, 验证这个方法被调用了，给我该调用传递的参数”。
+除了验证方法被以特定参数调用，Mockito 允许你捕捉这些参数，如此之后你可以在其上运行自定义断言。换句话说，你在讲 “Hey, Mockito, 验证这个方法被调用了，给我该调用传递的参数”。
 
 让我们创建 `PasswordEncoder的mock`，调用 `encode()`，捕捉其参数并验证其值：
 
@@ -610,7 +613,7 @@ assertEquals(Arrays.asList("password1", "password2", "password3"),
              passwordCaptor.getAllValues());
 ```
 
-同样的技术可用于捕捉可变数量的参数（也被称为可变参数（varargs））。
+同样的技术可用于捕捉可变数量的参数（也被称为可变参数（`varargs`））。
 
 ## 测试我们的简单例子（Testing Our Simple Example）
 
@@ -712,7 +715,7 @@ mock.encode("a");
 verify(mock).encode(or(eq("a"), endsWith("b")));
 ```
 
-明显地，第一行创建了一个 mock。Mockito 使用 [ByteBuddy](http://bytebuddy.net/) 来创建一个给定类的子类。新的类对象拥有一个产生的类名如 `demo.mockito.PasswordEncoder$MockitoMock$1953422997`，它的 `equals()` 讲检查唯一性（`identity`），`hashCode()` 将返回 `identity` 哈希码。一旦类被产生并加载，它的实例被使用 [Objenesis](http://objenesis.org/) 创建。
+明显地，第一行创建了一个 mock。Mockito 使用 [ByteBuddy](http://bytebuddy.net/) 来创建一个给定类的子类。新的类对象拥有一个产生的类名如 `demo.mockito.PasswordEncoder$MockitoMock$1953422997`，它的 `equals()` 将检查唯一性（`identity`），`hashCode()` 将返回 `identity` 哈希码。一旦类被产生并加载，它的实例被使用 [Objenesis](http://objenesis.org/) 来创建。
 
 让我们来看看下面的行：
 
@@ -720,15 +723,15 @@ verify(mock).encode(or(eq("a"), endsWith("b")));
 when(mock.encode("a")).thenReturn("1");
 ```
 
-顺序很重要。这里执行的第一个语句是 `mock.encode("a")`，它在 mock 上调用 `encode()`，其默认返回值为 `null`。因此实际上我们在传递 `null` 给 `when()` 作为其参数。Mockito 并不关注什么值传递给了 `when()`，其原因在于当方法被调用时，它存储该模拟方法的调用信息于所谓的 “ongoing stubbing”。稍后当我们调用 `when()`时，Mockito 拉取该 “ongoing stubbing” 对象并将其返回为when()的结果。然后我们爱返回的 “ongoing stubbing” 对象上调用 `thenReturn(“1”)`。
+顺序很重要。这里执行的第一个语句是 `mock.encode("a")`，它在 mock 上调用 `encode()`，其默认返回值为 `null`。因此实际上我们在传递 `null` 给 `when()` 作为其参数。Mockito 并不关注什么值传递给了 `when()`，其原因在于当方法被调用时，它存储该模拟方法的调用信息于所谓的 “ongoing stubbing”。稍后当我们调用 `when()`时，Mockito 拉取该 “ongoing stubbing” 对象并将其返回为 `when()` 的结果。然后我们爱返回的 “ongoing stubbing” 对象上调用 `thenReturn(“1”)`。
 
-第三行 `mock.encode("a")`; 很简单：我们调用这个打桩方法。在内部，Mockito 保存该调用以用于稍后进一步验证，并返回打桩调用回复，在我们的例子中，他是字符串 `1`。
+第三行 `mock.encode("a")`; 很简单：我们调用这个打桩方法。在内部，Mockito 保存该调用以用于稍后进一步验证，并返回打桩调用回复，在我们的例子中，它是字符串 `1`。
 
 在第四行 `verify(mock).encode(or(eq("a"), endsWith("b")));` 我们让 Mockito 验证有一次带有特定参数的 `encode()` 调用发生。
 
 `verify()` 首先执行，它将 Mockito 的内部状态转换为验证模式。理解 Mockito 将其状态保存在一个 `ThreadLocal` 中非常重要。它使得实现好的语法成为可能，另一方面，如果框架被不当使用（例如，如果你试着在验证或打桩之外使用参数匹配器），很可能导致奇怪的结果。
 
-那么 Mockito 如何创建一个 `or` 匹配器？首先，`eq("a")` 被调用，`equals` 被加入到匹配器堆栈。第二步，`endsWith("b")` 被调用，一个 `endsWith` 匹配器被加入到堆栈。最后，`or(null, null)` 被调用--它使用了他从堆栈中弹出的两个匹配器，创建了 `or` 匹配器，并将其压入堆栈。最终 `encode()` 被调用。Mockito 然后验证方法被以特定参数调用了指定次数。
+那么 Mockito 如何创建一个 `or` 匹配器？首先，`eq("a")` 被调用，`equals` 被加入到匹配器堆栈。第二步，`endsWith("b")` 被调用，一个 `endsWith` 匹配器被加入到堆栈。最后，`or(null, null)` 被调用--它使用了它从堆栈中弹出的两个匹配器，创建了 `or` 匹配器，并将其压入堆栈。最终 `encode()` 被调用。Mockito 然后验证方法被以特定参数调用了指定次数。
 
 当参数匹配器不能被提取（因为它改变了调用顺序）赋值给一个变量时，它们可被提取为方法。这种操作保留了调用顺序并保持了堆栈的正常状态。
 
@@ -809,7 +812,7 @@ assertTrue(mock instanceof Map);
 
 ### 监听调用（LISTENING INVOCATIONS）
 
-一个 mock 可被配置为当它的一个方法被调用时，它的调用监听器也被调用。在监听器内部，你可以找到该调用产生了一个值或抛出了一个异常。
+一个 mock 可被配置为当它的一个方法被调用时，特定调用监听器也被调用。在监听器内部，你可以找到该调用产生了一个值或抛出了一个异常。
 
 ```
 InvocationListener invocationListener = new InvocationListener() {
@@ -831,7 +834,7 @@ PasswordEncoder passwordEncoder = mock(
 passwordEncoder.encode("1");
 ```
 
-在这个例子中，我们讲返回值或者调用栈打印到系统标准输出上。我们的实现大致和 Mockito 的 `org.mockito.internal.debugging.VerboseMockInvocationLogger`（不要直接使用它，它是内部实现细节） 一致。如果打印调用是你需要的监听器的唯一特性，那么 Mockito 通过 `verboseLogging()` 设置提供了一个更干净的方式来表达你的意图。
+在这个例子中，我们将返回值或者调用栈打印到系统标准输出上。我们的实现大致和 Mockito 的 `org.mockito.internal.debugging.VerboseMockInvocationLogger`（不要直接使用它，它是内部实现细节） 一致。如果打印调用是你需要的监听器的唯一特性，那么 Mockito 通过 `verboseLogging()` 设置提供了一个更干净的方式来表达你的意图。
 
 ```
 PasswordEncoder passwordEncoder = mock(
@@ -906,7 +909,7 @@ mock(UserService.class,
 
 使我们的测试复杂且难于维护是我们的坏习惯而非 Mockito 的问题。例如，你可能觉得需要模拟一切。这种想法导致测试mocks 而非产品代码。模拟第三方 API 也是危险的，因为 API 的潜在修改可能破坏（已有的）测试。
 
-虽然坏味道是个认知问题，Mockito 提供了一些有争议的特性可能是的你的测试更难于维护。有时候打桩不是小事，或者乱用依赖注入会使得为每个测试重新创建 mocks 困难，不合理且没有效率。
+虽然坏味道是个认知问题，Mockito 提供了一些有争议的特性可能使得你的测试更难于维护。有时候打桩不是小事，或者乱用依赖注入会使得为每个测试重新创建 mocks 困难，不合理且没有效率。
 
 ### 清理调用
 
@@ -930,7 +933,7 @@ verifyZeroInteractions(passwordEncoder, userRepository);
 
 通过 `reset()` 重设一个 mock 是另一个有争议性的特性，应该仅仅在极少情况下使用，例如一个 mock 由容器注入，你不能在每个测试中重新创建它。
 
-### 过度使用Verify
+### 过度使用 Verify
 
 另一个坏习惯是使用 Mockito 的 `verify()` 代替每一个 `assert`。重要的是清晰地理解什么被测试：协作者之间的交互可以利用 `verify()` 来检查，但是一个执行行动的可观测结果的验证则需通过 `asserts`。
 
@@ -938,7 +941,7 @@ verifyZeroInteractions(passwordEncoder, userRepository);
 
 使用 Mockito 并不仅仅是添加了一个依赖，它需要你改变你在移除样本代码之外思考你的单元测试的方式。
 
-拥有多种 mock 接口，监听调用（listening invocations），匹配器和参数捕捉器，我们已经看到了 Mockito 是你的测试更干净也更易于理解。但像其它任何工具一样，只有使用恰当它才有用。现在你拥有了 Mockito 的内部工作机制，你可以把你的单元测试带向一个更高级别。
+拥有多种 mock 接口，监听调用（listening invocations），匹配器和参数捕捉器，我们已经看到了 Mockito 使你的测试更干净也更易于理解。但像其它任何工具一样，只有使用恰当它才有用。现在你拥有了 Mockito 的内部工作机制，你可以把你的单元测试带向一个更高级别。
 
 ## Reference
 
