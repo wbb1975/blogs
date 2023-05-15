@@ -308,3 +308,4 @@ for i, w := 0, 0; i < len(nihongo); i += w {
 - [Strings, bytes, runes and characters in Go](https://go.dev/blog/strings)
 - [数组，切片（字符串）：'append' 的运作机制](https://blog.golang.org/slices)
 - [The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets (No Excuses!)](https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/)
+－　[博文索引](https://go.dev/blog/all)
