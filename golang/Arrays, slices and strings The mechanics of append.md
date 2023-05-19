@@ -303,22 +303,356 @@ slice := sliceHeader{
 }
 ```
 
+`Capacity` 字段等于底层数组的长度减去切片的第一个元素在数组中的索引（此例中为0）。如果你想查询一个切片的容量，使用内建函数 `cap`：
+
+```
+if cap(slice) == len(slice) {
+    fmt.Println("slice is full!")
+}
+```
+
 ## Make
+
+我们如何增长切片至其容量之外？你不能！通过定义，容量是增长的限制。但你可以通过分配一个新的数组，把数据拷贝过去，然后修改切片以描述新的数组取得同样的效果。
+
+让我们从分配开始。我们可以使用内建 `new` 函数来分配一个更大的数组，然后对结果做切片。但是使用内建函数 `make` 会更简单。它一次性分配一个新的数组，并创建一个切片头以描述它。`make` 函数接收三个参数：切片类型，它的初始长度，以及它的容量，它是 `make` 分配以容纳切片数据的数组的长度。下面的调用创建了一个切片，其长度为 `10`，剩余空间为 `5`（15 - 10），你可以运行它以观察结果：
+
+```
+slice := make([]int, 10, 15)
+fmt.Printf("len: %d, cap: %d\n", len(slice), cap(slice))
+
+len: 10, cap: 15
+
+Program exited.
+```
+
+下面的代码片段将一个 int 切片容量增长一倍，但其大小不变：
+
+```
+slice := make([]int, 10, 15)
+fmt.Printf("len: %d, cap: %d\n", len(slice), cap(slice))
+newSlice := make([]int, len(slice), 2*cap(slice))
+for i := range slice {
+    newSlice[i] = slice[i]
+}
+slice = newSlice
+fmt.Printf("len: %d, cap: %d\n", len(slice), cap(slice))
+
+len: 10, cap: 15
+len: 10, cap: 30
+
+Program exited.
+```
+
+运行上面的代码之后，切片在执行另一次分配之前拥有更多的空间来增长。
+
+在创建切片时，通常保持长度与容量相同。`make` 对这种使用场景有一种快捷方式。长度默认为其容量，因此你可以忽略它从而将它们设为同样的值。在下面调用之后：
+
+```
+gophers := make([]Gopher, 10)
+```
+
+gophers 切片长度及其容量都被设置为 10。
 
 ## Copy
 
+在前面的章节，我们将切片容量增长一倍，我们创建了一个循环来拷贝旧数据到新的切片。Go 拥有一个内建函数 `copy`，它可以使得这个任务容易。它的参数是两个切片，它从右手边的参数拷贝数据到左手边参数。下面是使用 `copy` 重写的上面的例子：
+
+```
+newSlice := make([]int, len(slice), 2*cap(slice))
+copy(newSlice, slice)
+```
+
+`copy` 函数足够智能。它只拷贝它能够拷贝的数据--它注意到了两个参数的长度。换句话说，它拷贝的元素数目是两个切片长度的最小值，这可以减少一些样本代码。同时，`copy` 返回一个整数值，即拷贝的元素数量，通常它不值得检查。
+
+当源和目标切片有重叠时，`copy` 函数也能做出正确的工作，这意味着它可以用于在一个单一切片中移动数据项。下面演示了如何使用 `copy` 来在一个切片中间插入一个值：
+
+```
+// Insert inserts the value into the slice at the specified index,
+// which must be in range.
+// The slice must have room for the new element.
+func Insert(slice []int, index, value int) []int {
+    // Grow the slice by one element.
+    slice = slice[0 : len(slice)+1]
+    // Use copy to move the upper part of the slice out of the way and open a hole.
+    copy(slice[index+1:], slice[index:])
+    // Store the new value.
+    slice[index] = value
+    // Return the result.
+    return slice
+}
+```
+
+在这个函数中有一些细节需要引起注意。首先，它当然必须返回更新过的切片，原因在于其长度已经改变；其次，它使用了方便的快捷方式，表达式
+
+```
+slice[i:]
+```
+
+和下面的完全一样：
+
+```
+slice[i:len(slice)]
+```
+
+同样地，我们现在人美使用很多魔法，我们也可以忽略掉切片表达式的第一个参数，它默认为0，因此：
+
+```
+slice[:]
+```
+
+仅意味着切片本身，这对于为任何数组做切片都是有用的。下面的表达式是对“一个描述了数组所有元素的切片”的最简短的方式。
+
+```
+array[:]
+```
+
+现在无路可走，让我们来运行我们的 Insert 函数：
+
+```
+slice := make([]int, 10, 20) // Note capacity > length: room to add element.
+for i := range slice {
+    slice[i] = i
+}
+fmt.Println(slice)
+slice = Insert(slice, 5, 99)
+fmt.Println(slice)
+```
+
 ## Append：一个例子
+
+几个章节之前，我们写了一个 `Extend` 函数他为一个切片增长一个元素。它是有缺陷的，因为如哦切片的容量太小，函数将崩溃。（我们的 `Insert` 函数有同样的问题）现在来让我们原地修正它，因此让我们来为整形切片编写一个健壮的 `Extend` 实现。
+
+```
+func Extend(slice []int, element int) []int {
+    n := len(slice)
+    if n == cap(slice) {
+        // Slice is full; must grow.
+        // We double its size and add 1, so if the size is zero we still grow.
+        newSlice := make([]int, len(slice), 2*len(slice)+1)
+        copy(newSlice, slice)
+        slice = newSlice
+    }
+    slice = slice[0 : n+1]
+    slice[n] = element
+    return slice
+}
+```
+
+在这个例子中，返回切片尤其重要，因为当它重新分配时结果切片描述了一个完全不同的数组。下面的代码片段演示了当切片填充时发生了什么：
+
+```
+slice := make([]int, 0, 5)
+for i := 0; i < 10; i++ {
+    slice = Extend(slice, i)
+    fmt.Printf("len=%d cap=%d slice=%v\n", len(slice), cap(slice), slice)
+    fmt.Println("address of 0th element:", &slice[0])
+}
+```
+
+注意当初始数组的填充至5时发生的重新分配。当新数组被分配后容量和首元素的地址都发生了改变。
+
+有了健壮的 `Extend` 函数作为指导，我们可以写出更好的函数，让我们来一次扩展切片多个元素。为了实现这个，我们利用了 Go 的在函数调用时将函数参数列表转化为一个切片的能力。即我们利用的 Go 的可变函数设施。
+
+让我们称这个函数为 `Append`。对于第一个版本，我们重复调用 `Extend`，如此可变函数的机制是清楚的。`Append` 签名如下：
+
+```
+func Append(slice []int, items ...int) []int
+```
+
+它表明 `Append` 接受一个参数，一个切片，后跟 `0` 个多多个整形数。只要我们关注 `Append` 的实现，我们就会发现这些参数实际上就是一个整形切片，如下所示：
+
+```
+// Append appends the items to the slice.
+// First version: just loop calling Extend.
+func Append(slice []int, items ...int) []int {
+    for _, item := range items {
+        slice = Extend(slice, item)
+    }
+    return slice
+}
+```
+
+注意 `for` 范围循环迭代了 `items` 参数的每一个元素，它隐式类型为 `[]int`。也要注意使用空标识符 `_` 丢弃了循环的索引，在这个例子中我们并不需要它。试试它：
+
+```
+slice := []int{0, 1, 2, 3, 4}
+fmt.Println(slice)
+slice = Append(slice, 5, 6, 7, 8)
+fmt.Println(slice)
+```
+
+这个例子中的一个新技术是我们用一个复合表达式（composite literal）初始化一个切片。它包含了切片的类型后跟包含在括号里的元素。
+
+```
+slice := []int{0, 1, 2, 3, 4}
+```
+
+`Append` 有趣的还有另一个原因。我们不仅可以扩展元素，我们还可以在调用端使用 `...` 记法将第二个切片扩充为参数：
+
+```
+slice1 := []int{0, 1, 2, 3, 4}
+slice2 := []int{55, 66, 77}
+fmt.Println(slice1)
+slice1 = Append(slice1, slice2...) // The '...' is essential!
+fmt.Println(slice1)
+```
+
+当然，我们可以通过重分配不超过一次使得 `Append` 更高效。如下建立 `Extend` 函数的新内饰：
+
+```
+// Append appends the elements to the slice.
+// Efficient version.
+func Append(slice []int, elements ...int) []int {
+    n := len(slice)
+    total := len(slice) + len(elements)
+    if total > cap(slice) {
+        // Reallocate. Grow to 1.5 times the new size, so we can still grow.
+        newSize := total*3/2 + 1
+        newSlice := make([]int, total, newSize)
+        copy(newSlice, slice)
+        slice = newSlice
+    }
+    slice = slice[:total]
+    copy(slice[n:], elements)
+    return slice
+}
+```
+
+注意到我们这里使用了两次 `copy`，一次是将切片数据移动到新分配的内存；第二次是拷贝添加的元素到旧数据末尾。
+
+试试它，其行为应该和上面的一致：
+
+```
+slice1 := []int{0, 1, 2, 3, 4}
+slice2 := []int{55, 66, 77}
+fmt.Println(slice1)
+slice1 = Append(slice1, slice2...) // The '...' is essential!
+fmt.Println(slice1)
+```
 
 ## Append：内建函数
 
+现在到了我们讨论内建 `append` 函数的设计动机的阶段了。它精确地实现了 `Append` 示例所做的，效率也一样，但它可工作于任何切片类型。
+
+Go 的一个弱点是任何泛型操作必须在运行时提供。可能某一天这会改变，但现在为了使切片工作容易点，Go 提供了内建泛型 `append` 函数。它的工作方式与我们的整形切片一样，但可用于任何切片类型。
+
+记住由于切片头总会被 `append` 调用更新，你需要在调用后保存返回的切片，编译器将让你在调用 `append` 后必须保存返回结果。
+
+下面使逻辑代码与打印代码混杂的代码片段，试着运行它，编辑它并探索更多：
+
+```
+ // Create a couple of starter slices.
+slice := []int{1, 2, 3}
+slice2 := []int{55, 66, 77}
+fmt.Println("Start slice: ", slice)
+fmt.Println("Start slice2:", slice2)
+
+// Add an item to a slice.
+slice = append(slice, 4)
+fmt.Println("Add one item:", slice)
+
+// Add one slice to another.
+slice = append(slice, slice2...)
+fmt.Println("Add one slice:", slice)
+
+// Make a copy of a slice (of int).
+slice3 := append([]int(nil), slice...)
+fmt.Println("Copy a slice:", slice3)
+
+// Copy a slice to the end of itself.
+fmt.Println("Before append to self:", slice)
+slice = append(slice, slice...)
+fmt.Println("After append to self:", slice)
+```
+
+值得花上一点时间最后一段代码以理解切片该如何设计以使得这个简单调用能够正确工作。
+
+在社区构建的 [“Slice Tricks” Wiki 页面](https://go.dev/wiki/SliceTricks) 上有很多 `append`, `copy`, 以及其它使用切片的例子。
+
 ## Nil
+
+多说一句，利用我们新发现的知识，我们可以看到一个 `nil` 切片代表什么。自然地，其切片头里的值为零。
+
+```
+sliceHeader{
+    Length:        0,
+    Capacity:      0,
+    ZerothElement: nil,
+}
+```
+
+或仅仅：
+
+```
+sliceHeader{}
+```
+
+关键细节是元素指针也为 `nil`。下面代码创建的切片：
+
+```
+array[0:0]
+```
+
+长度为 0（容量也可能为0），但它的指针不是 `nil`，因此它不是一个 `nil` 切片。
+
+应该更清晰一点，一个空的切片可以增长（假设它拥有非零容量），但一个 `nil` 切片没有数组以存放值，因此不能增长以容纳甚至一个值。
+
+那样说来，一个 `nil` 切片功能上与零长度切片相同，即使它不指向任何存储。它拥有长度为零，但通过重新分配可以添加。参考上面的例子可以拷贝一个切片到一个 `nil` 切片看看会如何？
 
 ## Strings
 
+现在在 Go 切片的语境下让我们来谈谈字符串。
+
+字符串实际上非常简单：它们实际上是只读字节切片，并从语言级别提供了一些语法支持。
+
+由于它们是只读的，容量是不需要的（你不能增长它们），除此之外，对于大部分使用场景你可以把它当作只读字节切片看待。
+
+对新手来说，我们只能索引它们以访问单独的字节：
+
+```
+slash := "/usr/ken"[0] // yields the byte value '/'.
+```
+
+我们可以对字符串做切片以获得一个子字符串：
+
+```
+usr := "/usr/ken"[0:4] // yields the string "/usr"
+```
+
+现在我们对字符串做切片时背后发生了些什么就很明显了。
+
+我们可以拿到一个字节切片，并利用一个简单的转换基于它创建一个字符串：
+
+```
+str := string(slice)
+```
+
+反向也可以工作：
+
+```
+slice := []byte(usr)
+```
+
+字符串底层的数组隐藏于里；没有办法访问其内容除非通过字符串。这意味着当我们做上面任何一个转换时，一个数组的拷贝必须被创建出来。当然，Go 帮你做了这些，你自己无须如此。当上面的转换之后，对字节切片的底层数组的修改不会影响对应的字符串。
+
+这种字符串像字节切片风格设计的一个重要后果是创建一个字串效率很高。所有需要做的仅仅是创建一个包含两个整数的字符串头。因为字符串是只读的，原始字符串和基于切片操作派生的子字符串可以安全地共享同一个数组。
+
+一个历史变革：字符串的早期实现总是分配；但是当切片被加进语言之后，它们提供了高效的字符串处理模型。作为结果一些性能基准可以看到巨大的提升。
+
+当然，关于字符串有更多知识点，一个[单独的博文](https://blog.golang.org/strings)更深入地覆盖了它们。
+
 ## 结论
+
+为了理解切片如何工作，它帮助了解了它们如何实现。数据结构很简单，切片头，与每一个切片变量关联的数据项，这个头描述了单独分配的数组的一些细节。当我们传递切片值时，切片头被拷贝但是它指向的数组时共享的。
+
+一旦你喜欢上这种工作方式，切片将变得不仅易于使用，而且强大，富有表达力，尤其当有内建 `copy` 和 `append` 函数的帮助时。
 
 ## 更多阅读
 
+可以发现很多 Go 中切片相关的知识网络。正如早先提到的，[“Slice Tricks” Wiki 页面](https://go.dev/wiki/SliceTricks)上有很多例子。博文 [Go Slices](https://blog.golang.org/go-slices-usage-and-internals) 用清晰的图片描述了内存布局细节。Russ Cox 的 [Go 数据结构](https://research.swtch.com/godata) 包含了一个关于切片，以及 Go 的一些其它内部数据结构的讨论。
+
+有很多有用的材料，但学习切片最好的方式是使用它们。
 
 ## Reference
 
