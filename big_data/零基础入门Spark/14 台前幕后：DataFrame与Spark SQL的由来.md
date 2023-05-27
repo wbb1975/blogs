@@ -34,9 +34,9 @@ DSL 语言往往是为了解决某一类特定任务而设计，非图灵完备�
 
 那么问题来了，优化空间打开之后，真正负责优化引擎内核（`Spark Core`）的那个幕后英雄是谁？相信不用我说，你也能猜到，它就是 Spark SQL。
 
-想要吃透 Spark SQL，我们先得弄清楚它跟 Spark Core 的关系。随着学习进程的推进，我们接触的新概念、知识点会越来越多，厘清 Spark SQL 与 Spark Core 的关系，有利于你构建系统化的知识体系和全局视角，从而让你在学习的过程中“既见树木、也见森林”
+想要吃透 Spark SQL，我们先得弄清楚它跟 Spark Core 的关系。随着学习进程的推进，我们接触的新概念、知识点会越来越多，厘清 `Spark SQL` 与 `Spark Core` 的关系，有利于你构建系统化的知识体系和全局视角，从而让你在学习的过程中“既见树木、也见森林”
 
-首先，Spark Core 特指 Spark 底层执行引擎（Execution Engine），它包括了我们在基础知识篇讲过的调度系统、存储系统、内存管理、Shuffle 管理等核心功能模块。而 Spark SQL 则凌驾于 Spark Core 之上，是一层独立的优化引擎（Optimization Engine）。换句话说，`Spark Core` 负责执行，而 `Spark SQL` 负责优化，`Spark SQL` 优化过后的代码，依然要交付 `Spark Core` 来做执行。
+首先，`Spark Core` 特指 Spark 底层执行引擎（Execution Engine），它包括了我们在基础知识篇讲过的调度系统、存储系统、内存管理、Shuffle 管理等核心功能模块。而 Spark SQL 则凌驾于 Spark Core 之上，是一层独立的优化引擎（Optimization Engine）。换句话说，`Spark Core` 负责执行，而 `Spark SQL` 负责优化，`Spark SQL` 优化过后的代码，依然要交付 `Spark Core` 来做执行。
 
 ![Spark SQL与Spark Core的关系](images/3e410fb54d3b69358ca72ffc321dcd1d.webp)
 
@@ -89,7 +89,7 @@ result.collect
 
 ### Catalyst 优化器
 
-首先，我们先来说说 Catalyst 的优化过程。基于代码中 DataFrame 之间确切的转换逻辑，Catalyst 会先使用第三方的 SQL 解析器 ANTLR 生成抽象语法树（AST，Abstract Syntax Tree）。AST 由节点和边这两个基本元素构成，其中节点就是各式各样的操作算子，如 select、filter、agg 等，而边则记录了数据表的 Schema 信息，如字段名、字段类型，等等。
+首先，我们先来说说 Catalyst 的优化过程。基于代码中 DataFrame 之间确切的转换逻辑，Catalyst 会先使用第三方的 SQL 解析器 ANTLR 生成抽象语法树（AST，Abstract Syntax Tree）。AST 由节点和边这两个基本元素构成，其中节点就是各式各样的操作算子，如 `select`、`filter`、`agg` 等，而边则记录了数据表的 Schema 信息，如字段名、字段类型，等等。
 
 以下图“倍率分析”的语法树为例，它实际上描述了从源数据到最终计算结果之间的转换过程。因此，在 Spark SQL 的范畴内，AST 语法树又叫作“执行计划”（Execution Plan）。
 
@@ -99,11 +99,11 @@ result.collect
 
 还记得吗？我们的源文件是以 Parquet 格式进行存储的，而 **Parquet 格式在文件层面支持“谓词下推”（Predicates Pushdown）和“列剪枝”（Columns Pruning）这两项特性**。
 
-谓词下推指的是，利用像“batchNum >= 201601”这样的过滤条件，在扫描文件的过程中，只读取那些满足条件的数据文件。又因为 Parquet 格式属于列存（Columns Store）数据结构，因此 Spark 只需读取字段名为“carNum”的数据文件，而“剪掉”读取其他数据文件的过程。
+谓词下推指的是，利用像 “batchNum >= 201601” 这样的过滤条件，在扫描文件的过程中，只读取那些满足条件的数据文件。又因为 Parquet 格式属于列存（Columns Store）数据结构，因此 Spark 只需读取字段名为 “carNum” 的数据文件，而“剪掉”读取其他数据文件的过程。
 
 ![谓词下推与列剪枝示意图](images/72781191ddf37608602cdb0690c0e9e4.webp)
 
-以中签数据为例，在谓词下推和列剪枝的帮助下，Spark Core 只需要扫描图中绿色的文件部分。显然，这两项优化，都可以有效帮助 Spark Core 大幅削减数据扫描量、降低磁盘 I/O 消耗，从而显著提升数据的读取效率。
+以中签数据为例，在谓词下推和列剪枝的帮助下，`Spark Core` 只需要扫描图中绿色的文件部分。显然，这两项优化，都可以有效帮助 `Spark Core` 大幅削减数据扫描量、降低磁盘 I/O 消耗，从而显著提升数据的读取效率。
 
 因此，如果能把 3 个绿色节点的执行顺序，从`“Scan > Filter > Select”`调整为`“Filter > Select > Scan”`，那么，相比原始的执行计划，调整后的执行计划能给 `Spark Core` 带来更好的执行性能。
 
@@ -111,15 +111,15 @@ result.collect
 
 ![经过逻辑优化的执行计划](images/57029cabc2155c72ddbffb6c8ab440dd.webp)
 
-经过逻辑阶段优化的执行计划，依然可以直接交付 Spark Core 去运行，不过在性能优化方面，Catalyst 并未止步于此。
+经过逻辑阶段优化的执行计划，依然可以直接交付 `Spark Core` 去运行，不过在性能优化方面，Catalyst 并未止步于此。
 
 除了逻辑阶段的优化，Catalyst 在物理优化阶段还会进一步优化执行计划。与逻辑阶段主要依赖先验的启发式经验不同，物理阶段的优化，主要依赖各式各样的统计信息，如数据表尺寸、是否启用数据缓存、Shuffle 中间文件，等等。换句话说，**逻辑优化更多的是一种“经验主义”，而物理优化则是“用数据说话”**。
 
-以图中蓝色的 Join 节点为例，执行计划仅交代了 applyNumbersDF 与 filteredLuckyDogs 这两张数据表需要做内关联，但是，它并没有交代清楚这两张表具体采用哪种机制来做关联。按照实现机制来分类，数据关联有 3 种实现方式，分别是嵌套循环连接（NLJ，Nested Loop Join）、排序归并连接（Sort Merge Join）和哈希连接（Hash Join）。
+以图中蓝色的 Join 节点为例，执行计划仅交代了 `applyNumbersDF` 与 `filteredLuckyDogs` 这两张数据表需要做内关联，但是，它并没有交代清楚这两张表具体采用哪种机制来做关联。按照实现机制来分类，数据关联有 3 种实现方式，分别是**嵌套循环连接**（NLJ，Nested Loop Join）、**排序归并连接**（Sort Merge Join）和**哈希连接**（Hash Join）。
 
 而按照数据分发方式来分类，数据关联又可以分为 `Shuffle Join` 和 `Broadcast Join` 这两大类。因此，在分布式计算环境中，至少有 6 种 Join 策略供 Spark SQL 来选择。对于这 6 种 `Join` 策略，我们以后再详细展开，这里你只需要了解不同策略在执行效率上有着天壤之别即可。
 
-回到蓝色 Join 节点的例子，在物理优化阶段，Catalyst 优化器需要结合 applyNumbersDF 与 filteredLuckyDogs 这两张表的存储大小，来决定是采用运行稳定但性能略差的 Shuffle Sort Merge Join，还是采用执行性能更佳的 Broadcast Hash Join。
+回到蓝色 Join 节点的例子，在物理优化阶段，Catalyst 优化器需要结合 `applyNumbersDF` 与 `filteredLuckyDogs` 这两张表的存储大小，来决定是采用运行稳定但性能略差的 `Shuffle Sort Merge Join`，还是采用执行性能更佳的 `Broadcast Hash Join`。
 
 论 Catalyst 决定采用哪种 Join 策略，优化过后的执行计划，都可以丢给 Spark Core 去做执行。不过，Spark SQL 优化引擎并没有就此打住，当 Catalyst 优化器完成它的“历史使命”之后，Tungsten 会接过接力棒，在 Catalyst 输出的执行计划之上，继续打磨、精益求精，力求把最优的执行代码交付给底层的 SparkCore 执行引擎。
 
@@ -127,7 +127,7 @@ result.collect
 
 ### Tungsten
 
-站在 Catalyst 这个巨人的肩膀上，Tungsten 主要是在数据结构和执行代码这两个方面，做进一步的优化。数据结构优化指的是 Unsafe Row 的设计与实现，执行代码优化则指的是全阶段代码生成（WSCG，Whole Stage Code Generation）。
+站在 Catalyst 这个巨人的肩膀上，Tungsten 主要是在数据结构和执行代码这两个方面，做进一步的优化。数据结构优化指的是 `Unsafe Row` 的设计与实现，执行代码优化则指的是全阶段代码生成（WSCG，Whole Stage Code Generation）。
 
 我们先来看看为什么要有 `Unsafe Row`。对于 DataFrame 中的每一条数据记录，Spark SQL 默认采用 `org.apache.spark.sql.Row` 对象来进行封装和存储。我们知道，使用 Java Object 来存储数据会引入大量额外的存储开销。
 
@@ -147,13 +147,13 @@ result.collect
 
 而代码生成，指的是 Tungsten 在运行时把算子之间的“链式调用”捏合为一份代码。以上图 3 个绿色的节点为例，在默认情况下，Spark Core 会对每一条数据记录都依次执行 `Filter`、`Select` 和 `Scan` 这 3 个操作。
 
-经过了 Tungsten 的 WSCG 优化之后，`Filter`、`Select` 和 `Scan` 这 3 个算子，会被“捏合”为一个函数 f。这样一来，Spark Core 只需要使用函数 f 来一次性地处理每一条数据，就能消除不同算子之间数据通信的开销，一气呵成地完成计算。
+经过了 Tungsten 的 WSCG 优化之后，`Filter`、`Select` 和 `Scan` 这 3 个算子，会被“捏合”为一个函数 `f`。这样一来，Spark Core 只需要使用函数 f 来一次性地处理每一条数据，就能消除不同算子之间数据通信的开销，一气呵成地完成计算。
 
 好啦，到此为止，分别完成 `Catalyst` 和 `Tungsten` 这两个优化环节之后，`Spark SQL` 终于“心满意足”地把优化过的执行计划、以及生成的执行代码，交付给老大哥 `Spark Core`。`Spark Core` 拿到计划和代码，在运行时利用 `Tungsten Unsafe Row` 的数据结构，完成分布式任务计算。到此，我们这一讲的内容也就讲完了。
 
 ### 重点回顾
 
-首先，在 RDD 开发框架下，Spark Core 的优化空间受限。绝大多数 RDD 高阶算子所封装的封装的计算逻辑（形参函数 f）对于 Spark Core 是透明的，Spark Core 除了用闭包的方式把函数 f 分发到 Executors 以外，没什么优化余地。
+首先，在 RDD 开发框架下，Spark Core 的优化空间受限。绝大多数 RDD 高阶算子所封装的封装的计算逻辑（形参函数 `f`）对于 Spark Core 是透明的，Spark Core 除了用闭包的方式把函数 `f` 分发到 Executors 以外，没什么优化余地。
 
 而 DataFrame 的出现带来了新思路，它携带的 Schema 提供了丰富的类型信息，而且 DataFrame 算子大多为处理数据列的标量函数。DataFrame 的这两个特点，为引擎内核的优化打开了全新的空间。在 DataFrame 的开发框架下，负责具体优化过程的正是 Spark SQL。
 
@@ -165,7 +165,7 @@ Spark SQL 由两个核心组件构成，分别是 `Catalyst` 优化器和 `Tungs
 
 在 Catalyst 优化环节，Spark SQL 首先把用户代码转换为 AST 语法树，又叫执行计划，然后分别通过逻辑优化和物理优化来调整执行计划。逻辑阶段的优化，主要通过先验的启发式经验，如谓词下推、列剪枝，对执行计划做优化调整。而物理阶段的优化，更多是利用统计信息，选择最佳的执行机制、或添加必要的计算节点。
 
-Tungsten 主要从数据结构和执行代码两个方面进一步优化。与默认的 Java Object 相比，二进制的 Unsafe Row 以更加紧凑的方式来存储数据记录，大幅提升了数据的存储与访问效率。全阶段代码生成消除了同一 Stage 内部不同算子之间的数据传递，把多个算子融合为一个统一的函数，并将这个函数一次性地作用（Apply）到数据之上，相比不同算子的“链式调用”，这会显著提升计算效率。
+Tungsten 主要从数据结构和执行代码两个方面进一步优化。与默认的 Java Object 相比，二进制的 `Unsafe Row` 以更加紧凑的方式来存储数据记录，大幅提升了数据的存储与访问效率。全阶段代码生成消除了同一 Stage 内部不同算子之间的数据传递，把多个算子融合为一个统一的函数，并将这个函数一次性地作用（`Apply`）到数据之上，相比不同算子的“链式调用”，这会显著提升计算效率。
 
 
 ### Refernce
