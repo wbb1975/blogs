@@ -1,6 +1,6 @@
 ## Submitting Applications
 
-在 Spark `bin` 目录下的 `spark-submit` 脚本用于在一本集群上启动一个应用。通过一个统一的接口，它能够使用 Spark　支持的所有[集群管理器](https://spark.apache.org/docs/latest/cluster-overview.html#cluster-manager-types)，因此你不需要为每一个集群管理器特别配置你的应用。
+在 Spark `bin` 目录下的 `spark-submit` 脚本用于在一本集群上启动一个应用。通过一个统一的接口，它能够使用 Spark 支持的所有[集群管理器](https://spark.apache.org/docs/latest/cluster-overview.html#cluster-manager-types)，因此你不需要为每一个集群管理器特别配置你的应用。
 
 ### 打包你的应用依赖
 
@@ -32,13 +32,13 @@
 - application-jar：包括你的应用及其依赖的 `bundled jar` 的路径。该 URL 必须在集群范围内全局可见，例如，一个 `hdfs://` 路径或一个 `file://`，对所有节点可见。
 - application-arguments：传递给你的主类的 `main` 方法的参数。
 
-一个常见的部署策略是从一个网关机器上提交你的应用，它物理上与你的工作节点在一起（例如位于一个单独 EC2 集群中的 Master 节点）。在这种设置下，client 模式是合适的。在 client 模式下，启动器直接在 `spark-submit` 进程里启动以充当一个集群客户端。应用的输入输出被附在终端上。因此，这种模式尤其适用于涉及到 `REPL` 的应用（例如 `Spark shell`）。
+一个常见的部署策略是从一个网关机器上提交你的应用，它物理上与你的工作节点在一起（例如位于一个单独 EC2 集群中的 Master 节点）。在这种设置下，`client` 模式是合适的。在 `client` 模式下，启动器直接在 `spark-submit` 进程里启动以充当一个集群客户端。应用的输入输出被附在终端上。因此，这种模式尤其适用于涉及到 `REPL` 的应用（例如 `Spark shell`）。
 
-另外， 如哦你的应用从一个远离你的工作节点的机器（例如，从你的本地 Laptop）提交，`cluster` 模式常被选用以最小化驱动器即执行器之间的网络延迟。当前，独立模式不支持 Python 应用的集群模式。
+另外，如哦你的应用从一个远离你的工作节点的机器（例如，从你的本地 Laptop）提交，`cluster` 模式常被选用以最小化驱动器即执行器之间的网络延迟。当前，独立模式不支持 Python 应用的集群模式。
 
 对于 Python 应用，仅仅传递一个 `.py` 以代替 `<application-jar>`，并利用 `--py-files` 将 Python `.zip`, `.egg` 或 `.py` 文件添加到搜索路径。
 
-有一些选项是特定于所选用的[集群管理器](https://spark.apache.org/docs/latest/cluster-overview.html#cluster-manager-types)。例如，对于 [Spark standalone cluster](https://spark.apache.org/docs/latest/spark-standalone.html)的集群部署模式，你也可指定 `--supervise` 来确保如果驱动器失败并以非零值退出，那么它将自动重启。为了列出 `spark-submit` 所有可用的选项，以 `--help` 选项运行它。下面是常用选项的一些例子：
+有一些选项是特定于所选用的[集群管理器](https://spark.apache.org/docs/latest/cluster-overview.html#cluster-manager-types)。例如，对于 [Spark standalone cluster](https://spark.apache.org/docs/latest/spark-standalone.html) 的集群部署模式，你也可指定 `--supervise` 来确保如果驱动器失败并以非零值退出，那么它将自动重启。为了列出 `spark-submit` 所有可用的选项，以 `--help` 选项运行它。下面是常用选项的一些例子：
 
 ```
 # Run application locally on 8 cores
@@ -127,7 +127,7 @@ k8s://HOST:PORT|依赖 `--deploy-mode` 的值以 client 或 cluster 模式连接
 
 ### 从一个文件里加载配置
 
-spark-submit 脚本从一个属性文件加载默认[Spark configuration values](https://spark.apache.org/docs/latest/configuration.html)并将它们传递给你的应用。默认地，它将从 Spark 目录中的 conf/spark-defaults.conf 读取选项。更多细节，请参看 [loading default configurations](https://spark.apache.org/docs/latest/configuration.html#loading-default-configurations) 一节。
+spark-submit 脚本从一个属性文件加载默认 [Spark configuration values](https://spark.apache.org/docs/latest/configuration.html) 并将它们传递给你的应用。默认地，它将从 Spark 目录中的 `conf/spark-defaults.conf` 读取选项。更多细节，请参看 [loading default configurations](https://spark.apache.org/docs/latest/configuration.html#loading-default-configurations) 一节。
 
 通过这种方式加载默认 Spark 配置可以免除传递选项给 `spark-submit` 的需要。例如，如果 `spark.master` 属性已经设置，你就可以从 `spark-submit` 忽略 `--master` 参数。基本上，在一个 `SparkConf` 中设置的配置值拥有最大优先级，然后是传递给 `spark-submit` 的标记，再然后是默认文件中的值。
 
