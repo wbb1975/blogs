@@ -1,6 +1,6 @@
 # Spark SQL 指南
 
-Spark SQL 用于结构化数据处理的 Spark 模块。不像基础 `Spark RDD API`, `Spark SQL` 提供的接口为 Spark 提供了事关处理数据和运算的更多结构信息。在内部 `Spark SQL` 使用这些额外信息来执行额外的优化。有多种 `Spark SQL` 交互方式，包括 `SQL` 和 `Dataset API`。计算结果时使用相同的运算引擎，无论 你用什么样的 API/语言表达你的运算。这种统一意味着开发者可以在不同 API 间自由切换，并选择能够表达给定转换的最自然的方式。
+Spark SQL 是用于结构化数据处理的 Spark 模块。不像基本 `Spark RDD API`, `Spark SQL` 提供的接口为 Spark 提供了处理的数据和运算的更多结构信息。在内部 `Spark SQL` 使用这些额外信息来执行额外的优化。有多种 `Spark SQL` 交互方式，包括 `SQL` 和 `Dataset API`。计算结果时使用相同的运算引擎，无论 你用什么样的 `API/Language` 表达你的运算。这种统一意味着开发者可以在不同 API 间自由切换，并选择能够表达给定转换的最自然的方式。
 
 本页面上的所有示例的数据都包括在 Spark 分发中，可以在 `spark-shell`, `pyspark shell`, 或 `sparkR shell` 中执行。
 
@@ -8,9 +8,9 @@ Spark SQL 用于结构化数据处理的 Spark 模块。不像基础 `Spark RDD 
 
 Spark SQL 的一种使用场景是执行 SQL 查询。Spark SQL 可被用于从一个已有 Hive 安装读取数据。关于如何配置这个特性的更多信息，请参见 [Hive Tables](https://spark.apache.org/docs/latest/sql-data-sources-hive-tables.html) 章节。在另一种编程语言中运行 SQL 时，结果以 [Dataset/DataFrame](https://spark.apache.org/docs/latest/sql-programming-guide.html#datasets-and-dataframes) 对象返回。你也可以利用[命令行](https://spark.apache.org/docs/latest/sql-distributed-sql-engine.html#running-the-spark-sql-cli) 或 [JDBC/ODBC](https://spark.apache.org/docs/latest/sql-distributed-sql-engine.html#running-the-thrift-jdbcodbc-server) 来与 SQL 接口交互。
 
-#### Datasets and DataFrames
+#### Datasets 和 DataFrames
 
-一个 Dataset 是一个分布式数据结合。Dataset 是自 `Spark 1.6` 添加的新接口，它提供了比 RDDs 更多的收益（强类型，使用更强大 lambda 函数的能力）以及 Spark SQL 优化执行引擎。一个 Dataset 可以从 JVM 对象[构造](https://spark.apache.org/docs/latest/sql-getting-started.html#creating-datasets) 并使用函数式转换（`map`, `flatMap`, `filter`，等）控制。Dataset API 包含 [Scala](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html) 及 [Java](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)。Python 不支持 `Dataset API`，但由于 Python 的动态特性， Dataset API 的很多收益已经获得（例如，你可以很自然地利用 `row.columnName` 访问一行里的字段）。R 属于同样的情况。
+一个 Dataset 是一个分布式数据集合。Dataset 是自 `Spark 1.6` 添加的新接口，它提供了比 RDDs 更多的收益（强类型，使用强大 lambda 函数的能力）以及 Spark SQL 优化执行引擎。一个 Dataset 可以从 JVM 对象[构造](https://spark.apache.org/docs/latest/sql-getting-started.html#creating-datasets) 并使用函数式转换（`map`, `flatMap`, `filter`，等）控制。Dataset API 包含 [Scala](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html) 及 [Java](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)。Python 不支持 `Dataset API`，但由于 Python 的动态特性，Dataset API 的很多收益已经享受到了（例如，你可以很自然地利用 `row.columnName` 访问一行里的字段）。R 属于同样的情况。
 
 一个 DataFrame 是拥有命名列名的 Dataset。它概念上与关系数据库里的一个表或者 `R/Python` 里的一个 `data frame` 相同，但背后拥有更多的优化。DataFrames 可从一个很大范围的[数据源](https://spark.apache.org/docs/latest/sql-data-sources.html)构造，例如：结构化数据文件，Hive 中的表，以及现存的 RDDs。DataFrame API 包含Scala, Java, [Python](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame), 和 [R](https://spark.apache.org/docs/latest/api/R/index.html)。在 Scala 和 Java 中，一个 DataFrame 由包含 Row 的 Dataset 表示。在 [Scala API](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html)，DataFrame 仅仅是 `Dataset[Row]` 的类型别名；在 [Java API](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)，用户需要使用 `Dataset<Row>` 来表示一个 DataFrame。
 
@@ -20,7 +20,7 @@ Spark SQL 的一种使用场景是执行 SQL 查询。Spark SQL 可被用于从�
 
 ### 1.1 入口: SparkSession
 
-Spark 中所有功能的入口点是 [SparkSession](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/SparkSession.html) 类。为了创建一个基础 SparkSession，只需使用 `SparkSession.builder()`：
+Spark 中所有功能的入口点是 [SparkSession](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/SparkSession.html) 类。为了创建一个简单 SparkSession，只需使用 `SparkSession.builder()`：
 
 ```
 // Scala
@@ -44,11 +44,11 @@ SparkSession spark = SparkSession
   .getOrCreate();
 ```
 
-在 Spark 源码仓库你可以从 `"examples/src/main/scala/org/apache/spark/examples/sql/SparkSQLExample.scala"` 或 `"examples/src/main/java/org/apache/spark/examples/sql/JavaSparkSQLExample.java"` 找到完整示例代码。从 `Spark 2.0` 开始SparkSession 提供了对 Hive 特性包括使用 using HiveQL 编写查询访问 Hive UDFs 的能力的内建支持，也包括从 Hive 表读取数据的能力。为了使用这些特性，你并不需要拥有一个 Hive 安装。
+在 Spark 源码仓库你可以从 `"examples/src/main/scala/org/apache/spark/examples/sql/SparkSQLExample.scala"` 或 `"examples/src/main/java/org/apache/spark/examples/sql/JavaSparkSQLExample.java"` 找到完整示例代码。从 `Spark 2.0` 开始 SparkSession 提供了对 Hive 特性包括使用 HiveQL 编写查询访问 Hive UDFs 的能力的内建支持，也包括从 Hive 表读取数据的能力。为了使用这些特性，你并不需要拥有一个 Hive 安装。
 
 ### 1.2 创建 DataFrames
 
-利用 SparkSession，应用可以从一个[已有的 RDD](https://spark.apache.org/docs/latest/sql-getting-started.html#interoperating-with-rdds)，一个 Hive 表, 或者从 [Spark 数据源](https://spark.apache.org/docs/latest/sql-data-sources.html) 创建 DataFrames。
+利用 SparkSession，应用可以从一个[已有的 RDD](https://spark.apache.org/docs/latest/sql-getting-started.html#interoperating-with-rdds)，一个 Hive 表，或者从 [Spark 数据源](https://spark.apache.org/docs/latest/sql-data-sources.html) 创建 DataFrames。
 
 作为一个示例，下面的例子基于一个 JSON 文件的内容创建了一个 DataFrame。
 
@@ -87,9 +87,9 @@ df.show();
 
 在 Spark 源码仓库你可以从 `"examples/src/main/scala/org/apache/spark/examples/sql/SparkSQLExample.scala"` 或 `"examples/src/main/java/org/apache/spark/examples/sql/JavaSparkSQLExample.java"` 找到完整示例代码。
 
-### 1.3 无类型（Untyped） Dataset 操作 (即 DataFrame 操作)
+### 1.3 无类型（Untyped）Dataset 操作 (即 DataFrame 操作)
 
-DataFrames 提供领域专用语言用于在 Scalahttps://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html, Javahttps://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html, Pythonhttps://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html 及 Rhttps://spark.apache.org/docs/latest/api/R/reference/SparkDataFrame.html 语言中进行结构化数据的处理。
+DataFrames 提供领域专用语言用于在 [Scala](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html), [Java](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html), [Python](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html) 及 [R](https://spark.apache.org/docs/latest/api/R/reference/SparkDataFrame.html) 语言中进行结构化数据的处理。
 
 这里我们包括了使用 Datasets 进行结构化数据处理的基本示例。
 
@@ -297,7 +297,7 @@ spark.newSession().sql("SELECT * FROM global_temp.people").show();
 
 ### 1.6 创建 Datasets
 
-Datasets 与 RDD 很像，但是，代替 Java 系列化或 `Kryo` 序列化，它们使用一种特殊的 [Encoder](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Encoder.html) 来序列化对象以通过网络处理或传送。`encoders` 和标准序列化负责将一个对象转换为字节，`encoders` 是代码动态生成地，它使用一种格式，这种格式允许 Spark 执行许多操作如过滤，排序，哈希而无需将字节反序列化成对象。
+Datasets 与 RDD 很像，但是，代替 Java 序列化或 `Kryo` 序列化，它们使用一种特殊的 [Encoder](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Encoder.html) 来序列化对象以通过网络处理或传送。`encoders` 和标准序列化负责将一个对象转换为字节，`encoders` 是代码动态生成地，它使用一种格式，这种格式允许 Spark 执行许多操作如过滤，排序，哈希而无需将字节反序列化成对象。
 
 ```
 // Scala
@@ -371,8 +371,7 @@ person.setAge(32);
 Encoder<Person> personEncoder = Encoders.bean(Person.class);
 Dataset<Person> javaBeanDS = spark.createDataset(
   Collections.singletonList(person),
-  personEncoder
-);
+  personEncoder);
 javaBeanDS.show();
 // +---+----+
 // |age|name|
@@ -635,13 +634,39 @@ namesDS.show();
 聚集函数其对一组行数据返回一个值。[内建聚集函数](https://spark.apache.org/docs/latest/sql-ref-functions-builtin.html#aggregate-functions)提供了常见聚集功能如 `count()`, `count_distinct()`, `avg()`, `max()`, `min()`，等。用户无须局限于预定义聚集函数--用户可以创建自定义函数。关于用户自定义聚集函数的更多细节，请参见[用户自定义聚集函数](https://spark.apache.org/docs/latest/sql-ref-functions-udf-aggregate.html)的文档。
 
 ## 2. 数据源
+
+
+
 ## 3. 性能调优
 ## 4. 分布式 SQL 引擎
 ## 5. 基于带 Apache Arrow 的 Pandas PySpark使用指南（PySpark Usage Guide for Pandas with Apache Arrow）
 ## 6. 迁移指南
 ## 7. SQL 参考
+
+Spark SQL 是 Apache Spark 的结构化数据工作模块。这本指南是结构化查询语言（SQL）参考，包括语法，语义，关键字以及常用 SQL 使用示例。它包括如下主题的信息：
+
+### 7.1 ANSI 兼容性（ANSI Compliance）
+### 7.2 数据类型
+### 7.3 Datetime 模式
+### 7.4 Number 模式
+### 7.5 函数
+#### 7.5.1 内建函数（Built-in Functions）
+#### 7.5.2 用户定义标量函数
+#### 7.5.3 用户定义聚集函数
+#### 7.5.4 与 Hive UDFs/UDAFs/UDTFs 集成
+### 7.6 标识符
+### 7.7 字面量
+### 7.8 Null 语义
+### 7.9 SQL 语法
+#### 7.9.1 DDL 语句
+#### 7.9.2 DML 语句
+#### 7.9.3 数据检索语句
+#### 7.9.4 Auxiliary Statements
+
 ## 8. 错误条件（Error Conditions）
 
 ## Reference 
 
 - [Spark SQL Guide](https://spark.apache.org/docs/latest/sql-programming-guide.html)
+- [ava Dataset<T>](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)
+- [Scala Dataset](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html)
