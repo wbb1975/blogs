@@ -733,3 +733,4 @@ Spark SQL 是 Apache Spark 的结构化数据工作模块。这本指南是结�
 - [Spark SQL Guide](https://spark.apache.org/docs/latest/sql-programming-guide.html)
 - [Java Dataset<T>](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)
 - [Scala Dataset](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html)
+- [Dataframe and dataset](https://learning.oreilly.com/library/view/apache-spark-2-x/9781787126497/a8284e5f-1db5-49d2-971e-67126c51160e.xhtml)
