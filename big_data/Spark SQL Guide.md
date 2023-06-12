@@ -1,6 +1,6 @@
 # Spark SQL 指南
 
-Spark SQL 是用于结构化数据处理的 Spark 模块。不像基本 `Spark RDD API`, `Spark SQL` 提供的接口为 Spark 提供了处理的数据和运算的更多结构信息。在内部 `Spark SQL` 使用这些额外信息来执行额外的优化。有多种 `Spark SQL` 交互方式，包括 `SQL` 和 `Dataset API`。计算结果时使用相同的运算引擎，无论 你用什么样的 `API/Language` 表达你的运算。这种统一意味着开发者可以在不同 API 间自由切换，并选择能够表达给定转换的最自然的方式。
+Spark SQL 是用于结构化数据处理的 Spark 模块。不像基本 `Spark RDD API`, `Spark SQL` 提供的接口为 Spark 提供了处理的数据和运算的更多结构化信息。在内部 `Spark SQL` 使用这些额外信息来执行额外的优化。有多种 `Spark SQL` 交互方式，包括 `SQL` 和 `Dataset API`。计算结果时使用相同的运算引擎，无论你用什么样的 `API/Language` 表达你的运算。这种统一意味着开发者可以在不同 API 间自由切换，并选择能够表达给定转换的最自然的方式。
 
 本页面上的所有示例的数据都包括在 Spark 分发中，可以在 `spark-shell`, `pyspark shell`, 或 `sparkR shell` 中执行。
 
@@ -10,11 +10,11 @@ Spark SQL 的一种使用场景是执行 SQL 查询。Spark SQL 可被用于从�
 
 #### Datasets 和 DataFrames
 
-一个 Dataset 是一个分布式数据集合。Dataset 是自 `Spark 1.6` 添加的新接口，它提供了比 RDDs 更多的收益（强类型，使用强大 lambda 函数的能力）以及 Spark SQL 优化执行引擎。一个 Dataset 可以从 JVM 对象[构造](https://spark.apache.org/docs/latest/sql-getting-started.html#creating-datasets) 并使用函数式转换（`map`, `flatMap`, `filter`，等）控制。Dataset API 包含 [Scala](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html) 及 [Java](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)。Python 不支持 `Dataset API`，但由于 Python 的动态特性，Dataset API 的很多收益已经享受到了（例如，你可以很自然地利用 `row.columnName` 访问一行里的字段）。R 属于同样的情况。
+一个 Dataset 是一个分布式数据集合。Dataset 是自 `Spark 1.6` 添加的新接口，它提供了比 RDDs 更多的收益（强类型，使用强大 lambda 函数的能力）以及 Spark SQL 优化执行引擎。一个 Dataset 可以从 JVM 对象[构造](https://spark.apache.org/docs/latest/sql-getting-started.html#creating-datasets)并使用函数式转换（`map`, `flatMap`, `filter`，等）控制。Dataset API 包含 [Scala](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html) 及 [Java](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)。Python 不支持 `Dataset API`，但由于 Python 的动态特性，Dataset API 的很多收益已经享受到了（例如，你可以很自然地利用 `row.columnName` 访问一行里的字段）。R 属于同样的情况。
 
-一个 DataFrame 是拥有命名列名的 Dataset。它概念上与关系数据库里的一个表或者 `R/Python` 里的一个 `data frame` 相同，但背后拥有更多的优化。DataFrames 可从一个很大范围的[数据源](https://spark.apache.org/docs/latest/sql-data-sources.html)构造，例如：结构化数据文件，Hive 中的表，以及现存的 RDDs。DataFrame API 包含Scala, Java, [Python](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame), 和 [R](https://spark.apache.org/docs/latest/api/R/index.html)。在 Scala 和 Java 中，一个 DataFrame 由包含 Row 的 Dataset 表示。在 [Scala API](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html)，DataFrame 仅仅是 `Dataset[Row]` 的类型别名；在 [Java API](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)，用户需要使用 `Dataset<Row>` 来表示一个 DataFrame。
+一个 DataFrame 是拥有命名列名的 Dataset。它概念上与关系数据库里的一个表或者 `R/Python` 里的一个 `data frame` 相同，但背后拥有更多的优化。DataFrames 可从一个很大范围的[数据源](https://spark.apache.org/docs/latest/sql-data-sources.html)构造，例如：结构化数据文件，Hive 中的表，以及现存的 RDDs。DataFrame API 包含Scala, Java, [Python](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html#pyspark.sql.DataFrame), 和 [R](https://spark.apache.org/docs/latest/api/R/index.html)。在 Scala 和 Java 中，一个 DataFrame 由包含 `Row` 的 Dataset 表示。在 [Scala API](https://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html)，DataFrame 仅仅是 `Dataset[Row]` 的类型别名；在 [Java API](https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/sql/Dataset.html)，用户需要使用 `Dataset<Row>` 来表示一个 DataFrame。
 
-贯穿本文档，我们将把 `Scala/Java` 包含 Row 的 `Datasets` 称之为 `DataFrames`。
+贯穿本文档，我们将把 `Scala/Java` 包含 `Row` 的 `Datasets` 称之为 `DataFrames`。
 
 ## 1. 入门篇
 
@@ -239,7 +239,7 @@ sqlDF.show();
 
 ### 1.5 全局临时视图
 
-在 Spark SQL 中临时视图是会话范围的，当创建它的会话终止时它也会消失。如果你期待一个临时视图在所有会话间共享，并保持存活直至 Spark 应用终止，你可以创建一个全局临时视图。 全局临时视图与一个系统保留数据库 `global_temp` 绑定，我们必须使用限定名来引用它，如 `SELECT * FROM global_temp.view1`。
+在 Spark SQL 中临时视图是会话范围的，当创建它的会话终止时它也会消失。如果你期待一个临时视图在所有会话间共享，并保持存活直至 Spark 应用终止，你可以创建一个全局临时视图。全局临时视图与一个系统保留数据库 `global_temp` 绑定，我们必须使用限定名来引用它，如 `SELECT * FROM global_temp.view1`。
 
 ```
 // Scala
@@ -406,7 +406,7 @@ peopleDS.show();
 
 Spark SQL 支持两种方式将已有 RDDs 转换为 Datasets。第一种方法使用反射来推导包含特定类型对象 RDD 的模式。在你编写 Spark 应用已经知道模式时基于反射的方法可以产生更简洁的代码且工作得很好。
 
-第二种创建 Datasets 的方法是通过编程接口允许你构造一个模式并将其应用到一个已有的 RDD 上。当然这种方式更冗长，但它可让你在列及其类型直到运行时仍未知时构造Datasets。
+第二种创建 Datasets 的方法是通过编程接口允许你构造一个模式并将其应用到一个已有的 RDD 上。当然这种方式更冗长，但它可让你在列及其类型直到运行时仍未知时构造 Datasets。
 
 #### 1.7.1 使用反射推导模式（Inferring the Schema Using Reflection）
 
