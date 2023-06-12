@@ -637,20 +637,200 @@ namesDS.show();
 
 Spark SQL 支持通过 DataFrame 接口操作多种多样的数据源。一个 DataFrame 可以通过关系转换操作，也可以用于创建一个临时视图。将一个 DataFrame 注册为临时视图允许你在其上运行 SQL 查询。本节描述使用了 Spark 数据源加载及存储数据的一般方法，然后介绍内建数据源的特殊选项。
 
-### 2.1 Generic Load/Save Functions
+### 2.1 通用加载/保存函数
+
+在这个简单的代码里，默认数据源（`parquet`，除非通过 `spark.sql.sources.default` 配置）被用于所有操作。
+
+```
+val usersDF = spark.read.load("examples/src/main/resources/users.parquet")
+usersDF.select("name", "favorite_color").write.save("namesAndFavColors.parquet")
+
+// Java
+Dataset<Row> usersDF = spark.read().load("examples/src/main/resources/users.parquet");
+usersDF.select("name", "favorite_color").write().save("namesAndFavColors.parquet");
+```
+
+完整示例代码可在 Spark 仓库 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
 #### 2.1.1 Manually Specifying Options
-#### 2.1.2 Run SQL on files directly
-#### 2.1.3 Save Modes
-#### 2.1.4 Saving to Persistent Tables
-#### 2.1.5 Bucketing, Sorting and Partitioning
 
-### 2.2 Generic File Source Options
-#### 2.2.1 Ignore Corrupt Files
-#### 2.2.2 Ignore Missing Files
-#### 2.2.3 Path Global Filter
-#### 2.2.4 Recursive File Lookup
+你可以手动指定数据源，你可以将其与其它选项一道传递给数据源。数据源由完整可靠名字指定（如 org.apache.spark.sql.parquet），但对于内建数据源，你可以使用它们的短名字（json, parquet, jdbc, orc, libsvm, csv, text）。从任意数据源类型加载的 DataFrames 可通过这种语法转换为其它类型。
 
-### 2.3 Parquet Files
+请参考 API 文档以获取内建数据源的可用选项，例如，`org.apache.spark.sql.DataFrameReader` 和 `org.apache.spark.sql.DataFrameWrite`r。那里记录下的选项也适用于 non-Scala Spark APIs（例如，PySpark）。对其它格式，请参考特定格式的 API 文档。
+
+为了加载 JSON 你可以使用：
+
+```
+val peopleDF = spark.read.format("json").load("examples/src/main/resources/people.json")
+peopleDF.select("name", "age").write.format("parquet").save("namesAndAges.parquet")
+
+// Java
+Dataset<Row> peopleDF =  spark.read().format("json").load("examples/src/main/resources/people.json");
+peopleDF.select("name", "age").write().format("parquet").save("namesAndAges.parquet");
+```
+
+完整示例代码可在 Spark 仓库 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
+为了加载 CSV 你可以使用：
+
+```
+val peopleDFCsv = spark.read.format("csv")
+  .option("sep", ";")
+  .option("inferSchema", "true")
+  .option("header", "true")
+  .load("examples/src/main/resources/people.csv")
+
+// Java
+Dataset<Row> peopleDFCsv = spark.read().format("csv")
+  .option("sep", ";")
+  .option("inferSchema", "true")
+  .option("header", "true")
+  .load("examples/src/main/resources/people.csv");
+```
+
+其它选项在写操作时也使用。例如，你可以为 ORC 数据源控制布隆过滤器和字典编码。下面的 ORC 示例将创建布隆过滤器，并仅为 `favorite_color` 使用字典编码。对于 Parquet， 也有 `parquet.bloom.filter.enabled` 和 `parquet.enable.dictionary`。为了找到 ORC/Parquet 额外选项的更多信息，请访问官方 Apache [ORC](https://orc.apache.org/docs/spark-config.html)/[Parquet](https://github.com/apache/parquet-mr/tree/master/parquet-hadoop) 网站。
+
+ORC 数据源：
+
+```
+usersDF.write.format("orc")
+  .option("orc.bloom.filter.columns", "favorite_color")
+  .option("orc.dictionary.key.threshold", "1.0")
+  .option("orc.column.encoding.direct", "name")
+  .save("users_with_options.orc")
+
+// Java
+usersDF.write().format("orc")
+  .option("orc.bloom.filter.columns", "favorite_color")
+  .option("orc.dictionary.key.threshold", "1.0")
+  .option("orc.column.encoding.direct", "name")
+  .save("users_with_options.orc");
+```
+
+完整示例代码可在 Spark 仓库 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
+Parquet 数据源：
+
+```
+usersDF.write.format("parquet")
+  .option("parquet.bloom.filter.enabled#favorite_color", "true")
+  .option("parquet.bloom.filter.expected.ndv#favorite_color", "1000000")
+  .option("parquet.enable.dictionary", "true")
+  .option("parquet.page.write-checksum.enabled", "false")
+  .save("users_with_options.parquet")
+
+// Java
+usersDF.write().format("parquet")
+    .option("parquet.bloom.filter.enabled#favorite_color", "true")
+    .option("parquet.bloom.filter.expected.ndv#favorite_color", "1000000")
+    .option("parquet.enable.dictionary", "true")
+    .option("parquet.page.write-checksum.enabled", "false")
+    .save("users_with_options.parquet");
+```
+
+完整示例代码可在 Spark 仓库 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
+#### 2.1.2 在文件上直接运行 SQL
+
+你可以通过 SQL 直接查询文件而无需使用读 API 来将一个文件加载进 DataFrame 并查询它。
+
+```
+val sqlDF = spark.sql("SELECT * FROM parquet.`examples/src/main/resources/users.parquet`")
+
+// Java
+Dataset<Row> sqlDF =
+  spark.sql("SELECT * FROM parquet.`examples/src/main/resources/users.parquet`");
+```
+
+#### 2.1.3 保存模式
+
+保存操作可选地带有 `SaveMode` 参数，它指定了如何处理与有数据存在的场景。必须认识到这些模式并未使用任何锁机制，因此不是原子操作。另外，当执行一个 `Overwrite` 时，在写新数据之已有数据将被删除。
+
+Scala/Java|任何语言|意义
+--------|--------|--------
+SaveMode.ErrorIfExists（默认）|"error" or "errorifexists"（默认）|当把 DataFrame 保存到数据源时，如果数据已经存在，一个异常将被抛出。
+SaveMode.Append|"append"|当把 DataFrame 保存到数据源时，如果数据已经存在，DataFrame 的内容期待被追加到已有的数据里。
+SaveMode.Overwrite|"overwrite"|Overwrite 模式意味着在把 DataFrame 保存到数据源时，如果数据已经存在，已有数据将被 DataFrame 内容覆盖。
+SaveMode.Ignore|"ignore"|Ignore 模式意味着在把 DataFrame 保存到数据源时，如果数据已经存在，保存操作将不保存 DataFrame 的内容，已有数据不做任何改变。这就像 SQL 中的 `CREATE TABLE IF NOT EXISTS`。
+
+#### 2.1.4 保存到持久表中
+
+DataFrames 也可使用 `saveAsTable` 命令保存进 Hive metastore 中的持久表。注意使用这个特性并不需要一个已有的 Hive 部署。Spark 将为你创建一个默认本地 Hive metastore（使用 `Derby`）。不像 `createOrReplaceTempView` 命令，`saveAsTable` 将物化 DataFrame 的内容并创建一个指向 Hive metastore 里数据的指针。即使  Spark 应用重启之后持久表依然存在，只要你维持对同一 metastore 的连接。为持久表的 DataFrame 可以通过调用 SparkSession 的 `table` 方法并传递表名创建。
+
+对基于文件的数据源，例如 `text`, `parquet`, `json`，等，你可以通过 `path` 选项指定自定义表路径，例如 `df.write.option("path", "/some/path").saveAsTable("t")`。当表被删除时，自定义表路径并未被删除，且数据仍在那里。如果未指定自定义表路径，Spark 将把数据写到 `warehouse` 目录下的一个默认表路径。当表被删除时，默认表路径也将被删除。
+
+从 `Spark 2.1` 开始，持久数据源存储拥有存储于 Hive metastore 的每分区元数据。这带来几个收益：
+
+- 由于元数据仅仅返回查询所需必要的分区，对表的首次查询发现所有分区不再必要。
+- Hive DDLs 如 `ALTER TABLE PARTITION ... SET LOCATION` 现在对于 Datasource API 创建的表可用。
+
+注意在创建外部数据表（带有路径选项）时分区信息默认并未收集。为了在 `metastore` 中同步分区信息，你可以调用 `MSCK REPAIR TABLE`。
+
+#### 2.1.5 桶，排序和分区（Bucketing, Sorting and Partitioning）
+
+对基于文件的数据源，它也可能桶存储，并排序或分区输出。桶存储和排序仅对持久表可用。
+
+```
+peopleDF.write.bucketBy(42, "name").sortBy("age").saveAsTable("people_bucketed")
+
+// Java
+peopleDF.write().bucketBy(42, "name").sortBy("age").saveAsTable("people_bucketed");
+```
+
+当使用 `Dataset APIs` 时，分区可被用于 `save` 和 `saveAsTable`。
+
+```
+sersDF.write.partitionBy("favorite_color").format("parquet").save("namesPartByColor.parquet")
+
+// Java
+usersDF
+  .write()
+  .partitionBy("favorite_color")
+  .format("parquet")
+  .save("namesPartByColor.parquet");
+```
+
+对一个简单表，可以同时使用分区和桶存储。
+
+```
+usersDF
+  .write
+  .partitionBy("favorite_color")
+  .bucketBy(42, "name")
+  .saveAsTable("users_partitioned_bucketed")
+
+// Java
+usersDF
+  .write()
+  .partitionBy("favorite_color")
+  .bucketBy(42, "name")
+  .saveAsTable("users_partitioned_bucketed");
+```
+
+完整示例代码可在 Spark 仓库 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
+`partitionBy` 创建了一个在 [Partition Discovery](https://spark.apache.org/docs/latest/sql-data-sources-parquet.html#partition-discovery) 一节描述的目录结构。因此，它对拥有很多基数的列作用有限。相对而言，`bucketBy` 将数据分配至固定数量的桶中，它可用于部同值较多的列。
+
+### 2.2 通用文件数据源选项（Generic File Source Options）
+
+这些通用选项/配置只有在使用基于文件的数据源时才有效：parquet, orc, avro, json, csv, text。
+
+请注意实例中使用的目录层级如下所示：
+
+```
+dir1/
+ ├── dir2/
+ │    └── file2.parquet (schema: <file: string>, content: "file2.parquet")
+ └── file1.parquet (schema: <file, string>, content: "file1.parquet")
+ └── file3.json (schema: <file, string>, content: "{'file':'corrupt.json'}")
+```
+
+#### 2.2.1 忽略损坏的文件（Ignore Corrupt Files）
+#### 2.2.2 忽略缺失的文件（Ignore Missing Files）
+#### 2.2.3 路径全局过滤器（Path Global Filter）
+#### 2.2.4 递归文件查找（Recursive File Lookup）
+
+### 2.3 Parquet 文件
 
 #### 2.3.1 Loading Data Programmatically
 
@@ -662,15 +842,15 @@ Spark SQL 支持通过 DataFrame 接口操作多种多样的数据源。一个 D
 
 #### 2.3.5 Configuration
 
-### 2.4 ORC Files
+### 2.4 ORC 文件
 
-### 2.5 JSON Files
+### 2.5 JSON 文件
 
-### 2.6 CSV Files
+### 2.6 CSV 文件
 
-### 2.7 Text Files
+### 2.7 Text 文件
 
-### 2.8 Hive Tables
+### 2.8 Hive 表
 
 #### 2.8.1 Specifying storage format for Hive tables
 
@@ -678,7 +858,7 @@ Spark SQL 支持通过 DataFrame 接口操作多种多样的数据源。一个 D
 
 ### 2.9 JDBC To Other Databases
 
-### 2.10 Avro Files
+### 2.10 Avro 文件
 
 #### 2.10.1 Deploying
 #### 2.10.2 Load and Save Functions
@@ -689,7 +869,7 @@ Spark SQL 支持通过 DataFrame 接口操作多种多样的数据源。一个 D
 #### 2.10.7 Supported types for Avro -> Spark SQL conversion
 #### 2.10.8 Supported types for Spark SQL -> Avro conversion
 
-### 2.11 Protobuf data
+### 2.11 Protobuf 数据
 
 #### 2.11.1 Deploying
 #### 2.11.2 to_protobuf() and from_protobuf()
@@ -697,8 +877,8 @@ Spark SQL 支持通过 DataFrame 接口操作多种多样的数据源。一个 D
 #### 2.11.4 Supported types for Spark SQL -> Protobuf conversion
 #### 2.11.5 Handling circular references protobuf fields
 
-### 2.12 Whole Binary Files
-### 2.13 Troubleshooting
+### 2.12 整体二进制文件（Whole Binary Files）
+### 2.13 问题定位（Troubleshooting）
 
 ## 3. 性能调优
 ## 4. 分布式 SQL 引擎
