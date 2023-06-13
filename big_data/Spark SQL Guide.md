@@ -652,7 +652,7 @@ usersDF.select("name", "favorite_color").write().save("namesAndFavColors.parquet
 
 完整示例代码可在 Spark 仓库 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
 
-#### 2.1.1 Manually Specifying Options
+#### 2.1.1 手动指定选项
 
 你可以手动指定数据源，你可以将其与其它选项一道传递给数据源。数据源由完整可靠名字指定（如 org.apache.spark.sql.parquet），但对于内建数据源，你可以使用它们的短名字（json, parquet, jdbc, orc, libsvm, csv, text）。从任意数据源类型加载的 DataFrames 可通过这种语法转换为其它类型。
 
@@ -755,14 +755,14 @@ SaveMode.Ignore|"ignore"|Ignore 模式意味着在把 DataFrame 保存到数据�
 
 #### 2.1.4 保存到持久表中
 
-DataFrames 也可使用 `saveAsTable` 命令保存进 Hive metastore 中的持久表。注意使用这个特性并不需要一个已有的 Hive 部署。Spark 将为你创建一个默认本地 Hive metastore（使用 `Derby`）。不像 `createOrReplaceTempView` 命令，`saveAsTable` 将物化 DataFrame 的内容并创建一个指向 Hive metastore 里数据的指针。即使  Spark 应用重启之后持久表依然存在，只要你维持对同一 metastore 的连接。为持久表的 DataFrame 可以通过调用 SparkSession 的 `table` 方法并传递表名创建。
+DataFrames 也可使用 `saveAsTable` 命令保存进 Hive metastore 中的持久表。注意使用这个特性并不需要一个已有的 Hive 部署。Spark 将为你创建一个默认本地 Hive metastore（使用 `Derby`）。不像 `createOrReplaceTempView` 命令，`saveAsTable` 将物化 DataFrame 的内容并创建一个指向 Hive metastore 里数据的指针。即使 Spark 应用重启之后持久表依然存在，只要你维持对同一 metastore 的连接。为持久表的 DataFrame 可以通过调用 SparkSession 的 `table` 方法并传递表名创建。
 
 对基于文件的数据源，例如 `text`, `parquet`, `json`，等，你可以通过 `path` 选项指定自定义表路径，例如 `df.write.option("path", "/some/path").saveAsTable("t")`。当表被删除时，自定义表路径并未被删除，且数据仍在那里。如果未指定自定义表路径，Spark 将把数据写到 `warehouse` 目录下的一个默认表路径。当表被删除时，默认表路径也将被删除。
 
-从 `Spark 2.1` 开始，持久数据源存储拥有存储于 Hive metastore 的每分区元数据。这带来几个收益：
+从 `Spark 2.1` 开始，持久数据源存储拥有存储于 `Hive metastore` 的每分区元数据。这带来几个收益：
 
 - 由于元数据仅仅返回查询所需必要的分区，对表的首次查询发现所有分区不再必要。
-- Hive DDLs 如 `ALTER TABLE PARTITION ... SET LOCATION` 现在对于 Datasource API 创建的表可用。
+- Hive DDLs 如 `ALTER TABLE PARTITION ... SET LOCATION` 现在对于 `Datasource API` 创建的表可用。
 
 注意在创建外部数据表（带有路径选项）时分区信息默认并未收集。为了在 `metastore` 中同步分区信息，你可以调用 `MSCK REPAIR TABLE`。
 
@@ -813,7 +813,7 @@ usersDF
 
 ### 2.2 通用文件数据源选项（Generic File Source Options）
 
-这些通用选项/配置只有在使用基于文件的数据源时才有效：parquet, orc, avro, json, csv, text。
+这些通用选项/配置只有在使用基于文件的数据源时才有效：`parquet`, `orc`, `avro`, `json`, `csv`, `text`。
 
 请注意实例中使用的目录层级如下所示：
 
@@ -826,21 +826,202 @@ dir1/
 ```
 
 #### 2.2.1 忽略损坏的文件（Ignore Corrupt Files）
+
+Spark 允许你使用配置项 `spark.sql.files.ignoreCorruptFiles` 或数据源选项 `ignoreCorruptFiles` 以指定在从文件读取数据时忽略损坏的文件。当设置为 `true` 时，当遇到损坏的文件时 `Spark jobs` 将继续运行，且已经读到的内容将被返回。
+
+读取数据文件时为了忽略损坏文件，你能够使用：
+
+```
+// enable ignore corrupt files via the data source option
+// dir1/file3.json is corrupt from parquet's view
+val testCorruptDF0 = spark.read.option("ignoreCorruptFiles", "true").parquet(
+  "examples/src/main/resources/dir1/",
+  "examples/src/main/resources/dir1/dir2/")
+testCorruptDF0.show()
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// |file2.parquet|
+// +-------------+
+
+// enable ignore corrupt files via the configuration
+spark.sql("set spark.sql.files.ignoreCorruptFiles=true")
+// dir1/file3.json is corrupt from parquet's view
+val testCorruptDF1 = spark.read.parquet(
+  "examples/src/main/resources/dir1/",
+  "examples/src/main/resources/dir1/dir2/")
+testCorruptDF1.show()
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// |file2.parquet|
+// +-------------+
+
+// Java
+// enable ignore corrupt files via the data source option
+// dir1/file3.json is corrupt from parquet's view
+Dataset<Row> testCorruptDF0 = spark.read().option("ignoreCorruptFiles", "true").parquet(
+    "examples/src/main/resources/dir1/",
+    "examples/src/main/resources/dir1/dir2/");
+testCorruptDF0.show();
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// |file2.parquet|
+// +-------------+
+
+// enable ignore corrupt files via the configuration
+spark.sql("set spark.sql.files.ignoreCorruptFiles=true");
+// dir1/file3.json is corrupt from parquet's view
+Dataset<Row> testCorruptDF1 = spark.read().parquet(
+        "examples/src/main/resources/dir1/",
+        "examples/src/main/resources/dir1/dir2/");
+testCorruptDF1.show();
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// |file2.parquet|
+// +-------------+
+```
+
+完整示例代码可在 Spark 仓库中的 "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" 或 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
 #### 2.2.2 忽略缺失的文件（Ignore Missing Files）
-#### 2.2.3 路径全局过滤器（Path Global Filter）
+
+Spark 允许你使用配置项 `spark.sql.files.ignoreMissingFiles` 或数据源选项 `ignoreMissingFiles` 以指定再在从文件读取数据时忽略损缺失的文件。这里缺失的文件是指在你构造 DataFrame 后从目录下删除的文件。当设置为 `true` 时，当遇到缺失的文件时 `Spark jobs` 将继续运行，且已经读到的内容将被返回。
+
+#### 2.2.3 路径 Glob 过滤器（Path Glob Filter）
+
+`pathGlobFilter` 用于只包含文件名匹配模式的文件。语法遵从 `org.apache.hadoop.fs.GlobFilter`。它并不改变分区发现的行为。
+
+为了加载路径匹配给定 `glob` 模式的文件且保持分区发现的行为，你可以使用：
+
+```
+val testGlobFilterDF = spark.read.format("parquet")
+  .option("pathGlobFilter", "*.parquet") // json file should be filtered out
+  .load("examples/src/main/resources/dir1")
+testGlobFilterDF.show()
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// +-------------+
+
+// Java
+Dataset<Row> testGlobFilterDF = spark.read().format("parquet")
+        .option("pathGlobFilter", "*.parquet") // json file should be filtered out
+        .load("examples/src/main/resources/dir1");
+testGlobFilterDF.show();
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// +-------------+
+```
+
+完整示例代码可在 Spark 仓库中的 "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" 或 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
 #### 2.2.4 递归文件查找（Recursive File Lookup）
+
+`recursiveFileLookup` 用于递归加载文件，且它禁用了分区推导。其默认值为 `false`。当 `recursiveFileLookup` 为 `true` 时，如果数据源显式指定 `partitionSpec`，将会抛出异常。
+
+为了递归加载文件，你可以使用：
+
+```
+val recursiveLoadedDF = spark.read.format("parquet")
+  .option("recursiveFileLookup", "true")
+  .load("examples/src/main/resources/dir1")
+recursiveLoadedDF.show()
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// |file2.parquet|
+// +-------------+
+
+// Java
+Dataset<Row> recursiveLoadedDF = spark.read().format("parquet")
+        .option("recursiveFileLookup", "true")
+        .load("examples/src/main/resources/dir1");
+recursiveLoadedDF.show();
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// |file2.parquet|
+// +-------------+
+```
+
+完整示例代码可在 Spark 仓库中的 "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" 或 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
+#### 2.2.5 文件更改时间路径过滤器（Modification Time Path Filters）
+
+在 Spark 批查询中，`modifiedBefore` 和 `modifiedAfter` 可以骑或单独使用以对文件加载取得更细粒度的控制。（注意，结构化流文件数据源不支持这些选项。）
+
+- **modifiedBefore**：一个可选时间戳，用户包含文件修改时间在指定时间之前的文件。提供的时间戳必须满足下面的格式：`YYYY-MM-DDTHH:mm:ss` (例如 `2020-06-01T13:00:00`)。
+- **modifiedAfter**：一个可选时间戳，用户包含文件修改时间在指定时间之后的文件。提供的时间戳必须满足下面的格式：`YYYY-MM-DDTHH:mm:ss` (例如 `2020-06-01T13:00:00`)。
+
+如果没有提供时区，时间戳根据 Spark 会话时区解释（`spark.sql.session.timeZone`）。
+
+为了加载匹配给定时间戳的文件，你可以使用：
+
+```
+val beforeFilterDF = spark.read.format("parquet")
+  // Files modified before 07/01/2020 at 05:30 are allowed
+  .option("modifiedBefore", "2020-07-01T05:30:00")
+  .load("examples/src/main/resources/dir1");
+beforeFilterDF.show();
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// +-------------+
+val afterFilterDF = spark.read.format("parquet")
+   // Files modified after 06/01/2020 at 05:30 are allowed
+  .option("modifiedAfter", "2020-06-01T05:30:00")
+  .load("examples/src/main/resources/dir1");
+afterFilterDF.show();
+// +-------------+
+// |         file|
+// +-------------+
+// +-------------+
+
+// Java
+Dataset<Row> beforeFilterDF = spark.read().format("parquet")
+        // Only load files modified before 7/1/2020 at 05:30
+        .option("modifiedBefore", "2020-07-01T05:30:00")
+        // Only load files modified after 6/1/2020 at 05:30
+        .option("modifiedAfter", "2020-06-01T05:30:00")
+        // Interpret both times above relative to CST timezone
+        .option("timeZone", "CST")
+        .load("examples/src/main/resources/dir1");
+beforeFilterDF.show();
+// +-------------+
+// |         file|
+// +-------------+
+// |file1.parquet|
+// +-------------+
+```
+
+完整示例代码可在 Spark 仓库中的 "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" 或 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
 
 ### 2.3 Parquet 文件
 
-#### 2.3.1 Loading Data Programmatically
+[Parquet](https://parquet.apache.org/) 是一种列存储格式，它被其它许多数据处理系统支持。Spark SQL 提供了读写 Parquet 文件的支持，且自动保留原始数据的模式。在读取 Parquet 文件时，为了保持兼容性，所有的列被自动转化为 `nullable`。 
 
-#### 2.3.2 Partition Discovery
+#### 2.3.1 编程加载数据（Loading Data Programmatically）
 
-#### 2.3.3 Schema Merging
+#### 2.3.2 分区发现（Partition Discovery）
 
-#### 2.3.4 Hive metastore Parquet table conversion
+#### 2.3.3 模式合并（Schema Merging）
 
-#### 2.3.5 Configuration
+#### 2.3.4 Hive metastore Parquet table 转换
+
+#### 2.3.5 配置
 
 ### 2.4 ORC 文件
 
