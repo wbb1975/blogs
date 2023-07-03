@@ -1015,13 +1015,217 @@ beforeFilterDF.show();
 
 #### 2.3.1 编程加载数据（Loading Data Programmatically）
 
+使用来自上面示例的数据：
+
+```
+// Encoders for most common types are automatically provided by importing spark.implicits._
+import spark.implicits._
+
+val peopleDF = spark.read.json("examples/src/main/resources/people.json")
+
+// DataFrames can be saved as Parquet files, maintaining the schema information
+peopleDF.write.parquet("people.parquet")
+
+// Read in the parquet file created above
+// Parquet files are self-describing so the schema is preserved
+// The result of loading a Parquet file is also a DataFrame
+val parquetFileDF = spark.read.parquet("people.parquet")
+
+// Parquet files can also be used to create a temporary view and then used in SQL statements
+parquetFileDF.createOrReplaceTempView("parquetFile")
+val namesDF = spark.sql("SELECT name FROM parquetFile WHERE age BETWEEN 13 AND 19")
+namesDF.map(attributes => "Name: " + attributes(0)).show()
+// +------------+
+// |       value|
+// +------------+
+// |Name: Justin|
+// +------------+
+
+// Java
+import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
+Dataset<Row> peopleDF = spark.read().json("examples/src/main/resources/people.json");
+
+// DataFrames can be saved as Parquet files, maintaining the schema information
+peopleDF.write().parquet("people.parquet");
+
+// Read in the Parquet file created above.
+// Parquet files are self-describing so the schema is preserved
+// The result of loading a parquet file is also a DataFrame
+Dataset<Row> parquetFileDF = spark.read().parquet("people.parquet");
+
+// Parquet files can also be used to create a temporary view and then used in SQL statements
+parquetFileDF.createOrReplaceTempView("parquetFile");
+Dataset<Row> namesDF = spark.sql("SELECT name FROM parquetFile WHERE age BETWEEN 13 AND 19");
+Dataset<String> namesDS = namesDF.map(
+    (MapFunction<Row, String>) row -> "Name: " + row.getString(0),
+    Encoders.STRING());
+namesDS.show();
+// +------------+
+// |       value|
+// +------------+
+// |Name: Justin|
+// +------------+
+```
+
+完整示例代码可在 Spark 仓库中的 "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" 或 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
 #### 2.3.2 分区发现（Partition Discovery）
+
+在许多系统如 Hive 中表分区是个常见优化手段。在一个分区表中，数据通常存储于不同的目录，每个分区目录的路径中带有编码分区列名。所有内建文件数据源（包括 `Text/CSV/JSON/ORC/Parquet`）能够发现并自动推导分区信息。例如，我们可以将我们之前使用的人口数据存储到使用下面的目录结构的分区表中，并使用两个额外列名 `gender` 和 `country` 作为分区列名：
+
+```
+path
+└── to
+    └── table
+        ├── gender=male
+        │   ├── ...
+        │   │
+        │   ├── country=US
+        │   │   └── data.parquet
+        │   ├── country=CN
+        │   │   └── data.parquet
+        │   └── ...
+        └── gender=female
+            ├── ...
+            │
+            ├── country=US
+            │   └── data.parquet
+            ├── country=CN
+            │   └── data.parquet
+            └── ...
+```
+
+通过向 `SparkSession.read.parquet` 或 `SparkSession.read.load` 传递 `path/to/table`，Spark SQL 将会自动从路径中提取分区信息。现在返回的 DataFrame 的模式变成了：
+
+```
+root
+|-- name: string (nullable = true)
+|-- age: long (nullable = true)
+|-- gender: string (nullable = true)
+|-- country: string (nullable = true)
+```
+
+注意分区列的数据类型是自动推导的。当前，数字数据类型，日期，时间戳（timestamp），字符串类型是支持的。有时候，用户可能不想自动推导分区列的数据类型。对这些场景，自动类型推导可以通过 `spark.sql.sources.partitionColumnTypeInference.enabled` 配置，其默认为 `true`。当类型推导被禁止时，分区列将被视为字符串类型。
+
+从 `Spark 1.6.0` 开始，分区发现默认情况下仅在给定路径下查找分区。在上面的例子中，如果用户传递 `path/to/table/gender=male` 给 `SparkSession.read.parquet` 或 `SparkSession.read.load`, `gender` 将不会被视为一个分区列。如果用户需要指定分区发现的起始路径，他们可以在数据源选项中指定 `basePath`。例如，如果数据路径是 `path/to/table/gender=male`，并且用户指定 `basePath` 为 `path/to/table/`，那么 `gender` 将会成为分区列。
 
 #### 2.3.3 模式合并（Schema Merging）
 
+就像 `Protocol Buffer`, `Avro`, 和 `Thrift`，`Parquet` 也支持模式演化。用户可以从一个简单模式开始，然后随需增加更多列。通过这种方式，用户最终将会得到带有多个不同但兼容模式的 Parquet 文件。Parquet 数据源现在能够自动检测这个场景并将这些模式进行合并。
+
+因为模式合并是一个相对昂贵的操作，在大多数情况下他不是必须的，从 `1.5.0` 起我们默认禁用了它。你可通过下列方式启用它：
+
+- 当读取 Parquet 文件时设置数据源选项 `mergeSchema` 为 `true` （如下例所示），或
+- 设置全局 SQL 选项 `spark.sql.parquet.mergeSchema` 为 `true`。
+
+```
+// Scala
+// This is used to implicitly convert an RDD to a DataFrame.
+import spark.implicits._
+
+// Create a simple DataFrame, store into a partition directory
+val squaresDF = spark.sparkContext.makeRDD(1 to 5).map(i => (i, i * i)).toDF("value", "square")
+squaresDF.write.parquet("data/test_table/key=1")
+
+// Create another DataFrame in a new partition directory,
+// adding a new column and dropping an existing column
+val cubesDF = spark.sparkContext.makeRDD(6 to 10).map(i => (i, i * i * i)).toDF("value", "cube")
+cubesDF.write.parquet("data/test_table/key=2")
+
+// Read the partitioned table
+val mergedDF = spark.read.option("mergeSchema", "true").parquet("data/test_table")
+mergedDF.printSchema()
+
+// The final schema consists of all 3 columns in the Parquet files together
+// with the partitioning column appeared in the partition directory paths
+// root
+//  |-- value: int (nullable = true)
+//  |-- square: int (nullable = true)
+//  |-- cube: int (nullable = true)
+//  |-- key: int (nullable = true)
+
+// Java
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
+public static class Square implements Serializable {
+  private int value;
+  private int square;
+
+  // Getters and setters...
+
+}
+
+public static class Cube implements Serializable {
+  private int value;
+  private int cube;
+
+  // Getters and setters...
+
+}
+
+List<Square> squares = new ArrayList<>();
+for (int value = 1; value <= 5; value++) {
+  Square square = new Square();
+  square.setValue(value);
+  square.setSquare(value * value);
+  squares.add(square);
+}
+
+// Create a simple DataFrame, store into a partition directory
+Dataset<Row> squaresDF = spark.createDataFrame(squares, Square.class);
+squaresDF.write().parquet("data/test_table/key=1");
+
+List<Cube> cubes = new ArrayList<>();
+for (int value = 6; value <= 10; value++) {
+  Cube cube = new Cube();
+  cube.setValue(value);
+  cube.setCube(value * value * value);
+  cubes.add(cube);
+}
+
+// Create another DataFrame in a new partition directory,
+// adding a new column and dropping an existing column
+Dataset<Row> cubesDF = spark.createDataFrame(cubes, Cube.class);
+cubesDF.write().parquet("data/test_table/key=2");
+
+// Read the partitioned table
+Dataset<Row> mergedDF = spark.read().option("mergeSchema", true).parquet("data/test_table");
+mergedDF.printSchema();
+
+// The final schema consists of all 3 columns in the Parquet files together
+// with the partitioning column appeared in the partition directory paths
+// root
+//  |-- value: int (nullable = true)
+//  |-- square: int (nullable = true)
+//  |-- cube: int (nullable = true)
+//  |-- key: int (nullable = true)
+```
+
+完整示例代码可在 Spark 仓库中的 "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" 或 "examples/src/main/java/org/apache/spark/examples/sql/JavaSQLDataSourceExample.java" 找到。
+
 #### 2.3.4 Hive metastore Parquet table 转换
 
-#### 2.3.5 配置
+dang Hive metastore Parquet 
+##### Hive/Parquet 模式调谐（Hive/Parquet Schema Reconciliation）
+##### 元信息刷新（Metadata Refreshing）
+
+#### 2.3.5 列加密
+
+##### KMS 客户端
+
+#### 2.3.6 数据源选项
+
+##### 配置
 
 ### 2.4 ORC 文件
 
@@ -1033,30 +1237,30 @@ beforeFilterDF.show();
 
 ### 2.8 Hive 表
 
-#### 2.8.1 Specifying storage format for Hive tables
+#### 2.8.1 为 Hive 表指定存储格式
 
-#### 2.8.2 Interacting with Different Versions of Hive Metastore
+#### 2.8.2 与不同版本 Hive Metastore 交互
 
-### 2.9 JDBC To Other Databases
+### 2.9 其它数据库的 JDBC 连接（JDBC To Other Databases）
 
 ### 2.10 Avro 文件
 
-#### 2.10.1 Deploying
-#### 2.10.2 Load and Save Functions
-#### 2.10.3 to_avro() and from_avro()
-#### 2.10.4 Data Source Option
-#### 2.10.5 Configuration
-#### 2.10.6 Compatibility with Databricks spark-avro
-#### 2.10.7 Supported types for Avro -> Spark SQL conversion
-#### 2.10.8 Supported types for Spark SQL -> Avro conversion
+#### 2.10.1 部署
+#### 2.10.2 Load 和 Save 函数
+#### 2.10.3 to_avro() 和 from_avro()
+#### 2.10.4 数据源选项
+#### 2.10.5 配置
+#### 2.10.6 与 Databricks spark-avro 的兼容性
+#### 2.10.7 Avro -> Spark SQL 转换支持的类型
+#### 2.10.8 Spark SQL -> Avro 转换支持的类型
 
 ### 2.11 Protobuf 数据
 
-#### 2.11.1 Deploying
-#### 2.11.2 to_protobuf() and from_protobuf()
-#### 2.11.3 Supported types for Protobuf -> Spark SQL conversion
-#### 2.11.4 Supported types for Spark SQL -> Protobuf conversion
-#### 2.11.5 Handling circular references protobuf fields
+#### 2.11.1 部署
+#### 2.11.2 to_protobuf() 和 from_protobuf()
+#### 2.11.3 Protobuf -> Spark SQL 转换支持的类型
+#### 2.11.4 Spark SQL -> Protobuf 转换支持的类型
+#### 2.11.5 处理 protobuf 字段的循环引用
 
 ### 2.12 整体二进制文件（Whole Binary Files）
 ### 2.13 问题定位（Troubleshooting）
