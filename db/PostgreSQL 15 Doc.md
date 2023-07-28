@@ -61,20 +61,128 @@ CREATE INDEX test1_id_index ON test1 (id);
 
 在一个大表上创建索引可能需要花费很长时间。默认情况下 PostgreSQL 允许再一个表上的读操作（`SELECT` 语句）与索引创建并行进行，但是写操作（`INSERT`, `UPDATE`, `DELETE`）将被堵塞直至索引创建完成。在产品环境中这经常是不可接受的。允许写操作与索引创建并行运行是可能的，但需要意识到这里有几个陷阱－－更多信息，请参见[并行构建索引](https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)。
 
-一个索引被创建后，系统必须保证它与表的同步。这增加了数据修改操作的负担。索引也可阻止[堆上元组](https://www.postgresql.org/docs/current/storage-hot.html)的创建。因此，很少使用或这根本不用的索引应该被删除掉。
-
-```
-SELECT content FROM test1 WHERE id = constant;
-```
+一个索引被创建后，系统必须保证它与表的同步。这增加了数据修改操作的负担。索引也可阻止[堆上元组](https://www.postgresql.org/docs/current/storage-hot.html)的创建。因此，很少使用或根本不用的索引应该被删除掉。
 
 #### 11.2. 索引类型
+
+PostgreSQL 提供了几种索引类型：`B-tree`, `Hash`, `GiST`, `SP-GiST`, `GIN`, `BRIN`, 以及扩展[布隆](https://www.postgresql.org/docs/current/bloom.html)索引。每种索引使用不同的算法，该种算法将最适用于某种特定查询。默认地，[CREATE INDEX](https://www.postgresql.org/docs/current/sql-createindex.html) 将创建 `B-tree` 索引，它适用于大多数常见情况。通过写下关键字 `USING` 及其跟随的索引类型名可以选择其它索引类型。例如，为了创建一个 `Hash` 索引：
+
+```
+CREATE INDEX name ON table USING HASH (column);
+```
+
 11.2.1. B-Tree
+
+B-trees 能够处理可依据某种顺序排序的数据的相等和范围查询。特别地，在一个索引列涉及如下操作符的比较操作时，PostgreSQL 查询计划器将会考虑使用    B-tree 索引。
+
+```
+<   <=   =   >=   >
+```
+
+也有一些与上面操作符相等的构造，比如 `BETWEEN` 和 `IN`, 也可能用一个 B-tree 索引搜索来实现。同理，一个在索引列上的 `IS NULL` 或 `IS NOT NULL` 也可用作 B-tree 索引。
+
+优化器也可将 B-tree 索引用于设计模式匹配操作符如 `LIKE` 和 `~` 的查询，只要模式是个常量并且锚定于字符串的开始位置--例如 `col LIKE 'foo%'` 或 `col ~ '^foo'`, 但不能是 `col LIKE '%bar'`。但是，如果你的数据库没有使用 `C locale`，你将需要利用特殊的操作符类来创建索引以支持模式匹配查询的索引，可参阅下面的[11.10 节](https://www.postgresql.org/docs/current/indexes-opclass.html)。将 B-tree 用于 `ILIKE` 和 `~*` 也是可能的，但只有模式不是以字母字符开始的才可以，例如，字符应该不受大小写转换影响。
+
+B-tree 索引也可更具排序顺序检索数据。它并不总是比一个简单扫描并排序更快，但它通常是有用的。
+
 11.2.2. Hash
+
+哈希索引存储有来自索引列的值32位哈希值。因此，此类索引仅能处理相等比较操作符。当一个索引列涉及到一个等于操作符的比较时，查询计划器将会考虑使用一个哈希索引。
+
+```
+=
+```
+
 11.2.3. GiST
+
+GiST 不是一个简单的索引类别，而是一套许多不同的索引策略能够实现的基础设施。相应地，GiST 索引能够使用的特定操作符随索引策略（操作符类）变化很大。例如，标准 PostgreSQL 发布为多个二位地理信息数据类型包括了 GiST 操作符类，它们支持使用如下操作符的索引查询。
+
+```
+<<   &<   &>   >>   <<|   &<|   |&>   |>>   @>   <@   ~=   &&
+```
+
+（[参考章节 9.11](https://www.postgresql.org/docs/current/functions-geometry.html) 以获取这些操作符的意义）包含在标准发布中的 GiST 操作符类在[表 68.1](https://www.postgresql.org/docs/current/gist-builtin-opclasses.html#GIST-BUILTIN-OPCLASSES-TABLE)里进行了讲解。许多其它 GiST 操作符类在 `contrib` 聚合或者单独项目里。更多信息，请参见[章节 68](https://www.postgresql.org/docs/current/gist.html)。
+
+GiST 索引也能够优化“最近邻里”查询，例如：
+
+```
+SELECT * FROM places ORDER BY location <-> point '(101,456)' LIMIT 10;
+```
+
+它找到里给定目标点最近的十个地方。实现这个的能力再一次依赖于被使用的特定操作符类。在[表 68.1](https://www.postgresql.org/docs/current/gist-builtin-opclasses.html#GIST-BUILTIN-OPCLASSES-TABLE)，能够通过这种方式使用的操作符在 “排序操作符” 列里给出。
+
 11.2.4. SP-GiST
+
+SP-GiST 索引，就像 GiST 索引，提供支持各种类型检索的基础设施。SP-GiST 允许实现更广范围的不同的非平衡基于磁盘的数据结构，例如 `quadtrees`，`k-d trees`，和 `radix trees (tries)`。作为一个例子，PostgreSQL 标准发布包含了二位点的 SP-GiST 操作符类，它支持如下操作符的索引查询：
+
+```
+<<   >>   ~=   <@   <<|   |>>
+```
+
+（[参考章节 9.11](https://www.postgresql.org/docs/current/functions-geometry.html) 以获取这些操作符的意义）标准发布中的 SP-GiST 操作符类在[表 68.1](https://www.postgresql.org/docs/current/gist-builtin-opclasses.html#GIST-BUILTIN-OPCLASSES-TABLE)里进行了讲解。更多信息，请参见[章节 69](https://www.postgresql.org/docs/current/spgist.html)。
+
+和 GiST 一样，SP-GiST 支持“最近邻里”查询。对于支持按距离排序的 SP-GiST 操作符类，对应的操作符在[表 69.1](https://www.postgresql.org/docs/current/spgist-builtin-opclasses.html#SPGIST-BUILTIN-OPCLASSES-TABLE) 中的 “排序操作符” 列里给出。
+
 11.2.5. GIN
+
+GIN 属于倒排序索引，它适用于包含多个组件值的数据值，例如数组。倒排序索引为每个组件包含一个单独的入口，可以高效处理类似这样的查询，即检测特定组件值的存在。
+
+就像 GiST 和 SP-GiST, GIN 能够支持不同的用户定义的索引策略，一个 GIN 索引能够被使用的特定操作符依赖于索引策略而变化很大。一个例子，标准PostgreSQL 发布中一个用于数组的 GIN 操作符类，它支持使用如下操作符的索引查询：
+
+```
+<@   @>   =   &&
+```
+
+（[参考章节 9.19](https://www.postgresql.org/docs/current/functions-array.html) 以获取这些操作符的意义）标准发布中的 GIN 操作符类在[表 70.1](https://www.postgresql.org/docs/current/gin-builtin-opclasses.html#GIN-BUILTIN-OPCLASSES-TABLE)里进行了讲解。更多信息，请参见[章节 70](https://www.postgresql.org/docs/current/gin.html)。
+
 11.2.6. BRIN
+
+BRIN（块范围索引简写）索引存储了位于一个表的顺序物理块范围内的值的总结信息。因此，如果列值与表中的数据行的物理顺序有很好的相关性，BRIN 索引是很高效的。如同 GiST, SP-GiST 和 GIN，BRIN 能够支持不同的索引策略，而且能够被使用的特定操作符依赖于索引策略而变化很大。对于拥有线性排序顺序的数据类型，索引数据对应着每个块范围内列值的最小最大值。它支持使用如下操作符的索引查询：
+
+```
+<   <=   =   >=   >
+```
+
+标准发布中的 BRIN 操作符类在[表 71.1](https://www.postgresql.org/docs/current/brin-builtin-opclasses.html#BRIN-BUILTIN-OPCLASSES-TABLE)里进行了讲解。更多信息，请参见[章节 71](https://www.postgresql.org/docs/current/brin.html)。
+
 #### 11.3. 多列索引（Multicolumn Indexes）
+
+一个索引可以定义在一个表的多个列上。例如，你有一个如下模式的表：
+
+```
+CREATE TABLE test2 (
+  major int,
+  minor int,
+  name varchar
+);
+```
+
+（假如，你在一个数据库中存放 `/dev` 目录），而且你经常发布如下查询：
+
+```
+SELECT name FROM test2 WHERE major = constant AND minor = constant;
+```
+
+那么就适合在列 `major` 和 `minor` 一起定义一个索引，例如：
+
+```
+CREATE INDEX test2_mm_idx ON test2 (major, minor);
+```
+
+当前，只有 `B-tree`, `GiST`, `GIN`, 和 `BRIN` 索引类型支持多列索引。是否能够拥有多列取决于 `INCLUDE` 列能够被加进索引。索引最多可以拥有 32 列，包括`INCLUDE` 列（这个修改可以在构建 PostgreSQL 时修改，参见文件 `pg_config_manual.h`）。
+
+一个多列 B-tree 索引能够被用于索引列的任一子集设计查询条件的情况，但索引在引用索引最左边列的限制时最高效。准确的规则是最左边列上的相等限制，加上首列的不相等限制--它没有相等性限制，可被用于限制扫描索引的大小。直至最右边列的限制被索引检查，因此它能够减少表扫描的时间，但不能减少必须扫描的索引的数量。例如，给定一个在 `(a, b, c)` 上的索引，一个查询条件为 `WHERE a = 5 AND b >= 42 AND c < 77`, 索引将不得不从 `a = 5 and b = 42` 的第一条条目直至 `a = 5` 的最后一条。满足 `c >= 77` 的索引条目将被跳过，但它们不得不被扫描（过滤过）。索引原则上可用于在 `b 和/或 c` 上有限制但 `a`` 没限制的查询--但所有的索引不得不被扫描。因此在大多数情况下，计划器将倾向于序列表扫描而非利用索引。
+
+一个多列 GiST 索引可被用于查询条件涉及索引列的任一子集的情况。额外列上的条件限制了返回的索引的条目，但首列上的条件对决定扫描的索引量是最重要的。一个 GiST 索引但首列仅拥有少量不同值时相对低效，即使在额外列上拥有许多不同的值。
+
+一个多列 GIN 索引可被用于查询条件涉及索引列的任一子集的情况。不像 `B-tree` 或 `GiST`无论查询条件使用哪个索引列，索引检索有效性都一样。
+
+一个多列 BRIN 索引可被用于查询条件涉及索引列的任一子集的情况。像 `GIN` 而不像 `B-tree` 或 `GiST`无论查询条件使用哪个索引列，索引检索有效性都一样。在一个表上拥有多个 BRIN 索引而非一个多列 BRIN 索引的唯一原因在于拥有不同的 `pages_per_range` 存储参数。
+
+当然，每个列必须使用匹配索引的操作符，涉及其它操作符的子句不会被考虑。
+
+多列索引应该被适度使用。在大多数情况下，单个列上的索引时足够的，且节省时间和空间。多于三个列的索引不可能有帮助，除非表的使用时非常程式化的。参见[章节 11.5](https://www.postgresql.org/docs/current/indexes-bitmap-scans.html)和[章节 11.9](https://www.postgresql.org/docs/current/indexes-index-only-scans.html)以获取关于不同索引配置优点的讨论。
+
 #### 11.4. 索引和 ORDER BY
 #### 11.5. 绑定多个索引（Combining Multiple Indexes）
 #### 11.6. 唯一索引（Unique Indexes）
@@ -177,3 +285,4 @@ O. Obsolete or Renamed Features
 ## Reference
 
 - [PostgreSQL 15.3 Documentation](https://www.postgresql.org/docs/current/index.html)
+- [Index Columns for `LIKE` in PostgreSQL](https://niallburkley.com/blog/index-columns-for-like-in-postgres/)
