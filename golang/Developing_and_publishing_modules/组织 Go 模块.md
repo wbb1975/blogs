@@ -17,7 +17,7 @@ project-root-directory/
 
 (纵览本文，文件/包名是完全随意的)
 
-假设目录要上传到一个 GitHub 仓库 `github.com/someuser/modname`，`go.mod` 文件中的 `module` 行应该记为 
+假设目录要上传到一个 GitHub 仓库 **github.com/someuser/modname**，**go.mod** 文件中的 **module** 行应该记为 
 
 ```
 module github.com/someuser/modname
@@ -37,7 +37,7 @@ package modname
 import "github.com/someuser/modname"
 ```
 
-一个 Go 包可被细分成多个文件，单所有文件都驻留于同一目录，如下所示：
+一个 Go 包可被细分成多个文件，但所有文件都驻留于同一目录，如下所示：
 
 ```
 project-root-directory/
@@ -65,9 +65,9 @@ project-root-directory/
   main.go
 ```
 
-这里 **main.go** 文件包含 **func main**，但这渐进式一个习惯。“main” 文件也可以是 **modname.go**（`modname`` 的合适名字）或其它任何名字。
+这里 **main.go** 文件包含 **func main**，但这仅仅是一个惯例。**main** 文件也可以是 **modname.go**（`modname` 的合适名字）或其它任何名字。
 
-假设目录要上传到一个 GitHub 仓库 `github.com/someuser/modname`，`go.mod` 文件中的 `module` 行应该记为 
+假设目录要上传到一个 GitHub 仓库 **github.com/someuser/modname**，**go.mod** 文件中的 **module** 行应该记为 
 
 ```
 module github.com/someuser/modname
@@ -151,7 +151,7 @@ import "github.com/someuser/modname/hash"
 
 ### Multiple commands
 
-一个仓库的多个程序典型地拥有独立的目录：
+一个仓库的多个程序典型地拥有单独的目录：
 
 ```
 project-root-directory/
