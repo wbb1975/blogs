@@ -52,6 +52,62 @@ Number of dogs: 0
 
 啊哈，我们可以管理每个实例的所有属性，同时所有对象也可以包含一个共享变量。
 
+### 属性的继承
+
+在开始这个主题之前，让我们看看 `__dict__` 这个内建属性。
+
+```
+class Example:
+    classAttr = 0
+    def __init__(self, instanceAttr):
+        self.instanceAttr = instanceAttr
+a = Example(1)
+print(a.__dict__)
+print(Example.__dict__)
+Output:
+{'instanceAttr': 1}
+{'__module__': '__main__', '__doc__': None, '__dict__': <attribute '__dict__' of 'Example' objects>, '__init__': <function Example.__init__ at 0x7f8af2113f28>, 'classAttr': 0, '__weakref__': <attribute '__weakref__' of 'Example' objects>}
+```
+
+正如我们看到的，类和对象都有一个持有属性键值对的字典。类字典拥有多个对象不包含的内建属性。
+
+```
+b = Example(2)
+print(b.classAttr)
+print(Example.classAttr)
+b.classAttr = 653
+print(b.classAttr)
+print(Example.classAttr)
+Output:
+0
+0
+653
+0
+```
+
+喔喔。回到我早先写的，一个类的所有实例共享同样的类属性。这里发生了什么？我们修改了一个特定实例的类属性，但共享变量实际上并未改变。看看这些类、对象的字典将给我们深入的洞察。
+
+```
+b = Example(2)
+print(b.__dict__)
+print(Example.__dict__)
+b.classAttr = 653
+print(b.__dict__)
+print(Example.__dict__)
+Output:
+{'instanceAttr': 2}
+'__module__': '__main__', '__doc__': None, '__dict__': <attribute '__dict__' of 'Example' objects>, '__init__': <function Example.__init__ at 0x7f8af2113f28>, 'classAttr': 0, '__weakref__': <attribute '__weakref__' of 'Example' objects>}
+{'instanceAttr': 2, 'classAttr': 653}
+{'__module__': '__main__', '__doc__': None, '__dict__': <attribute '__dict__' of 'Example' objects>, '__init__': <function Example.__init__ at 0x7f8af2113f28>, 'classAttr': 0, '__weakref__': <attribute '__weakref__' of 'Example' objects>}
+```
+
+仔细看看，我们注意到 classAttr 被添加到对象的属性字典里了，带有其修改过的值。类字典里其值保持不变，这展示了类属性有时行为与对象属性类似。
+
+### 结论
+
+总而言之，类和对象属性是很有用的，但一起使用时可能引起混淆。当每个对象都需要共享一个变量时，比如计数器，类属性时有利的。当每个单独对象需要自己的值或者需要与其它对象区分时，对象属性具有优势。
+
 ### Reference
 
-- [Class and Object Attributes — Python]()
+- [Class and Object Attributes — Python](https://medium.com/swlh/class-and-object-attributes-python-8191dcd1f4cf)
+- [Python's property(): Add Managed Attributes to Your Classes](https://realpython.com/python-property/)

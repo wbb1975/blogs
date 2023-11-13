@@ -600,13 +600,613 @@ custom-layer.zip
 
 ## 部署容器镜像
 
+有三种方法可以为 Go Lambda 函数构建容器映像：
+
+- [使用 provided.al2 AWS 基础映像](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-al2)
+  Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译为原生代码，因此 Lambda 将 Go 视为自定义运行时系统。建议您使用自定义运行时系统的 [provided.al2](https://gallery.ecr.aws/lambda/provided) 基础映像，为 Lambda 构建 Go 映像。要使映像与 Lambda 兼容，您必须在映像中包含 `aws-lambda-go/lambda` 软件包。
+- [使用非 AWS 基础映像](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-other)
+  您还可以使用其它容器库的备用基础映像，例如 Alpine Linux 或 Debian。您还可以使用您的组织创建的自定义映像。要使映像与 Lambda 兼容，您必须在映像中包含 `aws-lambda-go/lambda` 软件包。
+- [使用 Go 1.x AWS 基础映像（旧版）](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-v1)
+
+Lambda 将继续支持 Go 1.x 基础映像，直到 2023 年 12 月 31 日结束对 Amazon Linux AMI 的维护支持。建议您[使用 provided.al2 自定义运行时系统](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-al2)，而不是 [Go 1.x 基础映像](https://gallery.ecr.aws/lambda/go)。
+
+> **提示** 要缩短 Lambda 容器函数激活所需的时间，请参阅 Docker 文档中的[使用多阶段构建](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#use-multi-stage-builds)。要构建高效的容器映像，请遵循[编写 Dockerfiles 的最佳实践](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)。
+
+本页面介绍了如何为 Lambda 构建、测试和部署容器映像。
+
+### Go AWS 基础映像
+
+AWS 为 Go 提供了以下基础映像：
+
+标签|运行时|操作系统|Dockerfile|淘汰
+----|----|----|----|----
+1|Go 1.x|Amazon Linux|[GitHub 上适用于 Go 1.x 的 Dockerfile](https://github.com/aws/aws-lambda-base-images/blob/go1.x/Dockerfile.go1.x)|2023年12月31日
+
+Amazon Elastic Container Registry 存储库：[gallery.ecr.aws/lambda/go](https://gallery.ecr.aws/lambda/go)
+
+### Go 运行时系统接口客户端
+
+`aws-lambda-go/lambda` 程序包包括运行时接口的实施。有关如何在映像中使用 `aws-lambda-go/lambda` 的示例，请参阅[使用 provided.al2 AWS 基础映像](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-al2)或[使用非 AWS 基础映像](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-other)。
+
+### 使用 provided.al2 AWS 基础映像
+
+Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译为原生代码，因此 Lambda 将 Go 视为自定义运行时系统。建议您使用自定义运行时系统的 `provided.al2` 基本映像，为 Go 函数构建容器映像。
+
+标签|运行时|操作系统|Dockerfile|淘汰
+----|----|----|----|----
+al2|自定义运行时|Amazon Linux 2|[GitHub 上用于自定义运行时系统的 Dockerfile](https://github.com/aws/aws-lambda-base-images/blob/provided.al2/Dockerfile.provided.al2)|
+alami|自定义运行时|Amazon Linux|[GitHub 上用于自定义运行时系统的 Dockerfile](https://github.com/aws/aws-lambda-base-images/blob/provided/Dockerfile.provided)|2023年12月31日
+
+有关这些基础映像的更多信息，请参阅 `Amazon ECR Public Gallery` 中的[provided](https://gallery.ecr.aws/lambda/provided)。
+
+您必须在 Go 处理程序中包含 `aws-lambda-go/lambda` 程序包。此程序包实施 Go 的编程模型，包括运行时系统接口。
+
+#### 先决条件
+
+要完成本节中的步骤，您必须满足以下条件：
+
+- Go
+- [Docker](https://docs.docker.com/get-docker)
+- [AWS Command Line Interface (AWS CLI) 版本 2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+#### 从 provided.al2 基础映像创建映像
+
+使用 `provided.al2` 基础映像构建和部署 Go 函数。
+
+1. 为项目创建一个目录，然后切换到该目录。
+   
+   ```
+   mkdir hello
+   cd hello
+   ```
+2. 初始化一个新的 Go 模块。
+   ```
+   go mod init example.com/hello-world
+   ```
+3. 添加 lambda 库作为新模块的依赖项。
+   ```
+   go get github.com/aws/aws-lambda-go/lambda
+   ```
+4. 创建一个名为 `main.go` 的文件，然后在文本编辑器中打开它。这是适用于 Lambda 函数的代码。您可以使用以下示例代码进行测试，也可以将其替换为您自己的代码。
+   ```
+   package main
+
+   import (
+    "context"
+    "github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-lambda-go/lambda"
+   )
+
+   func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+    response := events.APIGatewayProxyResponse{
+      StatusCode: 200,
+      Body:       "\"Hello from Lambda!\"",
+    }
+    return response, nil
+   }
+
+   func main() {
+    lambda.Start(handler)
+   }
+   ```
+5. 使用文本编辑器在项目目录中创建一个 Dockerfile。以下示例 Dockerfile 将使用[多阶段构建](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#use-multi-stage-builds)。这样便可在每个步骤中使用不同的基本映像。您可以使用一个映像（例如 [Go 基本映像](https://hub.docker.com/_/golang)）来编译代码并构建可执行二进制文件。然后，您可以在最后的 FROM 语句中使用不同的映像（例如 `provided.al2`）来定义部署到 Lambda 的映像。构建过程与最终部署映像分开，因此最终映像仅包含运行应用程序所需的文件。您可以使用可选的 `lambda.norpc` 标签排除 [lambda 库](https://github.com/aws/aws-lambda-go/tree/master/lambda)的远程过程调用（RPC）组件。只有在使用 Go 1.x 运行时系统时才需要 RPC 组件。排除 RPC 会减小部署包的大小。
+
+   > **注意** 确保您在 Dockerfile 中指定的 Go 版本（例如 golang:1.20）与用于创建应用程序的 Go 版本相同。
+
+   ```
+   FROM golang:1.20 as build
+   WORKDIR /helloworld
+   # Copy dependencies list
+   COPY go.mod go.sum ./
+   # Build with optional lambda.norpc tag
+   COPY main.go .
+   RUN go build -tags lambda.norpc -o main main.go
+   # Copy artifacts to a clean image
+   FROM public.ecr.aws/lambda/provided:al2
+   COPY --from=build /helloworld/main ./main
+   ENTRYPOINT [ "./main" ]
+   ```
+
+6. 使用 [docker build](https://docs.docker.com/engine/reference/commandline/build/) 命令构建 Docker 镜像。以下示例将镜像命名为 `docker-image` 并为其提供 `test` [标签](https://docs.docker.com/engine/reference/commandline/build/#tag)。
+   ```
+   docker build --platform linux/amd64 -t docker-image:test .
+   ```
+
+   > **注意** 该命令指定了 **--platform linux/amd64** 选项，可确保无论生成计算机的架构如何，容器始终与 Lambda 执行环境兼容。如果打算使用 `ARM64` 指令集架构创建 Lambda 函数，请务必将命令更改为使用 **--platform linux/arm64** 选项。
+
+#### （可选）在本地测试镜像
+
+使用[运行时系统接口仿真器](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/images-test.html)在本地测试镜像。`provided.al2` 基础镜像还包括运行时系统接口仿真器。
+
+在本地计算机上运行运行时系统接口仿真器：
+
+1. 使用 `docker run`` 命令启动 Docker 镜像。请注意以下几点：
+   
+   - `docker-image` 是映像名称，`test` 是标签。
+   - `./main` 是您的 Dockerfile 中的 `ENTRYPOINT`。
+   
+   ```
+   docker run -d -v ~/.aws-lambda-rie:/aws-lambda -p 9000:8080 --entrypoint /aws-lambda/aws-lambda-rie docker-image:test ./main
+   ```
+   
+   此命令会将镜像作为容器运行，并在 `localhost:9000/2015-03-31/functions/function/invocations` 创建本地端点。
+2. 在新的终端窗口中，使用 curl 命令将事件发布到以下端点：
+   
+   ```
+   curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
+   ```
+
+   此命令使用空事件调用函数并返回响应。某些函数可能需要 JSON 负载。示例：
+   ```
+   curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"payload":"hello world!"}'
+   ```
+3. 获取容器 ID。
+   ```
+   docker ps
+   ```
+4. 使用 [docker kill](https://docs.docker.com/engine/reference/commandline/kill/) 命令停止容器。在此命令中，将 `3766c4ab331c`` 替换为上一步中的容器 ID。
+   ```
+   docker kill 3766c4ab331c
+   ```
+
+#### 部署镜像
+
+将映像上传到 Amazon ECR 并创建 Lambda 函数：
+
+1. 运行 [get-login-password](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ecr/get-login-password.html) 命令，以针对 Amazon ECR 注册表进行 Docker CLI 身份验证。
+   - 将 `--region` 值设置为要在其中创建 Amazon ECR 存储库的 AWS 区域。
+   - 将 `111122223333` 替换为您的 AWS 账户 ID。
+
+   ```
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 111122223333.dkr.ecr.us-east-1.amazonaws.com
+   ```
+2. 使用 [create-repository](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/ecr/create-repository.html) 命令在 Amazon ECR 中创建存储库。
+   
+   ```
+   aws ecr create-repository --repository-name hello-world --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
+   ```
+
+   如果成功，您将会看到如下响应：
+   ```
+   {
+      "repository": {
+          "repositoryArn": "arn:aws:ecr:us-east-1:111122223333:repository/hello-world",
+          "registryId": "111122223333",
+          "repositoryName": "hello-world",
+          "repositoryUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/hello-world",
+          "createdAt": "2023-03-09T10:39:01+00:00",
+          "imageTagMutability": "MUTABLE",
+          "imageScanningConfiguration": {
+              "scanOnPush": true
+          },
+          "encryptionConfiguration": {
+              "encryptionType": "AES256"
+          }
+      }
+   }
+   ```
+3. 从上一步的输出中复制 `repositoryUri`。
+4. 运行 [docker tag](https://docs.docker.com/engine/reference/commandline/tag/) 命令，将本地映像作为最新版本标记到 Amazon ECR 存储库中。在此命令中：
+   
+   - 将 `docker-image:test` 替换为 Docker 镜像的名称和标签。
+   - 将 `<ECRrepositoryUri>` 替换为复制的 `repositoryUri`。确保 URI 末尾包含 `:latest`。
+
+   ```
+   docker tag docker-image:test <ECRrepositoryUri>:latest
+   ```
+
+   示例：
+
+   ```
+   docker tag docker-image:test 111122223333.dkr.ecr.us-east-1.amazonaws.com/hello-world:latest
+   ```
+    
+5. 运行 [docker push](https://docs.docker.com/engine/reference/commandline/push/) 命令，以将本地映像部署到 Amazon ECR 存储库。确保存储库 URI 末尾包含 `:latest`。
+
+   ```
+   docker push 111122223333.dkr.ecr.us-east-1.amazonaws.com/hello-world:latest
+   ```
+6. 如果您还没有函数的执行角色，请[创建执行角色](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/gettingstarted-awscli.html#with-userapp-walkthrough-custom-events-create-iam-role)。在下一步中，您需要提供角色的 Amazon 资源名称（ARN）。
+7. 创建 Lambda 函数。对于 `ImageUri`，指定之前的存储库 URI。确保 URI 末尾包含 `:latest`。
+   
+   ```
+   aws lambda create-function \
+    --function-name hello-world \
+    --package-type Image \
+    --code ImageUri=111122223333.dkr.ecr.us-east-1.amazonaws.com/hello-world:latest \
+    --role arn:aws:iam::111122223333:role/lambda-ex
+   ```
+8. 调用函数。
+   
+   ```
+   aws lambda invoke --function-name hello-world response.json
+   ```
+
+   应出现如下响应：
+
+   ```
+   {
+    "ExecutedVersion": "$LATEST", 
+    "StatusCode": 200
+   }
+   ```
+9.  要查看函数的输出，请检查 `response.json` 文件。
+
+要更新函数代码，您必须再次构建镜像，将新镜像上传到 Amazon ECR 存储库，然后使用 [update-function-code](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/lambda/update-function-code.html) 命令将镜像部署到 Lambda 函数。
+
+### 使用非 AWS 基础镜像
+
+您可以从非 AWS 基础映像为 Go 构建容器镜像。以下步骤中的示例 Dockerfile 使用 [Alpine 基础镜像](https://hub.docker.com/_/golang/)。
+
+您必须在 Go 处理程序中包含 [aws-lambda-go/lambda](https://github.com/aws/aws-lambda-go) 程序包。此程序包实施 Go 的编程模型，包括运行时系统接口。
+
+#### 先决条件
+
+要完成本节中的步骤，您必须满足以下条件：
+
+- Go
+- [Docker](https://docs.docker.com/get-docker)
+- [AWS Command Line Interface (AWS CLI) 版本 2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+#### 从备用基础镜像创建镜像
+
+使用 Alpine 基本映像构建和部署 Go 函数：
+
+1. 为项目创建一个目录，然后切换到该目录。
+   
+   ```
+   mkdir hello
+   cd hello
+   ```
+2. 初始化一个新的 Go 模块。
+   
+   ```
+   go mod init example.com/hello-world
+   ```
+3. 添加 lambda 库作为新模块的依赖项。
+   
+   ```
+   go get github.com/aws/aws-lambda-go/lambda
+   ```
+4. 创建一个名为 `main.go` 的文件，然后在文本编辑器中打开它。这是适用于 Lambda 函数的代码。您可以使用以下示例代码进行测试，也可以将其替换为您自己的代码。
+   
+   ```
+   package main
+
+   import (
+      "context"
+      "github.com/aws/aws-lambda-go/events"
+      "github.com/aws/aws-lambda-go/lambda"
+   )
+
+   func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+      response := events.APIGatewayProxyResponse{
+         StatusCode: 200,
+         Body:       "\"Hello from Lambda!\"",
+      }
+      return response, nil
+   }
+
+   func main() {
+      lambda.Start(handler)
+   }
+   ```
+5. 使用文本编辑器在项目目录中创建一个 Dockerfile。以下示例 Dockerfile 使用 [Alpine 基础映像](https://hub.docker.com/_/golang/)。
+   
+   > **注意** 确保您在 Dockerfile 中指定的 Go 版本（例如 `golang:1.20`）与用于创建应用程序的 Go 版本相同。
+
+   ```
+   FROM golang:1.20.2-alpine3.16 as build
+   WORKDIR /helloworld
+   # Copy dependencies list
+   COPY go.mod go.sum ./
+   # Build
+   COPY main.go .
+   RUN go build -o main main.go
+   # Copy artifacts to a clean image
+   FROM alpine:3.16
+   COPY --from=build /helloworld/main /main
+   ENTRYPOINT [ "/main" ]
+   ```
+6. 使用 [docker build](https://docs.docker.com/engine/reference/commandline/build/) 命令构建 Docker 映像。以下示例将映像命名为 `docker-image` 并为其提供 `test` [标签](https://docs.docker.com/engine/reference/commandline/build/#tag)。
+   
+   ```
+   docker build --platform linux/amd64 -t docker-image:test .
+   ```
+  
+   > **注意** 该命令指定了 `--platform linux/amd64` 选项，可确保无论生成计算机的架构如何，容器始终与 Lambda 执行环境兼容。如果打算使用 ARM64 指令集架构创建 Lambda 函数，请务必将命令更改为使用 `--platform linux/arm64` 选项。
+#### （可选）在本地测试镜像
+
+使用[运行时系统接口仿真器](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/images-test.html)在本地测试映像。您可以[将仿真器构建到映像中](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/images-test.html#images-rie-build)，也可以将其安装在本地计算机上。
+
+在本地计算机上安装并运行运行时系统接口仿真器 (Linux/macOS)：
+
+1. 从项目目录中，运行以下命令以从 GitHub 下载运行时系统接口仿真器（x86-64 架构）并将其安装在本地计算机上。
+
+   ```
+   mkdir -p ~/.aws-lambda-rie && \
+    curl -Lo ~/.aws-lambda-rie/aws-lambda-rie https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie && \
+    chmod +x ~/.aws-lambda-rie/aws-lambda-rie
+   ```
+
+   要安装 arm64 仿真器，请将上一条命令中的 GitHub 存储库 URL 替换为以下内容：
+
+   ```
+   https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie-arm64
+   ```
+2. 使用 `docker run` 命令启动 Docker 映像。请注意以下几点：
+   
+   + `docker-image` 是映像名称，`test` 是标签。
+   + `/main` 是您的 Dockerfile 中的 `ENTRYPOINT`。
+   
+   ```
+   docker run -d -v ~/.aws-lambda-rie:/aws-lambda -p 9000:8080 \
+    --entrypoint /aws-lambda/aws-lambda-rie \
+    docker-image:test \
+        /main
+   ```
+   此命令会将映像作为容器运行，并在 `localhost:9000/2015-03-31/functions/function/invocations` 创建本地端点。
+3. 将事件发布到本地端点。
+   
+   在 Linux 和 macOS 中，运行以下 curl 命令：
+   ```
+   curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
+   ```
+   此命令使用空事件调用函数并返回响应。如果您使用自己的函数代码而不是示例函数代码，则可能需要使用 JSON 负载调用函数。示例：
+   ```
+   curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"payload":"hello world!"}'
+   ```
+4. 获取容器 ID: `docker ps`
+5. 使用 [docker kill](https://docs.docker.com/engine/reference/commandline/kill/) 命令停止容器。在此命令中，将 3766c4ab331c 替换为上一步中的容器 ID。
+   
+   ```
+   docker kill 3766c4ab331c
+   ```
+
+#### 部署镜像
+
+见上节。
+
+### 使用 Go 1.x 基础镜像
+
+建议您使用 provided.al2 自定义运行时系统而不是 [Go 1.x 基本映像](https://gallery.ecr.aws/lambda/go)。Lambda 将继续支持 Go 1.x 基本映像，直到 2023年12月31日结束对 Amazon Linux AMI 的维护支持。有关 Amazon Linux AMI 支持的更多信息，请参阅 [Amazon Linux AMI 常见问题](http://aws.amazon.com/amazon-linux-ami/faqs/)。
+
+如果您使用的是 Go 1.x 基本映像，则必须将函数迁移到 `provided.al2`。此迁移无需更改任何代码。唯一需要进行的更改涉及如何构建部署包以及使用哪个运行时系统来创建函数。有关更多信息，请参阅[使用 provided.al2 AWS 基本映像](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/go-image.html#go-image-al2)。
+
 ## 日志记录
+
+AWS Lambda 将代表您自动监控 Lambda 函数并将日志记录发送至 Amazon CloudWatch。您的 Lambda 函数带有一个 CloudWatch Logs 日志组以及函数的每个实例的日志流。Lambda 运行时环境会将每个调用的详细信息发送到日志流，然后中继函数代码的日志和其他输出。有关更多信息，请参阅[访问 AWS Lambda 的 Amazon CloudWatch Logs](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs.html)。
+
+本页介绍如何从 Lambda 函数的代码生成日志输出，或使用 `AWS Command Line Interface`、Lambda 控制台或 CloudWatch 控制台访问日志。
+
+### 创建返回日志的函数
+
+您可以使用 [fmt 程序包](https://golang.org/pkg/fmt/)中的方法或写入到 `stdout` 或 `stderr` 的任何日志记录库，从函数代码输出日志。以下示例使用[日志包](https://golang.org/pkg/log/)。
+
+**例 [main.go](https://github.com/awsdocs/aws-lambda-developer-guide/tree/main/sample-apps/blank-go/function/main.go) – 日志记录**
+
+```
+func handleRequest(ctx context.Context, event events.SQSEvent) (string, error) {
+  // event
+  eventJson, _ := json.MarshalIndent(event, "", "  ")
+  log.Printf("EVENT: %s", eventJson)
+  // environment variables
+  log.Printf("REGION: %s", os.Getenv("AWS_REGION"))
+  log.Println("ALL ENV VARS:")
+  for _, element := range os.Environ() {
+    log.Println(element)
+  }
+```
+
+**例 日志格式**
+
+```
+START RequestId: dbda340c-xmpl-4031-8810-11bb609b4c71 Version: $LATEST
+2020/03/27 03:40:05 EVENT: {
+  "Records": [
+    {
+      "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
+      "receiptHandle": "MessageReceiptHandle",
+      "body": "Hello from SQS!",
+      "md5OfBody": "7b27xmplb47ff90a553787216d55d91d",
+      "md5OfMessageAttributes": "",
+      "attributes": {
+        "ApproximateFirstReceiveTimestamp": "1523232000001",
+        "ApproximateReceiveCount": "1",
+        "SenderId": "123456789012",
+        "SentTimestamp": "1523232000000"
+      },
+      ...
+2020/03/27 03:40:05 AWS_LAMBDA_LOG_STREAM_NAME=2020/03/27/[$LATEST]569cxmplc3c34c7489e6a97ad08b4419
+2020/03/27 03:40:05 AWS_LAMBDA_FUNCTION_NAME=blank-go-function-9DV3XMPL6XBC
+2020/03/27 03:40:05 AWS_LAMBDA_FUNCTION_MEMORY_SIZE=128
+2020/03/27 03:40:05 AWS_LAMBDA_FUNCTION_VERSION=$LATEST
+2020/03/27 03:40:05 AWS_EXECUTION_ENV=AWS_Lambda_go1.x
+END RequestId: dbda340c-xmpl-4031-8810-11bb609b4c71
+REPORT RequestId: dbda340c-xmpl-4031-8810-11bb609b4c71	Duration: 38.66 ms	Billed Duration: 39 ms	Memory Size: 128 MB	Max Memory Used: 54 MB	Init Duration: 203.69 ms	
+XRAY TraceId: 1-5e7d7595-212fxmpl9ee07c4884191322	SegmentId: 42ffxmpl0645f474	Sampled: true
+```
+
+Go 运行时记录每次调用的 `START`、`END` 和 `REPORT` 行。报告行提供了以下详细信息：
+
+**REPORT 行数据字段**
+
+- **RequestId** – 调用的唯一请求 ID。
+- **Duration**（持续时间）– 函数的处理程序方法处理事件所花费的时间。
+- **Billed Duration**（计费持续时间）– 针对调用计费的时间量。
+- **Memory Size**（内存大小）– 分配给函数的内存量。
+- **Max Memory Used**（最大内存使用量）– 函数使用的内存量。
+- **Init Duration**（初始持续时间）– 对于提供的第一个请求，为运行时在处理程序方法外部加载函数和运行代码所花费的时间。
+- **XRAY TraceId** – 对于追踪的请求，为 [AWS X-Ray 追踪 ID](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/services-xray.html)。
+- **SegmentId** – 对于追踪的请求，为 X-Ray 分段 ID。
+- **Sampled**（采样）– 对于追踪的请求，为采样结果。
+
+### 使用 Lambda 控制台
+
+调用 Lambda 函数后，您可以使用 Lambda 控制台查看日志输出。
+
+如果可以在嵌入式**代码**编辑器中测试代码，则可以在**执行结果**中找到日志。使用控制台测试功能调用函数时，可以在**详细信息**部分找到**日志输出**。
+
+### 使用 CloudWatch 控制台
+
+您可以使用 Amazon CloudWatch 控制台查看所有 Lambda 函数调用的日志。
+
+使用 CloudWatch 控制台查看日志
+
+1. 打开 CloudWatch 控制台的 [Log groups](https://console.aws.amazon.com/cloudwatch/home?#logs:)（日志组页面）。
+2. 选择您的函数 (`/aws/lambda/your-function-name``) 的日志组。
+3. 创建日志流。
+
+每个日志流对应一个[函数实例](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/lambda-runtime-environment.html)。日志流会在您更新 Lambda 函数以及创建更多实例来处理多个并发调用时显示。要查找特定调用的日志，建议您使用 AWS X-Ray 检测函数。X-Ray 会在追踪中记录有关请求和日志流的详细信息。
+
+如需使用将日志和跟踪与 X-Ray 相关联的示例应用程序，请参阅 [AWS Lambda 错误处理器示例应用程序](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/samples-errorprocessor.html)。
+
+### 使用 AWS Command Line Interface (AWS CLI)
+
+AWS CLI 是一种开源工具，让您能够在命令行 Shell 中使用命令与 AWS 服务进行交互。要完成本节中的步骤，您必须满足以下条件：
+
+- [AWS Command Line Interface (AWS CLI) 版本 2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [AWS CLI – 使用 aws configure 进行快速配置](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
+
+您可以通过 [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html)，使用 `--log-type` 命令选项检索调用的日志。响应包含一个 `LogResult` 字段，其中包含多达 4KB 来自调用的 `base64` 编码日志。
+
+#### 例 检索日志 ID
+
+以下示例说明如何从 `LogResult` 字段中检索名为 `my-function` 的函数的日志 ID。
+
+```
+aws lambda invoke --function-name my-function out --log-type Tail
+```
+
+您应看到以下输出：
+```
+{
+    "StatusCode": 200,
+    "LogResult": "U1RBUlQgUmVxdWVzdElkOiA4N2QwNDRiOC1mMTU0LTExZTgtOGNkYS0yOTc0YzVlNGZiMjEgVmVyc2lvb...",
+    "ExecutedVersion": "$LATEST"
+}
+```
+#### 例 解码日志
+
+在同一命令提示符下，使用 `base64` 实用程序解码日志。以下示例说明如何为 `my-function` 检索 `base64` 编码的日志。
+
+```
+aws lambda invoke --function-name my-function out --log-type Tail \
+--query 'LogResult' --output text --cli-binary-format raw-in-base64-out | base64 --decode
+```
+
+如果使用 `cli-binary-format 版本 2`，则 AWS CLI 选项是必需的。要将其设为默认设置，请运行 `aws configure set cli-binary-format raw-in-base64-out`。有关更多信息，请参阅 [AWS CLI 支持的全局命令行选项](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-options.html#cli-configure-options-list)。
+
+您应看到以下输出：
+
+```
+START RequestId: 57f231fb-1730-4395-85cb-4f71bd2b87b8 Version: $LATEST
+"AWS_SESSION_TOKEN": "AgoJb3JpZ2luX2VjELj...", "_X_AMZN_TRACE_ID": "Root=1-5d02e5ca-f5792818b6fe8368e5b51d50;Parent=191db58857df8395;Sampled=0"",ask/lib:/opt/lib",
+END RequestId: 57f231fb-1730-4395-85cb-4f71bd2b87b8
+REPORT RequestId: 57f231fb-1730-4395-85cb-4f71bd2b87b8  Duration: 79.67 ms      Billed Duration: 80 ms         Memory Size: 128 MB     Max Memory Used: 73 MB
+```
+
+base64 实用程序在 Linux、macOS 和 [Ubuntu on Windows](https://docs.microsoft.com/en-us/windows/wsl/install-win10) 上可用。macOS 用户可能需要使用 `base64 -D`。
+
+#### 例 get-logs.sh 脚本
+
+在同一命令提示符下，使用以下脚本下载最后五个日志事件。此脚本使用 `sed` 从输出文件中删除引号，并休眠 15 秒以等待日志可用。输出包括来自 Lambda 的响应，以及来自 `get-log-events` 命令的输出。
+
+复制以下代码示例的内容并将其作为 `get-logs.sh` 保存在 Lambda 项目目录中。
+
+```
+#!/bin/bash
+aws lambda invoke --function-name my-function --cli-binary-format raw-in-base64-out --payload '{"key": "value"}' out
+sed -i'' -e 's/"//g' out
+sleep 15
+aws logs get-log-events --log-group-name /aws/lambda/my-function --log-stream-name stream1 --limit 5
+```
+
+#### 例 macOS 和 Linux（仅限）
+
+在同一命令提示符下，macOS 和 Linux 用户可能需要运行以下命令以确保脚本可执行。
+
+```
+chmod -R 755 get-logs.sh
+```
+#### 例 检索最后五个日志事件
+
+在同一命令提示符下，运行以下脚本以获取最后五个日志事件。
+
+```
+./get-logs.sh
+```
+
+您应看到以下输出：
+
+```
+{
+    "StatusCode": 200,
+    "ExecutedVersion": "$LATEST"
+}
+{
+    "events": [
+        {
+            "timestamp": 1559763003171,
+            "message": "START RequestId: 4ce9340a-b765-490f-ad8a-02ab3415e2bf Version: $LATEST\n",
+            "ingestionTime": 1559763003309
+        },
+        {
+            "timestamp": 1559763003173,
+            "message": "2019-06-05T19:30:03.173Z\t4ce9340a-b765-490f-ad8a-02ab3415e2bf\tINFO\tENVIRONMENT VARIABLES\r{\r  \"AWS_LAMBDA_FUNCTION_VERSION\": \"$LATEST\",\r ...",
+            "ingestionTime": 1559763018353
+        },
+        {
+            "timestamp": 1559763003173,
+            "message": "2019-06-05T19:30:03.173Z\t4ce9340a-b765-490f-ad8a-02ab3415e2bf\tINFO\tEVENT\r{\r  \"key\": \"value\"\r}\n",
+            "ingestionTime": 1559763018353
+        },
+        {
+            "timestamp": 1559763003218,
+            "message": "END RequestId: 4ce9340a-b765-490f-ad8a-02ab3415e2bf\n",
+            "ingestionTime": 1559763018353
+        },
+        {
+            "timestamp": 1559763003218,
+            "message": "REPORT RequestId: 4ce9340a-b765-490f-ad8a-02ab3415e2bf\tDuration: 26.73 ms\tBilled Duration: 27 ms \tMemory Size: 128 MB\tMax Memory Used: 75 MB\t\n",
+            "ingestionTime": 1559763018353
+        }
+    ],
+    "nextForwardToken": "f/34783877304859518393868359594929986069206639495374241795",
+    "nextBackwardToken": "b/34783877303811383369537420289090800615709599058929582080"
+}
+```
+
+### 删除日志
+
+删除函数时，日志组不会自动删除。要避免无限期存储日志，请删除日志组，或[配置一个保留期](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Working-with-log-groups-and-streams.html#SettingLogRetention)，在该保留期之后，日志将自动删除。
 
 ## 错误
 
 ## 跟踪
 
 ## 环境变量
+
+要在 Go 中访问[环境变量](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/configuration-envvars.html)，请使用 [Getenv](https://golang.org/pkg/os/#Getenv) 函数。
+
+下面介绍了如何完成此步骤。请注意，函数将导入 [fmt 程序包](https://golang.org/pkg/fmt/)，以格式化打印的结果，还将导入 [os 程序包](https://golang.org/pkg/os/)，后者是一个独立于平台的系统界面，可让您访问环境变量。
+
+```
+package main
+
+import (
+	"fmt"
+	"os"
+	"github.com/aws/aws-lambda-go/lambda"
+)
+
+func main() {
+	fmt.Printf("%s is %s. years old\n", os.Getenv("NAME"), os.Getenv("AGE"))
+
+}
+```
+
+有关 Lambda 运行时设置的环境变量的列表，请参阅[定义运行时环境变量](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/configuration-envvars.html#configuration-envvars-runtime)。
 
 ## Reference
 
