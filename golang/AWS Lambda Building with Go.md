@@ -1027,7 +1027,7 @@ REPORT RequestId: dbda340c-xmpl-4031-8810-11bb609b4c71	Duration: 38.66 ms	Billed
 XRAY TraceId: 1-5e7d7595-212fxmpl9ee07c4884191322	SegmentId: 42ffxmpl0645f474	Sampled: true
 ```
 
-Go 运行时记录每次调用的 `START`、`END` 和 `REPORT` 行。报告行提供了以下详细信息：
+Go 运行时记录每次调用的 **START**、**END** 和 **REPORT** 行。报告行提供了以下详细信息：
 
 **REPORT 行数据字段**
 
@@ -1183,7 +1183,246 @@ chmod -R 755 get-logs.sh
 
 ## 错误
 
+您的代码引发错误时，Lambda 将会生成错误的 JSON 表示形式。此错误文档会出现在调用日志和输出中，用于同步调用。
+
+本页介绍如何使用 Lambda 控制台和 AWS CLI 查看 Go 运行时的 Lambda 函数调用错误。
+
+### 创建返回异常的函数
+
+以下代码示例演示了直接从 Lambda 函数引发异常并直接对其进行处理的自定义错误处理。请注意，Go 中的自定义错误必须导入 `errors` 模块。
+
+```
+package main
+ 
+import (
+   "errors"
+   "github.com/aws/aws-lambda-go/lambda"
+)
+ 
+func OnlyErrors() error {
+   return errors.New("something went wrong!")
+}
+ 
+func main() {
+   lambda.Start(OnlyErrors)
+}
+```
+
+将返回以下内容：
+
+```
+{
+  "errorMessage": "something went wrong!",
+  "errorType": "errorString"
+}
+```
+
+### 工作原理
+
+调用 Lambda 函数时，Lambda 将接收调用请求并验证执行角色中的权限、验证事件文档是否是有效的 JSON 文档，并检查参数值。
+
+如果请求通过验证，Lambda 会将请求发送到函数实例。[Lambda 运行时](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/lambda-runtimes.html)环境会将事件文档转换为一个对象，并将该对象传递给函数处理程序。
+
+如果 Lambda 遇到错误，则会返回指示错误原因的异常类型、消息和 HTTP 状态代码。调用 Lambda 函数的客户端或服务可以通过编程方式处理错误或将其一直传递到终端用户。正确的错误处理行为取决于应用程序的类型、受众以及错误来源。
+
+以下列表描述了您可以从 Lambda 中接收的状态码范围。
+
+- **2xx** 2xx 响应中包含 `X-Amz-Function-Error` 标题的 2xx 系列错误会指示 Lambda 运行时或函数错误。2xx 系列状态代码表示 Lambda 已接受请求，但 Lambda 通过在响应中包含 `X-Amz-Function-Error` 标题，而不是通过错误代码来指示错误。
+- **4xx** 4xx 系列错误指示调用客户端或服务可以通过修改请求、请求权限或重试请求来修复的错误。4xx 系列错误（而不是 429）通常指示请求存在错误。
+- **5xx** 5xx 系列错误指示 Lambda 问题，或者函数的配置或资源存在问题。5xx 系列错误可以指示无需用户采取任何操作即可解决的临时情况。调用客户端或服务无法解决这些问题，但 Lambda 函数的拥有者可能能够修复该问题。
+
+有关调用错误的完整列表，请参阅 [InvokeFunction 错误](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/API_Invoke.html#API_Invoke_Errors)。
+
+### 使用 Lambda 控制台
+
+您可以通过配置测试事件并查看输出，在 Lambda 控制台上调用函数。输出也会捕获到函数的执行日志中，当启用 [active tracing](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/services-xray.html) (活动跟踪) 时，会捕获到 AWS X-Ray 中。
+
+在 Lambda 控制台中调用函数
+
+1. 打开 Lamba 控制台的 [Functions page](https://console.aws.amazon.com/lambda/home#/functions)（函数页面）。
+2. 选择要测试的函数，然后选择 **Test**（测试）。
+3. 在 **Test event**（测试事件）中，选择 **New event**（新建事件）。
+4. 选择 **Template**（模板）。
+5. 对于 **Name**（名称），输入测试事件的名称。在文本输入框中，输入 JSON 测试事件。
+6. 选择 **Save changes**（保存更改）。
+7. 选择 **Test**（测试）。
+
+Lambda 控制台会[同步](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/invocation-sync.html)调用您的函数并显示结果。要查看响应、日志和其他信息，请展开 **Details** (详细信息) 部分。
+
+### 使用 AWS Command Line Interface (AWS CLI)
+
+AWS CLI 是一种开源工具，让您能够在命令行 Shell 中使用命令与 AWS 服务进行交互。要完成本节中的步骤，您必须满足以下条件：
+
+- [AWS Command Line Interface (AWS CLI) 版本 2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [AWS CLI – 使用 aws configure 进行快速配置](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
+
+在 AWS CLI 中调用 Lambda 函数时，AWS CLI 会将响应分为两个文档。AWS CLI 响应将显示在命令提示符中。如果发生错误，响应将包含一个 `FunctionError` 字段。函数返回的调用响应或错误将写入到输出文件。例如，`output.json` 或 `output.txt`。
+
+以下调用 命令示例演示了如何调用函数并将调用响应写入 `output.txt` 文件。
+
+```
+aws lambda invoke   \
+  --function-name my-function   \
+      --cli-binary-format raw-in-base64-out  \
+          --payload '{"key1": "value1", "key2": "value2", "key3": "value3"}' output.txt
+```
+
+如果使用 cli-binary-format 版本 2，则 AWS CLI 选项是必需的。要将其设为默认设置，请运行 `aws configure set cli-binary-format raw-in-base64-out`。有关更多信息，请参阅 [AWS CLI 支持的全局命令行选项](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-options.html#cli-configure-options-list)。
+
+命令提示符中应该会显示 AWS CLI 响应：
+
+```
+{
+    "StatusCode": 200,
+    "FunctionError": "Unhandled",
+    "ExecutedVersion": "$LATEST"
+}
+```
+
+`output.txt`` 文件中应该会显示函数调用响应：在同一命令提示符下，您还可以使用以下命令在命令提示符中查看输出：
+
+```
+cat output.txt
+```
+
+命令提示符中应该会显示调用响应。
+
+### 其他 AWS 服务中的错误处理
+
+当其他 AWS 服务调用您的函数时，服务会选择调用类型和重试行为。AWS 服务可以按计划调用您的函数，以响应资源上的生命周期事件或者针对来自用户的请求提供响应。某些服务异步调用函数并让 Lambda 处理错误，而其他服务则重试或将错误传回给用户。
+
+例如，API Gateway 将所有调用和函数错误视为内部错误。如果 Lambda API 拒绝调用请求，则 API Gateway 会返回 500 错误代码。如果函数运行但返回错误，或返回格式错误的响应，则 API Gateway 返回 502 错误代码。要自定义错误响应，您必须捕获代码中的错误并以所需格式设置响应的格式。
+
+建议使用 AWS X-Ray 来确定错误来源及其原因。您可使用 X-Ray 找出哪个组件遇到了错误，并查看有关错误的详细信息。以下示例显示导致 API Gateway 发出 502 响应的函数错误。
+
+![发出 502 响应的函数错误](images/tracemap-apig-502.png)
+
+有关更多信息，请参阅[在 AWS Lambda 中检测 Go 代码](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/golang-tracing.html)。
+
 ## 跟踪
+
+Lambda 与 AWS X-Ray 集成，以帮助您跟踪、调试和优化 Lambda 应用程序。您可以在某个请求遍历应用程序中的资源（其中可能包括 Lambda 函数和其他 AWS 服务）时，使用 X-Ray 跟踪该请求。
+
+要将跟踪数据发送到 X-Ray，您可以使用以下两个软件开发工具包 (SDK) 库之一：
+
+- [适用于 OpenTelemetry 的 AWS 发行版 (ADOT)](http://aws.amazon.com/otel) – 一种安全、可供生产、支持 AWS 的 OpenTelemetry (OTel) SDK 的分发版本。
+- [适用于 Go 的 AWS X-Ray 软件开发工具包](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-go.html) – 用于生成跟踪数据并将其发送到 X-Ray 的 SDK。
+
+每个开发工具包均提供了将遥测数据发送到 X-Ray 服务的方法。然后，您可以使用 X-Ray 查看、筛选和获得对应用程序性能指标的洞察，从而发现问题和优化机会。
+
+> **重要** X-Ray 和 Powertools for AWS Lambda SDK 是 AWS 提供的紧密集成的分析解决方案的一部分。ADOT Lambda Layers 是全行业通用的跟踪分析标准的一部分，该标准通常会收集更多数据，但可能不适用于所有使用案例。您可以使用任一解决方案在 X-Ray 中实现端到端跟踪。要了解有关如何在两者之间进行选择的更多信息，请参阅[在 AWS Distro for Open Telemetry 和 X-Ray 开发工具包之间进行选择](https://docs.aws.amazon.com/xray/latest/devguide/xray-instrumenting-your-app.html#xray-instrumenting-choosing)。
+
+### 使用 ADOT 分析您的 Go 函数
+
+ADOT 提供完全托管式 Lambda [层](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/gettingstarted-concepts.html#gettingstarted-concepts-layer)，这些层使用 OTel SDK，将收集遥测数据所需的一切内容打包起来。通过使用此层，您可以在不必修改任何函数代码的情况下，对您的 Lambda 函数进行分析。您还可以将您的层配置为对 OTel 进行自定义初始化。有关更多信息，请参阅 ADOT 文档中的[适用于 Lambda 上的 ADOT 收集器的自定义配置](https://aws-otel.github.io/docs/getting-started/lambda#custom-configuration-for-the-adot-collector-on-lambda)。
+
+对于 Go 运行时，可以添加 适用于 ADOT Go 的 AWS 托管 Lambda 层以自动分析您的函数。有关如何添加此层的详细说明，请参阅 ADOT 文档中的 [AWS Distro for OpenTelemetry Lambda 对 Go 的支持](https://aws-otel.github.io/docs/getting-started/lambda/lambda-go)。
+
+### 使用 X-Ray SDK 分析您的 Go 函数
+
+要记录有关 Lambda 函数对应用程序中的其他资源进行的调用的详细信息，您还可以使用适用于 Go 的 AWS X-Ray 开发工具包。要获取开发工具包，请使用 go get 从 [GitHub 存储库](https://github.com/aws/aws-xray-sdk-go)下载开发工具包：
+
+```
+go get github.com/aws/aws-xray-sdk-go
+```
+
+要检测AWS开发工具包客户端，请将客户端传递给 `xray.AWS()` 方法。然后，您可以使用该方法的 `WithContext` 版本来跟踪调用。
+
+```
+svc := s3.New(session.New())
+xray.AWS(svc.Client)
+...
+svc.ListBucketsWithContext(ctx aws.Context, input *ListBucketsInput)
+```
+
+在添加正确的依赖项并进行必要的代码更改后，请通过 Lambda 控制台或 API 激活函数配置中的跟踪。
+
+### 使用 Lambda 控制台激活跟踪
+
+要使用控制台切换 Lambda 函数的活动跟踪，请按照以下步骤操作：
+
+**打开活跃跟踪**
+
+1. 打开 Lamba 控制台的 [Functions](https://console.aws.amazon.com/lambda/home#/functions)（函数）页面。
+2. 选择函数。
+3. 选择 **Configuration**（配置），然后选择 **Monitoring and operations tools**（监控和操作工具）。
+4. 选择**编辑**。
+5. 在 **X-Ray** 下方，开启 **Active tracing**（活动跟踪）。
+6. 选择 **Save**（保存）。
+
+### 使用 Lambda API 激活跟踪
+
+借助 AWS CLI 或 AWS SDK 在 Lambda 函数上配置跟踪，请使用以下 API 操作：
+
+- [UpdateFunctionConfiguration](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/API_UpdateFunctionConfiguration.html)
+- [GetFunctionConfiguration](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/API_GetFunctionConfiguration.html)
+- [CreateFunction](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/API_CreateFunction.html)
+
+以下示例 AWS CLI 命令对名为 `my-function` 的函数启用活跃跟踪。
+
+```
+aws lambda update-function-configuration --function-name my-function \
+--tracing-config Mode=Active
+```
+
+跟踪模式是发布函数版本时版本特定配置的一部分。您无法更改已发布版本上的跟踪模式。
+
+### 使用 AWS CloudFormation 激活跟踪
+
+要对 AWS CloudFormation 模板中的 `AWS::Lambda::Function` 资源激活跟踪，请使用 `TracingConfig` 属性。
+
+例 [function-inline.yml](https://github.com/awsdocs/aws-lambda-developer-guide/blob/master/templates/function-inline.yml) – 跟踪配置
+
+```
+Resources:
+  function:
+    Type: AWS::Lambda::Function
+    Properties:
+      TracingConfig:
+        Mode: Active
+      ...
+```
+
+对于 AWS Serverless Application Model (AWS SAM) `AWS::Serverless::Function` 资源，请使用 `Tracing` 属性。
+
+例 `template.yml` – 跟踪配置
+
+```
+Resources:
+  function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Tracing: Active
+      ...
+```
+
+### 解释 X-Ray 跟踪
+
+您的函数需要权限才能将跟踪数据上载到 X-Ray。在 Lambda 控制台中激活跟踪后，Lambda 会将所需权限添加到函数的执行角色。如果没有，请将 [AWSXRayDaemonWriteAccess](https://console.aws.amazon.com/iam/home#/policies/arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess) 策略添加到执行角色。
+
+在配置活跃跟踪后，您可以通过应用程序观察特定请求。[X-Ray 服务图](https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-servicegraph)将显示有关应用程序及其所有组件的信息。来自[错误处理器](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/samples-errorprocessor.html)示例应用程序的以下示例显示了具有两个函数的应用程序。主函数处理事件，有时会返回错误。位于顶部的第二个函数将处理第一个函数的日志组中显示的错误，并使用 AWS SDK 调用 X-Ray、Amazon Simple Storage Service (Amazon S3) 和 Amazon CloudWatch Logs。
+
+![sample-errorprocessor-servicemap](images/sample-errorprocessor-servicemap.png)
+
+X-Ray 无法跟踪对应用程序的所有请求。X-Ray 将应用采样算法确保跟踪有效，同时仍会提供所有请求的一个代表性样本。采样率是每秒 1 个请求和 5% 的其他请求。
+
+> **注意**: 您无法为您的函数配置此 X-Ray 采样率。
+
+使用活动跟踪时，Lambda 会每个跟踪记录 2 个分段，这些分段将在服务图上创建两个节点。下图突出显示了错误处理程序示例应用程序中的主函数的这两个节点。
+
+![xray-servicemap-function](images/xray-servicemap-function.png)
+
+位于左侧的第一个节点表示接收调用请求的 Lambda 服务。第二个节点表示特定的 Lambda 函数。以下示例显示了一个包含这 2 个分段的跟踪。两者都命名为 `my-function`，但其中一个函数具有 `AWS::Lambda` 源，另一个则具有 `AWS::Lambda::Function` 源。
+
+![nodejs-xray-timeline](images/nodejs-xray-timeline.png)
+
+此示例将展开函数分段，以显示其三个子分段。
+
+- **初始化** – 表示加载函数和运行[初始化代码](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/foundation-progmodel.html)所花费的时间。此子分段仅对由您的函数的每个实例处理的第一个事件显示。
+- **调用** – 表示执行处理程序代码花费的时间。
+- **开销** – 表示 Lambda 运行时为准备处理下一个事件而花费的时间。
+
+您还可以分析 HTTP 客户端、记录 SQL 查询以及使用注释和元数据创建自定义子段。有关更多信息，请参阅《AWS X-Ray 开发人员指南》中的[适用于 Go 的 AWS X-Ray 开发工具包](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-python.html)。
 
 ## 环境变量
 
