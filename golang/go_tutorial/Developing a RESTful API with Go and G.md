@@ -103,7 +103,7 @@ Gin 简化了许多构建 Web 应用及 Web 服务的编码任务，你将使用
    一个独立应用（与库相反）总是在包 `main` 里。
 3. 在包声明之下，粘贴进下面的 `album` 结构体定义。你将使用它来在内存里存储唱片数据。
 
-    结构体标签如 `json:"artist"` 指定了当结构体内容被序列化成 JSON 字段名字应该是什么。没有它们，JSON 将会使用结构体的大写字段名字--这不是一个常见的 JSON 风格。
+    结构体标签如 `json:"artist"` **指定了当结构体内容被序列化成 JSON 字段名字应该是什么。没有它们，JSON 将会使用结构体的大写字段名字**--这不是一个常见的 JSON 风格。
 
     ```
     // album represents data about a record album.
@@ -162,24 +162,26 @@ Gin 简化了许多构建 Web 应用及 Web 服务的编码任务，你将使用
      注意你可以从用 [Context.JSON](https://pkg.go.dev/github.com/gin-gonic/gin#Context.JSON) 替换 `Context.IndentedJSON` 以发送一个更紧凑的 JSON。实际中，调试时缩进格式更易于工作，并且两者大小差别不大。
 
 2. 在靠近 `main.go` 顶部，`albums` 切片声明之下，粘贴下面的代码以将处理器函数指派给一个端点路径。
+   
+   这设定了 `getAlbums` 处理器和 `/albums` 端点路径之间的关联。
 
-　　这设定了 `getAlbums` 处理器和 `/albums` 端点路径之间的关联。
-
-　　在这段代码中，你：
-    + 使用 [Default](https://pkg.go.dev/github.com/gin-gonic/gin#Default) 函数初始化了一个 Gin 路由器。
-    + 使用 [GET](https://pkg.go.dev/github.com/gin-gonic/gin#RouterGroup.GET) 函数来将 `GET HTTP` 方法和 `/albums` 路径与处理器函数关联起来。
-
-    ```
+   ```
     func main() {
        router := gin.Default()
        router.GET("/albums", getAlbums)
 
        router.Run("localhost:8080")
     }
-    ```
+   ```
 
-    注意你传递了 `getAlbums` 函数的名字。这与传递该函数调用的结果，即 `getAlbums()`（注意括号）截然不同。
-    + 使用 [Run](https://pkg.go.dev/github.com/gin-gonic/gin#Engine.Run) 函数将这个 Gin 路由器附在 `http.Server` 上并启动该服务器。
+   在这段代码中，你
+    
+   - 使用 [Default](https://pkg.go.dev/github.com/gin-gonic/gin#Default) 函数初始化了一个 Gin 路由器。
+   - 使用 [GET](https://pkg.go.dev/github.com/gin-gonic/gin#RouterGroup.GET) 函数来将 `GET HTTP` 方法和 `/albums` 路径与处理器函数关联起来。
+
+     
+     注意你传递了 `getAlbums` 函数的名字。这与传递该函数调用的结果，即 `getAlbums()`（注意括号）截然不同。
+    - 使用 [Run](https://pkg.go.dev/github.com/gin-gonic/gin#Engine.Run) 函数将这个 Gin 路由器附在 `http.Server` 上并启动该服务器。
 
 3. 在靠近 `main.go` 顶部，包声明之下，导入你刚编写的代码所需要的包。
 
@@ -195,13 +197,13 @@ Gin 简化了许多构建 Web 应用及 Web 服务的编码任务，你将使用
     )
     ```
 
-4. 保存 `main.go`。
+3. 保存 `main.go`。
 
 ### 4.2 运行代码
 
 1. 开始追踪作为一个依赖的 `Gin` 模块。
    
-   使用  [go get](https://go.dev/cmd/go/#hdr-Add_dependencies_to_current_module_and_install_them) 来为你的模块添加 `github.com/gin-gonic/gin` 依赖。使用点号作为参数，这意味着“为当前目录里的代码获取依赖”。
+   使用  [go get](https://go.dev/cmd/go/#hdr-Add_dependencies_to_current_module_and_install_them) 来为你的模块添加 `github.com/gin-gonic/gin` 依赖。使用点号作为参数，这意味着**为当前目录里的代码获取依赖**。
 
    ```
    $ go get .
@@ -248,7 +250,7 @@ Gin 简化了许多构建 Web 应用及 Web 服务的编码任务，你将使用
    ]
    ```
 
-你已经成功启动了你的 API。下一节你将创建另一个端点以处理添加新唱片的 POST 请求。
+你已经成功启动了你的 API。下一节你将创建另一个端点以处理添加新唱片的 `POST` 请求。
 
 ## 5. 编写处理器以增加新项目
 

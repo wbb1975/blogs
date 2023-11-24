@@ -1225,7 +1225,7 @@ func main() {
 
 #### 2.3.18 函数的闭包（function closures）
 
-Go 函数可以是一个闭包。闭包是一个函数值，它引用了其函数体之外的变量。该函数可以访问并赋予其引用的变量的值，换句话说，该函数被这些变量“绑定”在一起。
+Go 函数可以是一个闭包。闭包是一个函数值，它引用了其函数体之外的变量。该函数可以访问并修改其引用的变量的值，换句话说，该函数被这些变量“绑定”在一起。
 
 例如，函数 `adder` 返回一个闭包。每个闭包都被绑定在其各自的 `sum` 变量上（**相当于 C/C++ 中函数的 static 变量**）。
 
@@ -1381,13 +1381,13 @@ func main() {
 
 你可以为指针接收者声明方法。
 
-这意味着对于某类型 `T`，接收者的类型可以用 `*T` 的文法。（此外，`T` 不能是像 `*int` 这样的指针。）
+这意味着对于某类型 `T`，接收者的类型可以用 `*T` 的文法。（此外，`T` 本身不能是像 `*int` 这样的指针。）
 
 例如，这里为 `*Vertex` 定义了 `Scale` 方法。
 
 指针接收者的方法可以修改接收者指向的值（就像 `Scale` 在这做的）。**由于方法经常需要修改它的接收者，指针接收者比值接收者更常用**。
 
-试着移除第 16 行 `Scale` 函数声明中的 *，观察此程序的行为如何变化。
+试着移除第 16 行 `Scale` 函数声明中的 `*`，观察此程序的行为如何变化。
 
 若使用值接收者，那么 `Scale` 方法会对原始 `Vertex` 值的副本进行操作。（对于函数的其它参数也是如此。）`Scale` 方法必须用指针接收者来更改 `main` 函数中声明的 `Vertex` 的值。
 
@@ -1421,7 +1421,41 @@ func main() {
 ```
 > **译注：指针接收者方法与值接收者方法调用形式相同，但默认会传递其指针对象用于修改源值**。
 
-#### 3.1.3 方法与指针重定向
+#### 3.1.3 指针和函数
+
+这里我看看到 Abs 和 Scale 被重写为函数。
+
+再次，试着从 16 行移除 `*`，你知道为什么程序的行为发生了变化吗？你知道你需要做什么额外修改才能使示例编译通过吗？
+
+```
+package main
+
+import (
+	"fmt"
+	"math"
+)
+
+type Vertex struct {
+	X, Y float64
+}
+
+func Abs(v Vertex) float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func Scale(v *Vertex, f float64) {
+	v.X = v.X * f
+	v.Y = v.Y * f
+}
+
+func main() {
+	v := Vertex{3, 4}
+	Scale(&v, 10)
+	fmt.Println(Abs(v))
+}
+```
+
+#### 3.1.4 方法与指针重定向
 
 比较前两个程序，你大概会注意到带指针参数的函数必须接受一个指针：
 
@@ -1432,6 +1466,38 @@ ScaleFunc(&v, 5) // OK
 ```
 
 **而以指针为接收者的方法被调用时，接收者既能为值又能为指针**：
+
+```
+package main
+
+import "fmt"
+
+type Vertex struct {
+	X, Y float64
+}
+
+func (v *Vertex) Scale(f float64) {
+	v.X = v.X * f
+	v.Y = v.Y * f
+}
+
+func ScaleFunc(v *Vertex, f float64) {
+	v.X = v.X * f
+	v.Y = v.Y * f
+}
+
+func main() {
+	v := Vertex{3, 4}
+	v.Scale(2)
+	ScaleFunc(&v, 10)
+
+	p := &Vertex{4, 3}
+	p.Scale(3)
+	ScaleFunc(p, 8)
+
+	fmt.Println(v, p)
+}
+```
 
 ```
 var v Vertex
@@ -1463,7 +1529,7 @@ fmt.Println(p.Abs()) // OK
 
 这种情况下，方法调用 `p.Abs()` 会被解释为 `(*p).Abs()`。
 
-#### 3.1.4 选择值或指针作为接收者
+#### 3.1.5 选择值或指针作为接收者
 
 使用指针接收者的原因有二：
 
@@ -1666,6 +1732,14 @@ func describe(i I) {
 }
 ```
 
+输出为：
+```
+(<nil>, *main.T)
+<nil>
+(&{hello}, *main.T)
+hello
+```
+
 #### 3.2.4 nil 接口值
 
 **nil 接口值既不保存值也不保存具体类型**。
@@ -1690,6 +1764,13 @@ func main() {
 func describe(i I) {
     fmt.Printf("(%v, %T)\n", i, i)
 }
+```
+
+输出为：
+```
+(<nil>, <nil>)
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x47c1b9]
 ```
 
 #### 3.2.5 空接口
@@ -2024,9 +2105,39 @@ func main() {
 ch := make(chan int, 100)
 ```
 
-**仅当信道的缓冲区填满后，向其发送数据时才会阻塞。当缓冲区为空时，接受方会阻塞**。
+**仅当信道的缓冲区填满后，向其发送数据时才会阻塞。当缓冲区为空时，接收方会阻塞**。
 
 修改示例填满缓冲区，然后看看会发生什么。
+
+```
+package main
+
+import "fmt"
+
+func main() {
+	ch := make(chan int, 2)
+	ch <- 1
+	ch <- 2
+	fmt.Println(<-ch)
+	fmt.Println(<-ch)
+}
+```
+
+将输出：
+```
+1
+2
+```
+
+如果将 `ch := make(chan int, 2)` 改为 `ch := make(chan int)`，将输出：
+
+```
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan send]:
+main.main()
+	/tmp/sandbox642231773/prog.go:7 +0x36
+```
 
 ### 4.3 range 和 close
 
