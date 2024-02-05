@@ -290,3 +290,4 @@ O. Obsolete or Renamed Features
 - [PostgreSQL 15.3 Documentation](https://www.postgresql.org/docs/current/index.html)
 - [Index Columns for `LIKE` in PostgreSQL](https://niallburkley.com/blog/index-columns-for-like-in-postgres/)
 - [POSTGRESQL: MORE PERFORMANCE FOR LIKE AND ILIKE STATEMENTS](https://www.cybertec-postgresql.com/en/postgresql-more-performance-for-like-and-ilike-statements/)
+- [PostgreSQL Indexes: An In-Depth Guide](https://blog.devart.com/postgresql-indexes.html)

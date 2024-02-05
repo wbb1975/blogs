@@ -1,6 +1,6 @@
 # AWS Lambda Building with Go
 
-Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译为原生代码，因此 Lambda 将 Go 视为自定义运行时系统。建议您使用 `provided.al2`` 运行时系统将 Go 函数部署到 Lambda。
+Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译为原生代码，因此 Lambda 将 Go 视为自定义运行时系统。建议您使用 `provided.al2` 运行时系统将 Go 函数部署到 Lambda。
 
 ### Go 运行时系统支持
 
@@ -78,7 +78,7 @@ func main() {
 
 请注意以下几点：
 
-- **package main**：在 Go 中，包含 `func main()`` 的程序包必须始终名为 `main`。
+- **package main**：在 Go 中，包含 `func main()` 的程序包必须始终名为 `main`。
 - **import**：您可以使用它来包含 Lambda 函数所需的库。在此实例中，它包括：
   + **上下文**：[Go 中的 AWS Lambda上下文对象](https://docs.aws.amazon.com/lambda/latest/dg/golang-context.html)。
   + **fmt**：用于格式化您的函数返回的值的 Go [格式化](https://golang.org/pkg/fmt/)对象。
@@ -97,7 +97,7 @@ func main() {
 
 #### provided.al2 运行时系统
 
-对于使用 [.zip 部署包](https://docs.aws.amazon.com/lambda/latest/dg/golang-package.html)中的 `provided.al2` 运行时系统的 Go 函数，包含函数代码的可执行文件必须命名为 `bootstrap`。对于在[容器映像](https://docs.aws.amazon.com/lambda/latest/dg/go-image.html#go-image-al2)中使用 `provided.al2`` 运行时系统的 Go 函数，可执行文件可以使用任何名称。
+对于使用 [.zip 部署包](https://docs.aws.amazon.com/lambda/latest/dg/golang-package.html)中的 `provided.al2` 运行时系统的 Go 函数，包含函数代码的可执行文件必须命名为 `bootstrap`。对于在[容器映像](https://docs.aws.amazon.com/lambda/latest/dg/go-image.html#go-image-al2)中使用 `provided.al2` 运行时系统的 Go 函数，可执行文件可以使用任何名称。
 
 处理程序(handler)可以使用任何名称。要在代码中引用处理程序值，可以使用 `_HANDLER` 环境变量。
 
@@ -269,7 +269,7 @@ func main() {
 }
 ```
 
-在上述示例中，`lc` 是用于使用 `context` 对象捕获的信息的变量，`log.Print(lc.Identity.CognitoIdentityPoolID)` 将输出该信息 (在本例中为 `CognitoIdentityPoolID``)。
+在上述示例中，`lc` 是用于使用 `context` 对象捕获的信息的变量，`log.Print(lc.Identity.CognitoIdentityPoolID)` 将输出该信息 (在本例中为 `CognitoIdentityPoolID`)。
 
 以下示例介绍了如何使用上下文对象来监控您的 Lambda 函数完成任务所需的时间。这让您能够分析性能期望并相应地调整您的函数代码 (如果需要)。
 
@@ -310,7 +310,7 @@ func main() {
 
 您的 AWS Lambda 函数代码由脚本或编译的程序及其依赖项组成。您可以使用部署程序包将函数代码部署到 Lambda。Lambda 支持两种类型的部署程序包：容器镜像和 .zip 文件归档。
 
-本页将介绍如何创建 .zip 文件作为 Go 运行时系统的部署包，然后使用 .zip 文件通过 `AWS Management Console`、`AWS Command Line Interface（AWS CLI）` 和 `AWS Serverless Application Model（AWS SAM）` 将函数代码部署到 AWS Lambda。
+本页将介绍如何创建 `.zip` 文件作为 Go 运行时系统的部署包，然后使用 `.zip` 文件通过 `AWS Management Console`、`AWS Command Line Interface（AWS CLI）` 和 `AWS Serverless Application Model（AWS SAM）` 将函数代码部署到 AWS Lambda。
 
 请注意，Lambda 使用 POSIX 文件权限，因此在创建 .zip 文件归档之前，您可能需要[为部署包文件夹设置权限](https://aws.amazon.com/premiumsupport/knowledge-center/lambda-deployment-package-errors/)。
 
@@ -355,7 +355,7 @@ Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译�
    ```
 4. 创建函数。请注意以下几点：
    + 处理程序值必须是 `bootstrap`。有关更多信息，请参阅[命名](https://docs.aws.amazon.com/lambda/latest/dg/golang-handler.html#golang-handler-naming)。
-   + 仅在使用 `arm64` 时，必须使用 `--architectures`` 选项。默认值为 `x86_64`。
+   + 仅在使用 `arm64` 时，必须使用 `--architectures` 选项。默认值为 `x86_64`。
   + 对于 `--role`，指定[执行角色](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/lambda-intro-execution-role.html)的 Amazon 资源名称（ARN）。
     ```
     aws lambda create-function --function-name myFunction \
@@ -389,7 +389,7 @@ Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译�
    ```
    go install github.com/aws/aws-lambda-go/cmd/build-lambda-zip@latest
    ```
-2. 使用来自 `GOPATH`` 的工具创建 .zip 文件。如果您有 Go 的默认安装，则该工具通常在 `%USERPROFILE%\Go\bin` 中。否则，请导航到安装 Go 运行时的位置，然后执行以下任一操作：
+2. 使用来自 `GOPATH` 的工具创建 .zip 文件。如果您有 Go 的默认安装，则该工具通常在 `%USERPROFILE%\Go\bin` 中。否则，请导航到安装 Go 运行时的位置，然后执行以下任一操作：
    
    **cmd.exe**
    在 cmd.exe 中，根据目标[指令集架构](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/foundation-arch.html)运行以下任一命令。`provided.al2` 运行时系统支持 `arm64` 和 `x86_64`。
@@ -417,7 +417,7 @@ Go 的实施方式与其他托管式运行时系统不同。由于 Go 可编译�
    **PowerShell**
 3. 创建函数。请注意以下几点：
    + 处理程序值必须是 `bootstrap`。有关更多信息，请参阅[命名](https://docs.aws.amazon.com/lambda/latest/dg/golang-handler.html#golang-handler-naming)。
-   + 仅在使用 `arm64` 时，必须使用 `--architectures`` 选项。默认值为 `x86_64`。
+   + 仅在使用 `arm64` 时，必须使用 `--architectures` 选项。默认值为 `x86_64`。
    + 对于 `--role`，指定[执行角色](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/lambda-intro-execution-role.html)的 Amazon 资源名称（ARN）。
     ```
     aws lambda create-function --function-name myFunction \
@@ -437,7 +437,7 @@ Lambda 的 .zip 部署包的最大大小为 `250MB`（已解压缩）。请注�
 
 要创建新函数，必须先在控制台中创建该函数，然后上传您的 .zip 归档。要更新现有函数，请打开函数页面，然后按照相同的步骤添加更新的 .zip 文件。
 
-如果您的 .zip 文件小于 `50MB`，则可以通过直接从本地计算机上传该文件来创建或更新函数。对于大于 `50MB`` 的 .zip 文件，必须首先将您的程序包上传到 Amazon S3 存储桶。有关如何使用 AWS Management Console 将文件上传到 Amazon S3 存储桶的说明，请参阅 [Amazon S3 入门](https://docs.aws.amazon.com/AmazonS3/latest/userguide/GetStartedWithS3.html)。要使用 AWS CLI 上传文件，请参阅《AWS CLI 用户指南》中的[移动对象](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-move)。
+如果您的 .zip 文件小于 `50MB`，则可以通过直接从本地计算机上传该文件来创建或更新函数。对于大于 `50MB` 的 .zip 文件，必须首先将您的程序包上传到 Amazon S3 存储桶。有关如何使用 AWS Management Console 将文件上传到 Amazon S3 存储桶的说明，请参阅 [Amazon S3 入门](https://docs.aws.amazon.com/AmazonS3/latest/userguide/GetStartedWithS3.html)。要使用 AWS CLI 上传文件，请参阅《AWS CLI 用户指南》中的[移动对象](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-move)。
 
 > **注意** 您无法将现有容器映像函数转换为使用 .zip 归档。您必须创建新函数。
 
@@ -720,7 +720,7 @@ alami|自定义运行时|Amazon Linux|[GitHub 上用于自定义运行时系统�
 
 在本地计算机上运行运行时系统接口仿真器：
 
-1. 使用 `docker run`` 命令启动 Docker 镜像。请注意以下几点：
+1. 使用 `docker run` 命令启动 Docker 镜像。请注意以下几点：
    
    - `docker-image` 是映像名称，`test` 是标签。
    - `./main` 是您的 Dockerfile 中的 `ENTRYPOINT`。
@@ -744,7 +744,7 @@ alami|自定义运行时|Amazon Linux|[GitHub 上用于自定义运行时系统�
    ```
    docker ps
    ```
-4. 使用 [docker kill](https://docs.docker.com/engine/reference/commandline/kill/) 命令停止容器。在此命令中，将 `3766c4ab331c`` 替换为上一步中的容器 ID。
+4. 使用 [docker kill](https://docs.docker.com/engine/reference/commandline/kill/) 命令停止容器。在此命令中，将 `3766c4ab331c` 替换为上一步中的容器 ID。
    ```
    docker kill 3766c4ab331c
    ```
@@ -1054,7 +1054,7 @@ Go 运行时记录每次调用的 **START**、**END** 和 **REPORT** 行。报�
 使用 CloudWatch 控制台查看日志
 
 1. 打开 CloudWatch 控制台的 [Log groups](https://console.aws.amazon.com/cloudwatch/home?#logs:)（日志组页面）。
-2. 选择您的函数 (`/aws/lambda/your-function-name``) 的日志组。
+2. 选择您的函数 (`/aws/lambda/your-function-name`) 的日志组。
 3. 创建日志流。
 
 每个日志流对应一个[函数实例](https://docs.aws.amazon.com/zh_cn/lambda/latest/dg/lambda-runtime-environment.html)。日志流会在您更新 Lambda 函数以及创建更多实例来处理多个并发调用时显示。要查找特定调用的日志，建议您使用 AWS X-Ray 检测函数。X-Ray 会在追踪中记录有关请求和日志流的详细信息。
@@ -1279,7 +1279,7 @@ aws lambda invoke   \
 }
 ```
 
-`output.txt`` 文件中应该会显示函数调用响应：在同一命令提示符下，您还可以使用以下命令在命令提示符中查看输出：
+`output.txt` 文件中应该会显示函数调用响应：在同一命令提示符下，您还可以使用以下命令在命令提示符中查看输出：
 
 ```
 cat output.txt
