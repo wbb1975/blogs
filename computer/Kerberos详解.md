@@ -466,3 +466,5 @@ kerberos作为网络认证服务，使用对称加密算法，对各种传输的
 - [Use a keytab](https://kb.iu.edu/d/aumh)
 - [崔永泉第四讲kerberos协议ppt课件](https://www.docin.com/p-2855487876.html)
 - [Kerberos: The Network Authentication Protocol](http://web.mit.edu/kerberos/www/)
+- [kerberos详解](https://blog.csdn.net/SkyChaserYu/article/details/104891996/)
+- [OAuth2认证授权流程解析](https://blog.csdn.net/lixiang987654321/article/details/107745646?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-1-107745646-blog-114500794.235^v43^pc_blog_bottom_relevance_base8&spm=1001.2101.3001.4242.2&utm_relevant_index=4)
