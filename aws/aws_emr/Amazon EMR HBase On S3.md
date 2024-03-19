@@ -275,7 +275,28 @@ Details:
   + HBase Region `http://region-dns-name:16030/jmx?description=true`
 - See [HBase metrics](https://hbase.apache.org/book.html) on the HBase documentation
 
+## HBase Data Migration
+
+### Batch Approach
+
+- Most straight forward approach, easily achieved with scripts
+- Notes:
+  + the export command involves a MapReduce application so room in YARN is needed
+  + If on-prem, make sure hadoop-aws module is installed to communicate with S3 + Direct connect
+- How to:
+1. Create a snapshots for all our tables
+2. Export to S3:
+  + On the Hbase root of another cluster if planning to use HBase on S3
+3. Import the snapshot:
+  + HBase on S3: Required only if the snapshot has not been previously copied on the Hbase root S3 location
+  + Hbase on HDFS: required
+4. Restore the Snapshot:
+  + Before restoring create all needed namespaces
+
 ## Useful Resources
+
+- [Migrating to Apache Hbase on Amazon S3 on Amazon EMR](
+https://docs.aws.amazon.com/whitepapers/latest/migrate-apache-hbase-s3/identifying-apache-hbase-and-emrfs-tuning-options.html)
 
 ## Reference
 
