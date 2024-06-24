@@ -40,7 +40,7 @@ EXAMPLE.COM = {
 }
 ```
 
-在一个 realm 内，这个 realm 的认证服务才能认证一个用户，主机或者服务。但这并不意味着如果一个用户和一个服务属于不同的 realm，它们就无法互相认证，如果它们不在同一个 realm 中，但是它们所属的 realm 有信任关系，那么认证就可以通过。
+在属于一个认证服务的边界内，这个认证服务才有权利认证一个用户，主机或者服务。但这并不意味着如果一个用户和一个服务属于不同的 realm，它们就无法互相认证，如果它们不在同一个 realm 中，但是它们所属的 realm 有信任关系，那么认证就可以通过。本文下面会讲到这个被称为"交叉认证(Cross-Authentiation)" 的机制。
 
 基本上可以认为，只有当一个用户/服务和一个 realm 的认证服务共享一个密钥时，这个用户/服务才属于这个 realm。
 
@@ -57,9 +57,9 @@ component1/component2/…/componentN@REALM
 
 但是，实际情况，最多只使用两个 component。
 
-##### 用户principal
+##### 用户 Principal
 
-用户principal的形式：
+用户 Principal 的形式：
 
 ```
 Name[/Instance]@REALM
@@ -91,7 +91,7 @@ Service/Hostname@REALM
 
 需要指出的是最后一条是一个例外，因为它的第二个compoment不是主机名，而是 `AFS cell` 的名字。
 
-最后，有一些 principal 即不用来指代用户，也不用于指代服务，而是在 Kerberos 认证系统的操作中扮演一个角色。一个首要的例子就是 `krbtgt/REALM@REALM`，这个principal 和它的相关的密钥会被用来加密 `Tikcet Granting Ticket`，`krb` 就是指 `kerberos`，`tgt` 就是指 `Ticket Granting Ticket`，所以这个特殊的principal 前缀就是 `krbtgt`。只有 KDC 拥有这个 principal 和它的相关的密钥，所以 TGT 才不能被伪造.
+最后，有一些 principal 即不用来指代用户，也不用于指代服务，而是在 Kerberos 认证系统的操作中扮演一个角色。一个首要的例子就是 `krbtgt/REALM@REALM`，这个 principal 和它的相关的密钥会被用来加密 `Tikcet Granting Ticket`，`krb` 就是指 `kerberos`，`tgt` 就是指 `Ticket Granting Ticket`，所以这个特殊的principal 前缀就是 `krbtgt`。只有 KDC 拥有这个 principal 和它的相关的密钥，所以 TGT 才不能被伪造.
 
 #### Ticket
 
@@ -100,7 +100,7 @@ Ticket 分两种：
 - **Ticket Granting Ticket(票据授予票据)**，**TGT**：这是 KDC 中的 `Authentication Server`(简称AS) 产生的，TGT 是向 `Ticket Granting Server`(TGS) 用于表明自己真实身份的东西
 - **Service Ticket(服务授予票据)**：这是 KDC 中的 `Ticket Granting Server`(简称TGS) 产生的，`Service Ticket` 是用于向应用服务器表明自己身份的东西
 
-虽然这是两种不同的 Ticket，但是我们也把 `Ticket Granting Server` 当做一个应用服务器，所以 Ticket 是客户端提供给应用服务器用于表明自己真实身份的东西。加密Ticket 的密钥是 AS 或者 TGS 与应用服务器之间共享的密钥加密的(后面直接说即 service 的密钥)，因此即使请求 ticket 的客户端也不能查看或更改它的内容。ticket 包括的主要信息包括：
+虽然这是两种不同的 Ticket，但是我们也把 `Ticket Granting Server` 当做一个应用服务器，所以 Ticket 是客户端提供给应用服务器用于表明自己真实身份的东西。加密 Ticket 的密钥是 AS 或者 TGS 与应用服务器之间共享的密钥加密的(后面直接说即 service 的密钥)，因此即使请求 ticket 的客户端也不能查看或更改它的内容。ticket 包括的主要信息包括：
 
 - **Pc**：发出请求的用户的 principal（通常就是用户名）
 - **Ps**：想要访问的服务的 principal
@@ -111,13 +111,40 @@ Ticket 分两种：
 
 **每个 ticket 都会有一个过期时间(通常是10小时)**。这非常关键，因为发出 ticket 的服务，例如 AS，无法控制一个已经分发去出的 ticket(译注：因为 AS 和提供 service的 server 之间是没有联系的。因此，AS 是没办法主动销毁一个已经分发出去的 ticket 的)。尽管 realm 的管理员可以在任何时间停止给特定的用户分发新的 ticket，但是却无法阻止用户使用已经拥有的 ticket。限制一个 ticket 的最长使用期，就是为了防止无时间限制的滥用。
 
-#### 密钥版本号(kvno)
-
-当用户修改密码或者管理员为应用服务器升级密钥的时候，这个修改会被以增加计数器计数的形式记录下来。计数器的当前值表示密钥的版本，这被称为 `Key Version Number`， 或者简称为 `kvno`.
-
 #### 加密
 
-就像你所看到的 一样，Kerberos经常需要加密和解密在认证过程中的参与者之间传递的消息(ticket和authenticator)(译注：authenticator的概念后面会讲)。**需要强调的是，Kerberos只使用对称加密算法(也就是说同样的密钥即用于加密也用于解密)**。某些工程(比如pkinit)致力于引用公钥系统，利于与特定公钥相关的私钥来对初始用户进行验证，但是鉴于这种做法并没有一个标准，所以我们会暂时跳过。
+就像你所看到的 一样，Kerberos 经常需要加密和解密在认证过程中的参与者之间传递的消息(ticket和authenticator)(译注：authenticator 的概念后面会讲)。**需要强调的是，Kerberos 只使用对称加密算法(也就是说同样的密钥即用于加密也用于解密)**。某些工程(比如 `pkinit`)致力于引用公钥系统，利于与特定公钥相关的私钥来对初始用户进行验证，但是鉴于这种做法并没有一个标准，所以我们会暂时跳过。
+
+##### 1.3.4.1 加密类型
+
+Kerberos 4只实现了一种加密类型，就56位DES。这种加密算法的脆弱性和一些协议上的漏洞(译注：指Kerberos 4协议上的漏洞)使得Kerberos 4已经不再使用 了。Kerbeors 5，不同于它的前任，没有它所支持的加密算法的数量和类型。而是由Kerberos的不同实现来支持和沟通各种不同的加密算法(译注：这里的沟通应该是指KDC和Client间对使用的加密算法进行沟通)。但是，这种灵活性和可扩展性却加剧了Kerberos的各种实现之间的互操作问题。Kerberos的不同实现的客户端、程序和认证服务器之间如果想要互操作(interoperate), 它们必须至少有一种相同的加密算法。Unix实现的Kerberos 5和Windows的Active Directory之间的互操作存在的因难就是一个典型的例子。事实上，Windows Active Directory只支持有限的几种加密算法，并且它和Unix的Kerberos实现间只有56位DES是相同的。这就使得如果它们想要互操作的话，56位DES必须被启用，虽然这样做的风险是众所周知的。这个问题后来被1.3版本的MIT `Kerberos  5` 解决了。这个版本加入了对RC4-HMAC的支持，这个算法也被Windows 支持，并且比DES更加安全。在Kerberos支持的算法中(但是不被Windows支持)，3DES和更新的AES128和AES256值得一提(译注：这些算法的安全性都还说得过去，三者之间AES256是最强的，通常AES128已经够用，而3DES的加解密速度会比较慢。对于JDK，AES256需要下policy文件才能使用)。
+
+##### 1.3.4.2 密钥
+
+在前边提到过，Kerberos 的一个目标就是防止用户的密码被以未加密的形式存储，即使是在认证服务器的数据库里。考虑到不同的加密算法使用不同的密钥长度，那么，很明显的就是不能强制用户为每个加密算法指定一个符合它们长度要求的密码。因为这个原因，Kerberos引入了 `string2key` 函数，这个函数会将未加密的密码转化成符合加密算法要求的长度的密钥。这个函数在每次用户更改密码或者用密码进行验证时都会被调用。`string2key` 被称作一个哈希函数，意思是它是不可逆的：知道密钥是不能够推出来生成它时使用的密码的(除了暴力破解)。最著名的哈希算法是 `MD5` 和 `CRC32`.(译注：另一个著名的哈希算法是SHA系列。CRC32只能生成32位的摘要，因此通常用于做校验码。而MD5有126，SHA1有160位，理论上，消息摘要的长度越大，碰撞的可能性越小)。
+
+##### 1.3.4.3 盐 (Salt)
+
+Kerberos5 不同于Kerberos 4, 引用于密码盐(password salt)的概念。盐被加到密码的明文的后面，然后再通过string2key函数来获取密钥。Kerberos 5 使用用户的 principal 作为盐：
+
+```
+Kpippo = string2key(Ppippo + "pippo@EXAMPLE.COM")
+```
+
+这种形式的盐有以下的优点：
+
+属于同一个realm的两个principal，即使有相同的密码，也会有不同的密钥。比如，如果一个管理员有一个principal用于日常工作(pippo@EXAMPLE.COM)，另一个用于管理工作(pippo/admin@EXAMPLE.COM)。很可能这个用户为了方便，给两个principal设置了相同的密码。这种形式的盐的使用确保了有关联的密钥是不同的。
+如果一个用户有两个在不同的realm中的账户，那么一个普遍的情况就是这两个账户的密码是相同的：感谢salt的存在，这样即使一个realm中的帐户被攻破了，也不会自动异致另一个realm中的账户被攻破。
+
+在Kerberos 5中，也可以指定不用 salt，以和Kerberos 4兼容。同样，为了和AFS兼容，也可以用配置salt不用principal的完整的名字，而只使用cell的名字。
+
+在 讨论了加密类型，string2key，salt之后，就可以检查一下下面的说法准确性了：为了在不同的Kerberos实现之间相行互操作，它们拥有相同的加密算法还不够，它们还必须有相同的 `string2key` 和 `salt`。
+
+另一点需要注意的是，在解释string2key和salt的时候，我们只是提了用户principal，而没有提server principal。原因很明显：一个服务，即使和验证服务器共享一个秘密，也不会使用 一个未加密的密码(谁来输入这个密码呢？)(译注：这倒不一定...), 而是一个由管理员生成的密钥，这个密钥被存储(译注：原文是memorized)在提供服务的服务器上。
+
+##### 1.3.4.4 密钥版本号(kvno)
+
+当用户修改密码或者管理员为应用服务器升级密钥的时候，这个修改会被以增加计数器计数的形式记录下来。计数器的当前值表示密钥的版本，这被称为 `Key Version Number`， 或者简称为 `kvno`.
 
 #### 密钥分发中心(KDC)
 
@@ -127,6 +154,8 @@ Ticket 分两种：
 - 认证服务器(Authentication Server)
 - 票据分发服务器(Ticket Granting Server)
 
+> 注意：可以使得一个realm中有Master/Slave形式的冗余服务器(在MIT和Heimdal中),或者Multimaster结构(在Windows Active Directory中)。如何获得冗余并没有在Kerberos协议中指定，而是由Kerberos的实现自己确定，因此这里不进行讨论。
+
 ##### 数据库
 
 数据库中存储着与用户 principal 和服务 principal 有关的条目(entry)。每个条目包括以下的信息：
@@ -134,7 +163,7 @@ Ticket 分两种：
 - 这个条目相关联的 principal
 - 密钥和相关的kvno（译注: 注意这里并不是密码，而是密钥）;
 - 与这个principal相关联的ticket最长可用时间
-- 与这个principal相关联的ticket的最长的renew时间，这个是指这个ticket通过renew机制累计可用的时间，只在kerberos 5中可用)
+- 与这个principal相关联的ticket的最长的renew时间(译注：这个是指这个ticket通过renew机制累计可用的时间，只在kerberos 5中可用)
 - 决定这个ticket的具体行为的属性和标志位。
 - 密码过期时间
 - 这个principal的过期时间，在此之后就不为这个 principal 分发 ticket 了。
@@ -153,13 +182,13 @@ KDC 的 TGS 组件用于为拥有可用的TGT的客户端分发 `service ticket`
 
 #### 会话密钥 Session Key
 
-在认证用户的时候，用户和服务会与KDC共享密钥。用户与服务也有必要共享密钥。在将 kerberos 的流程中会应用到这些密钥。
+就像我们所看到的一样，用户和服务和KDC共享一个秘密。对于用户来说，这个秘密就是从密码推导出来的密钥，对于服务来说，就是密钥(由管理员指定)。这些密钥被称为长期密钥(long term)，因为在工作会话改变时，它们是不变的。但是，用户和服务间也有必要共享秘密，至少当用户和服务之间存在工作会话的时候：这个密钥在KDC分发ticket时候生成，称为Session Key。分发给服务的session key被KDC封装在ticket中(应用服务器拥有long term key，因此可以从ticket中解码出session key)，分发给用户的session key被使用用户的长期密钥加密封装。Session key在认证用户的身份真伪上起了基础性的角色，我们在接下来的章节中会看到这点。
 
 #### Authenticator
 
 注意：这一段对于理解Kerberos认证流程的设计原理非常非常重要。
 
-尽管ticket中含有用户的principal信息，并且只有应用服务器可以获取和(可能)管理这些信息(因为ticket被应用服务的密钥加密)，但这不足以保证用户身份的真伪。一个冒名顶替者可以在一个合法的客户端向应用服务器发送ticket时捕捉(记住Kerberos的假设是在一个开放以及不安全的网络)这个ticket，并且在适当的时候发送它，来非法获取服务。另一方面，在 ticket 中包含可以使用这个 ticket 的 ip 地址并不是非常有用：众所周知的是在一个开放和不安全的网络环境中，网各地址可以很容易地伪造。
+尽管ticket中含有用户的principal信息，并且只有应用服务器可以获取和(可能)管理这些信息(因为ticket被应用服务的密钥加密)，但这不足以保证用户身份的真伪。一个冒名顶替者可以在一个合法的客户端向应用服务器发送ticket时捕捉(记住Kerberos的假设是在一个开放以及不安全的网络)这个ticket，并且在适当的时候发送它，来非法获取服务。另一方面，在 ticket 中包含可以使用这个 ticket 的 ip 地址并不是非常有用：众所周知的是在一个开放和不安全的网络环境中，网络地址可以很容易地伪造。
 
 为了解决这个问题，我们必须利于一个事实：客户端和服务器至少在一个会话中共享会话密钥，并且只有它们知道这个密钥(KDC也知道，因为正是KDC产生了这个密钥，但是根据定义，KDC一定是可信的！！！)。因此，以下的策略被采用:  在访问TGS或者应用服务器时，和包含ticket的请求一起，客户端添加了另一个包(就是authenticator)，用户的principal和时间戳(当时的时间)被用session key加密后放在这个包里；提供服务的服务器在收到这个请求后，解开第一个包，获取session key，如果用户的确是他/她所声称，那么服务器就可以解密 authenticator，并且提取时间戳。如果这个时间戳和服务器的时间相差在两分种以内(这个值是可以配置 的)，那么这个认证成功。这个时间给同一个realm中的服务器的同步划了一个底线。
 
@@ -167,15 +196,15 @@ KDC 的 TGS 组件用于为拥有可用的TGT的客户端分发 `service ticket`
 
 #### Replay Cache
 
-以下的可能性仍然存在：一个冒名顶替者同时窃取了ticket和authenticator，并且authenticator可用的2分钟内使用它。这很难，但不是不可能。为了在Kerberos 5中解决这个问题，引入了 `Replay Cache`。应用服务器 `application server`(也在TGS中)可以记住过去两分种内到达的 `authenticator`，并且拒绝重复的 `authenticator`。只有冒名顶替者没有能力在合法请求到达前复制ticket和authenticator然后发送它们到 service，他的攻击就不能得逞。如果他能够做到的话，那么真正的用户就会被拒绝，而冒名顶替者将会成功获取服务。
+以下的可能性仍然存在：一个冒名顶替者同时窃取了ticket和authenticator，并且authenticator可用的2分钟内使用它。这很难，但不是不可能。为了在Kerberos 5中解决这个问题，引入了 `Replay Cache`。应用服务器 `application server`(也在TGS中)可以记住过去两分种内到达的 `authenticator`，并且拒绝重复的 `authenticator`。只有冒名顶替者没有能力在合法请求到达前复制ticket和authenticator然后发送它们到 service，它的攻击就不能得逞。如果它能够做到的话，那么真正的用户就会被拒绝，而冒名顶替者将会成功获取服务。
 
 #### Credential Cache
 
-客户端从不保存用户的密码，也不会记住 它通过string2key获得的密钥：密钥被用于解密KDC的回复并且被立即丢弃。但是，另一方面，为了实现单点登录(single sign-on)功能，也就是说用户在一个工作会话中只被要求输入一次密码，必须要存储ticket和相关的会话密钥。这些数据被存储的地方叫做"Credential Cache". 这个cache的位置并不由kerberos协议来指定，而是由它的实现来决定。通常为了可移值性的原因，这个cache被放在文件系统中(MIT和Heimdal)。在其它的实现中(AFS和  Active Directory)，为了增加脆弱的客户端的安全性，credential cache被放在了一个只有内核才能访问的内存区域，并且不会被交换到磁盘。
+客户端从不保存用户的密码，也不会记住它通过 `string2key` 获得的密钥：密钥被用于解密KDC的回复并且被立即丢弃。但是，另一方面，为了实现单点登录(single sign-on)功能，也就是说用户在一个工作会话中只被要求输入一次密码，必须要存储 ticket 和相关的会话密钥。这些数据被存储的地方叫做 "Credential Cache". 这个cache的位置并不由kerberos协议来指定，而是由它的实现来决定。通常为了可移值性的原因，这个cache 被放在文件系统中(MIT和Heimdal)。在其它的实现中(AFS和  Active Directory)，为了增加脆弱的客户端的安全性，`credential cache` 被放在了一个只有内核才能访问的内存区域，并且不会被交换到磁盘。
 
 #### keytab
 
-keytab是一个包含了Kerberos princpals和加密的密钥的一个文件，这个加密的密钥是从Kerberos的用户密码转化来的，当你的用户密码改变了，你就需要重新生成你的keytabs。你可以在client上用kinit -k -t keytab principal无密码的认证principal用户或者服务，获取principal对应的ticket granting ticket（TGT）文件。
+keytab是一个包含了 `Kerberos princpals` 和加密的密钥的一个文件，这个加密的密钥是从Kerberos的用户密码转化来的，当你的用户密码改变了，你就需要重新生成你的 `keytabs`。你可以在client上用 `kinit -k -t keytab principal` 无密码的认证principal用户或者服务，获取principal对应的 `ticket granting ticket（TGT）` 文件。
 
 ## Kerberos 工作原理
 
@@ -460,7 +489,6 @@ CTCCDH2.COM = {
 kerberos作为网络认证服务，使用对称加密算法，对各种传输的数据加密，并且还通过authenticator，Replay Cache保证了用户的真实，并且利用Credential Cache，keytab防止明文密码出现在realm中。所以Kerberos是在集群中常用的用户认证服务，会为hadoop等没有用户安全的集群应用起到用户安全的作用。
 
 ## 参考
-- [Kerberos详解](https://www.modb.pro/db/323372)
 - [kerberos tutorial](http://kerberos.org/software/tutorial.html)
 - [Kerberos的组件和术语(翻译和注解)](https://www.cnblogs.com/devos/p/5448938.html)
 - [Use a keytab](https://kb.iu.edu/d/aumh)
