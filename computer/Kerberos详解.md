@@ -257,7 +257,7 @@ AS_REQ = { Pc ，Ps ， IP_list ， Lifetime }
 
 在这个时候，用户已经证明他们的身份，在这个用户的 `credential cache` 中会有一个 TGT 和一个 SK_TGS。但是想要访问其他服务如何 HDFS，还是没有合适的 `service ticket`。这是就要发送一个 `request（TGS_REQ）`给 KDC_TGS，client 执行以下步骤：
 
-- 创建一个 `Authenticator`，其中包括 `Pc` 和客户端的 timestamp，并且用 client 和TGS共享的 SK_TGS加密。
+- 创建一个 `Authenticator`，其中包括 `Pc` 和客户端的 timestamp，并且用 client 和 TGS 共享的 SK_TGS加密。
   ```
   Authenticator = { Pc， Timestamp }SK_TGS
   ```
@@ -268,7 +268,7 @@ AS_REQ = { Pc ，Ps ， IP_list ， Lifetime }
 
 ### TGS_REP
 
-当 KDC 接受到 `TGS_REQ`，TGS 首先到 database 验证 `Ps` 是否存在，如果存在，则用 TG S的 `(krbtgt/REAM@REALM)key` 去解密 K_TGS，获取到TGT，TGT中包含
+当 KDC 收到 `TGS_REQ`，TGS 首先到 database 验证 `Ps` 是否存在，如果存在，则用 TGS 的 `(krbtgt/REAM@REALM)key` 去解密 K_TGS，获取到TGT，TGT中包含
 
 ```
 TGT = { Pc， krbtgt/REALM@REALM， IP_list， Timestamp， Lifetime， SK_TGS}
@@ -302,7 +302,7 @@ TGT = { Pc， krbtgt/REALM@REALM， IP_list， Timestamp， Lifetime， SK_TGS}
 
 ### AP_REQ
 
-client因为有了 `SK_Service` 和 {T_Service}K_Service 了，就可以访问 appservice 的资格了，Client 通过向 appservice 发送 `AP_REQ` 即可访问 applicaion 服务中的资源了。这一步请求格式并没有具体的标准，因 application 的不同而不同。流程也是客户端用它的 credential 去证明它的身份，并访问资源，下面举一个例子：
+client 因为有了 `SK_Service` 和 {T_Service}K_Service 了，就可以访问 appservice 的资格了，Client 通过向 appservice 发送 `AP_REQ` 即可访问 applicaion 服务中的资源了。这一步请求格式并没有具体的标准，因 application 的不同而不同。流程也是客户端用它的 credential 去证明它的身份，并访问资源，下面举一个例子：
 
 - client创建一个 `authenticator`，其中包含 `Pc`，`timestamp`，并且使用 `SK_Service` 对 `authenticator` 进行加密。
   
