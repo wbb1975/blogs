@@ -41,9 +41,9 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 
 ### 编辑 KDC 配置文件
 
-修改配置文件 [krb5.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 和 [kdc.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 以反映你的 realm 的正确信息（如域名 realm 的映射，Kerberos 服务器名字），参见[MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults)可了解这些文件的推荐默认位置。
+修改配置文件 [krb5.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 和 [kdc.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 以反映你的 realm 的正确信息（如域名-Realm 的映射，Kerberos 服务器名字），参见 [MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults) 可了解这些文件的推荐默认位置。
 
-配置里的大部分标签拥有可良好工作于大部分站点的默认值。但在 [krb5.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 有一些标签必须显式指定值--这一章节将解释这些。
+配置里的大部分标签拥有可良好工作于大部分站点的默认值。但在 [krb5.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 里有一些标签必须显式指定值，本节将解释这些。
 
 如果这些配置文件位于与默认值不同的位置，设置 **KRB5_CONFIG** 和 **KRB5_KDC_PROFILE** 环境变量来分别指向 `krb5.conf` 和 `kdc.conf`，例如：
 
@@ -54,9 +54,9 @@ export KRB5_KDC_PROFILE=/yourdir/kdc.conf
 
 #### krb5.conf
 
-如果你不打算使用 DNS TXT records（参见[将主机名映射为Kerberos realms](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#mapping-hostnames)），你必须在 [libdefaults] 节里指定 default_realm。如果你不使用DNS URI or SRV records (参见 [KDCs 主机名](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-hostnames) 和 [KDC 发现](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-discovery)), 你必须在 [realms] 节为每一个realm 指定 kdc tag。为了与每一个 realm 的 kadmin server 通信，必须在 [realms] 节里指定 admin_server 标签。
+如果你不打算使用 DNS TXT records（参见[将主机名映射为Kerberos realms](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#mapping-hostnames)），你必须在 `[libdefaults]` 节里指定 `default_realm`。如果你不使用 `DNS URI` 或 `SRV records` (参见 [KDCs 主机名](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-hostnames) 和 [KDC 发现](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-discovery)), 你必须在 `[realms]` 节为每一个 realm 指定 `kdc tag`。为了与每一个 realm 的 `kadmin server` 通信，必须在 `[realms]` 节里指定 admin_server 标签。
 
-一个 krb5.conf 实例：
+一个 `krb5.conf` 实例：
 
 ```
 [libdefaults]
@@ -72,7 +72,7 @@ export KRB5_KDC_PROFILE=/yourdir/kdc.conf
 
 #### kdc.conf
 
-kdc.conf 用于控制 KDC 和 kadmind 的监听端口，也包括 realm 特定默认配置，数据库类型及位置，以及日志。
+kdc.conf 用于控制 KDC 和 `kadmind` 的监听端口，也包括 realm 特定默认配置，数据库类型及位置，以及日志。
 
 一个 kdc.conf 示例：
 
@@ -103,19 +103,19 @@ kdc.conf 用于控制 KDC 和 kadmind 的监听端口，也包括 realm 特定�
     default = FILE:/var/log/krb5lib.log
 ```
 
-将 `ATHENA.MIT.EDU` 和 `kerberos.mit.edu` 分别替换为你的 Kerberos realm 和服务器名字。
+将 `ATHENA.MIT.EDU` 和 `kerberos.mit.edu` 分别替换为你的 `Kerberos realm` 和服务器名字。
 
 > 注意：你必须对 **database_name**, **key_stash_file**, 和 **acl_file** 文件所在目录（这些目录必须存在）有可写权限。
 
 ## 创建 KDC 数据库
 
-你将使用主 KDC 上的[kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 命令来创建 Kerberos 数据库及可选的 [stash 文件](https://web.mit.edu/kerberos/krb5-devel/doc/basic/stash_file_def.html#stash-definition)。
+你将使用主 KDC 上的 [kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 命令来创建 Kerberos 数据库及可选的 [stash 文件](https://web.mit.edu/kerberos/krb5-devel/doc/basic/stash_file_def.html#stash-definition)。
 
 > 注意：如果你选择不安装 stash 文件，KDC 在其每次启动时都要提示输入 master key。这意味着 KDC 不能自动启动，比如在一次系统重启后。
 
-[kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 将提示你输入用于 Kerberos 数据库的master 密码。这个密码可以是任意字符串。一个好的密码是你能够记得，但别的人却不能猜到。坏的密码的例子包括字典里的单词，任何常见和流行的名字，尤其是一个名人（或卡通人物），任何形式的你的名字（例如顺序，倒序，重复两次等），这篇手册里的任意密码等。没有出现在本手册里的一个好的密码示例是 “MITiys4K5!”，它代表句子 “MIT is your source for Kerberos 5!” (它是每个单词的首字母，将单词 “for” 用数字 “4” 代替并在最后加上了叹号)。
+[kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 将提示你输入用于 Kerberos 数据库的 master 密码。这个密码可以是任意字符串。一个好的密码是你能够记得，但别的人却不能猜到。坏的密码的例子包括字典里的单词，任何常见和流行的名字，尤其是一个名人（或卡通人物），任何形式的你的名字（例如顺序，倒序，重复两次等），这篇手册里的任意密码等。没有出现在本手册里的一个好的密码示例是 “MITiys4K5!”，它代表句子 “MIT is your source for Kerberos 5!” (它是每个单词的首字母，将单词 “for” 用数字 “4” 代替并在最后加上了叹号)。
 
-下面是一个在主 KDC 上使用[kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 命令创建Kerberos 数据库和 stash 文件的例子。将 ATHENA.MIT.EDU 替换为你的 Kerberos realm 名字：
+下面是一个在主 KDC 上使用 [kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 命令创建 Kerberos 数据库和 `stash` 文件的例子。将 `ATHENA.MIT.EDU` 替换为你的 `Kerberos realm` 名字：
 
 ```
 shell% kdb5_util create -r ATHENA.MIT.EDU -s
@@ -129,18 +129,18 @@ Re-enter KDC database master key to verify:  <= Type it again.
 shell%
 ```
 
-这将在 **LOCALSTATEDIR/krb5kdc**（或者在 kdc.conf 中指定的位置） 下创建五个文件：
+这将在 **LOCALSTATEDIR/krb5kdc**（或者在 `kdc.conf` 中指定的位置） 下创建五个文件：
 
-- 两个 Kerberos 数据库文件，principal, 和 principal.ok
-- Kerberos 管理数据库文件，principal.kadm5
-- 管理数据库锁文件，principal.kadm5.lock
-- stash 文件, 本例中为 .k5.ATHENA.MIT.EDU。如果你不想要一个 stash 文件, 不要 -s 选项运行上面的命令。
+- 两个 Kerberos 数据库文件，`principal`, 和 `principal.ok`
+- Kerberos 管理数据库文件，`principal.kadm5`
+- 管理数据库锁文件，`principal.kadm5.lock`
+- `stash` 文件, 本例中为 `.k5.ATHENA.MIT.EDU`。如果你不想要一个 stash 文件, 不要 `-s` 选项运行上面的命令。
 
 关于管理 Kerberos 数据库的更多信息，参见 [Kerberos 数据库操作](https://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#db-operations)。 
 
 ## 向 ACL 文件添加管理员
 
-接下来，你需要创建一个访问控制列表(ACL) 文件，并添加至少一个管理员的 Kerberos principal。这个文件被 [kadmind](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kadmind.html#kadmind-8) 守护进程用于控制谁可以查看并对 Kerberos 数据库文件做特权修改。ACL 文件名由 [kdc.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 中的 `acl_file` 变量确定，默认为 `LOCALSTATEDIR/krb5kdc/kadm5.acl`。
+接下来，你需要创建一个访问控制列表(ACL) 文件，并添加至少一个管理员的 `Kerberos principal`。这个文件被 [kadmind](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kadmind.html#kadmind-8) 守护进程用于控制谁可以查看并对 Kerberos 数据库文件做特权修改。ACL 文件名由 [kdc.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 中的 `acl_file` 变量确定，默认为 `LOCALSTATEDIR/krb5kdc/kadm5.acl`。
 
 关于 Kerberos ACL 文件的详细信息，请参见 [kadm5.acl](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kadm5_acl.html#kadm5-acl-5)。
 
@@ -201,9 +201,9 @@ shell% kinit admin/admin@ATHENA.MIT.EDU
 
 ### 为副本 KDC 创建主机 keytabs
 
-每个 KDC 在  Kerberos 需要一个 `host` key。这些键用于在将主 KDC 的数据库转储文件传播到 secondary KDC 服务器的过程中的相互认证。
+每个 KDC 在  Kerberos 需要一个 `host key`。这些键用于在将主 KDC 的数据库转储文件传播到副本 KDC 服务器的过程中的相互认证。
 
-在主 KDC 上，连接到管理界面并为每个 KDC 的 `host` 服务创建 host principal。例如，如果主 KDC 称之为 kerberos.mit.edu，并且你拥有一个副本 KDC 名为 kerberos-1.mit.edu，你应该输入下面的内容：
+在主 KDC 上，连接到管理界面并为每个 KDC 的 `host` 服务创建 `host principal`。例如，如果主 KDC 称之为 kerberos.mit.edu，并且你拥有一个副本 KDC 名为 kerberos-1.mit.edu，你应该输入下面的内容：
 
 ```
 shell% kadmin
@@ -218,7 +218,7 @@ Principal "host/kerberos-1.mit.edu@ATHENA.MIT.EDU" created.
 
 严格来讲，主 KDC 服务器并不需要出现在 Kerberos 数据库中，但它在切换主从 KDC 时会带来便利。
 
-接下来，为所有需要传播的 KDC 抽取 `host` 随机 key，并将它们存储到每个主机的默认 keytab 文件中。理想地你应该从自己的 KDC 上本地抽取 keytab 文件。如果这不可行，你应该使用一个加密会话跨网络传送它们。在一个叫做 `kerberos-1.mit.edu` 的副本 KDC 上直接抽取 keytab 文件，你将执行下面的命令：
+接下来，为所有需要传播的 KDC 抽取 `host` 随机 `key`，并将它们存储到每个主机的默认 keytab 文件中。理想地你应该从自己的 KDC 上本地抽取 keytab 文件。如果这不可行，你应该使用一个加密会话跨网络传送它们。在一个叫做 `kerberos-1.mit.edu` 的副本 KDC 上直接抽取 keytab 文件，你将执行下面的命令：
 
 ```
 kadmin: ktadd host/kerberos-1.mit.edu
@@ -246,16 +246,16 @@ Entry for principal host/kerberos-1.mit.edu with kvno 2, encryption
 
 ### 配置副本 KDCs （Configure replica KDCs）
 
-数据库传播拷贝主 KDC 数据库的内容，但并不传播配置文件。stash 文件以及 `kadm5 ACL` 文件。下面的文件必须被手动拷贝到每个副本上（参见 [MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults)以了解本这些文件的默认位置）：
+数据库传播拷贝主 KDC 数据库的内容，但并不传播配置文件，`stash` 文件以及 `kadm5 ACL` 文件。下面的文件必须被手动拷贝到每个副本上（参见 [MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults)以了解本这些文件的默认位置）：
 
 - krb5.conf
 - kdc.conf
 - kadm5.acl
-- master key stash file
+- master key stash 文件
 
 将这些文件移到合适的目录下，要和主 KDC 上的一样。`kadm5.acl` 只有在允许当前副本 KDC 与主 KDC 互换角色时才需要。
 
-数据库通过 [kpropd](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kpropd.html#kpropd-8) 守护进程从主 KDC 传播到副本 KDC。你必须显式指定一个 principals，它允许在副本 KDC 上为 Kerberos 新的数据库提供转储更新。在 `KDC state` 目录下创建一个名为 `kpropd.acl` 的文件包含每个 KDC 的 `host principals`。
+数据库通过 [kpropd](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kpropd.html#kpropd-8) 守护进程从主 KDC 传播到副本 KDC。你必须显式指定一个 `principal`，它允许在副本 KDC 上为 Kerberos 新的数据库提供转储更新。在 `KDC state` 目录下创建一个名为 `kpropd.acl` 的文件包含每个 KDC 的 `host principals`。
 
 ```
 host/kerberos.mit.edu@ATHENA.MIT.EDU
@@ -264,7 +264,7 @@ host/kerberos-1.mit.edu@ATHENA.MIT.EDU
 
 > 注意：如果你期待主从 KDC 能够在同一时间点切换，在所有 KDC 上的 `kpropd.acl` 文件中理出所有参与的 KDC 的 `host principals`。否则，你只需要在副本 KDC 的 `kpropd.acl` 中列出主 KDC 的 `host principals`。
 
-然后，在每个 KDC（调整o kpropd 路径） 上添加下面的命令到 /etc/inetd.conf：
+然后，在每个 KDC（调整 `kpropd` 的路径） 上添加下面的命令到 `/etc/inetd.conf`：
 
 ```
 krb5_prop stream tcp nowait root /usr/local/sbin/kpropd kpropd
@@ -276,7 +276,7 @@ krb5_prop stream tcp nowait root /usr/local/sbin/kpropd kpropd
 krb5_prop       754/tcp               # Kerberos replica propagation
 ```
 
-重启 inetd 守护进程。
+重启 `inetd` 守护进程。
 
 可选地，将 [kpropd](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kpropd.html#kpropd-8) 作为一个独立守护进程启动。当增量传播开启时这是需要的。
 
@@ -292,7 +292,7 @@ krb5_prop       754/tcp               # Kerberos replica propagation
 shell% kdb5_util dump /usr/local/var/krb5kdc/replica_datatrans
 ```
 
-加下来，收到将数据库传播到每个副本 KDC 上，如下所示：
+接下来，手动将数据库传播到每个副本 KDC 上，如下所示：
 
 ```
 shell% kprop -f /usr/local/var/krb5kdc/replica_datatrans kerberos-1.mit.edu
@@ -319,13 +319,13 @@ done
 
 你需要设置一个定时任务在一个你决定的规定间隔的早些时候运行这个脚本（参见[数据库传播](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#db-prop)）。
 
-现在副本 KDC 拥有了 Kerberos 数据库的一份拷贝，你可以启动 krb5kdc 守护进程：
+现在副本 KDC 拥有了 Kerberos 数据库的一份拷贝，你可以启动 `krb5kdc` 守护进程：
 
 ```
 shell% krb5kdc
 ```
 
-和主 KDC 一样，你可能想将这个命令添加到 `/etc/rc` 或 `/etc/inittab` 文件，如此它们将在系统启动时自动启动 krb5kdc 守护进程。
+和主 KDC 一样，你可能想将这个命令添加到 `/etc/rc` 或 `/etc/inittab` 文件，如此它们将在系统启动时自动启动 `krb5kdc` 守护进程。
 
 ### 传播失败
 
@@ -349,7 +349,7 @@ shell% krb5kdc
 
 如果主 KDC 仍在运行，在老的主 KDC 上执行下面的操作：
 
-1. 杀死 kadmind 进程
+1. 杀死 `kadmind`` 进程
 2. 禁用传播数据库的定时任务
 3. 手动运行你的数据库传播脚本，确保副本 KDC 拥有了数据库的最新拷贝（参见[将数据库传播至每个副本 KDC](https://web.mit.edu/kerberos/krb5-devel/doc/admin/install_kdc.html#kprop-to-replicas)）。
 
@@ -367,3 +367,5 @@ shell% krb5kdc
 ## Reference
 
 - [Installing KDCs](https://web.mit.edu/kerberos/krb5-devel/doc/admin/install_kdc.html)
+- [kinit](https://web.mit.edu/kerberos/krb5-devel/doc/user/user_commands/kinit.html#kinit-1)
+- [klist](https://web.mit.edu/kerberos/krb5-devel/doc/user/user_commands/klist.html#klist-1)
