@@ -26,10 +26,15 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 
 > 注意：
 > 基于本文目的，我们将使用下面的名字：
+> 
 > kerberos.mit.edu    - primary KDC
+> 
 > kerberos-1.mit.edu  - replica KDC
+> 
 > ATHENA.MIT.EDU      - realm name
+> 
 > .k5.ATHENA.MIT.EDU  - stash file
+> 
 > admin/admin         - admin principal
 >
 > 参见[MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults)可了解本主题相关文件的默认名字和位置。调整名字和路径以适应你的系统环境。
