@@ -13,7 +13,7 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 
 ## 前言
 
-当在一个产品环境设置 Kerberos 时，最好除一个主 KDC 外部署多个 KDC 副本以确保 Kerberos 化服务的高可用性。每个 KDC 包含一套 Kerberos 数据库。主 KDC 包含 realm 数据库的一个可写拷贝，它被定期同步到副本 KDC 上。所有数据库修改（例如密码变化）在主 KDC 上做出。副本 KDC 提供 Kerberos 票据授予服务（ticket-granting services），但不包括数据库管理，当主 KDC 不可用时，MIT 建议你将所有 KDC 安装为主 KDC 或一个副本 KDC。这使在必要（参见[切换主 KDC 和副本 KDC](https://web.mit.edu/kerberos/krb5-devel/doc/admin/install_kdc.html#switch-primary-replica)）时切换主 KDC 到一个副本 KDC 上时变得容易。
+当在一个产品环境设置 Kerberos 时，最好除一个主 KDC 外部署多个 KDC 副本以确保 Kerberos 化服务的高可用性。每个 KDC 包含一套 Kerberos 数据库。主 KDC 包含 realm 数据库的一个可写拷贝，它被定期同步到副本 KDC 上。所有数据库修改（例如密码变化）在主 KDC 上做出。副本 KDC 提供 Kerberos 票据授予服务（ticket-granting services），但不包括数据库管理，当主 KDC 不可用时，MIT 建议你将所有 KDC 安装为主 KDC 或一个副本 KDC。这使在必要（参见[切换主 KDC 和副本 KDC](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html#switch-primary-replica)）时切换主 KDC 到一个副本 KDC 上时变得容易。
 
 > 警告：
 > - Kerberos 系统依赖正确时间信息的可用性。确保主 KDC 和所有副本 KDC 拥有正确同步的时钟。
@@ -22,7 +22,7 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 
 ## 安装并配置主 KDC（Install and configure the primary KDC）
 
-从操作系统提供的包或从源代码（参见[从单一源代码树构建](https://web.mit.edu/kerberos/krb5-devel/doc/build/doing_build.html#do-build)）安装 Kerberos。
+从操作系统提供的包或从源代码（参见[从单一源代码树构建](https://web.mit.edu/kerberos/krb5-latest/doc/build/doing_build.html#do-build)）安装 Kerberos。
 
 > 注意：
 > 基于本文目的，我们将使用下面的名字：
@@ -37,13 +37,13 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 > 
 > admin/admin         - admin principal
 >
-> 参见[MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults)可了解本主题相关文件的默认名字和位置。调整名字和路径以适应你的系统环境。
+> 参见[MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-latest/doc/mitK5defaults.html#mitk5defaults)可了解本主题相关文件的默认名字和位置。调整名字和路径以适应你的系统环境。
 
 ### 编辑 KDC 配置文件
 
-修改配置文件 [krb5.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 和 [kdc.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 以反映你的 realm 的正确信息（如域名-Realm 的映射，Kerberos 服务器名字），参见 [MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-devel/doc/mitK5defaults.html#mitk5defaults) 可了解这些文件的推荐默认位置。
+修改配置文件 [krb5.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 和 [kdc.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 以反映你的 realm 的正确信息（如域名-Realm 的映射，Kerberos 服务器名字），参见 [MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-latest/doc/mitK5defaults.html#mitk5defaults) 可了解这些文件的推荐默认位置。
 
-配置里的大部分标签拥有可良好工作于大部分站点的默认值。但在 [krb5.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 里有一些标签必须显式指定值，本节将解释这些。
+配置里的大部分标签拥有可良好工作于大部分站点的默认值。但在 [krb5.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 里有一些标签必须显式指定值，本节将解释这些。
 
 如果这些配置文件位于与默认值不同的位置，设置 **KRB5_CONFIG** 和 **KRB5_KDC_PROFILE** 环境变量来分别指向 `krb5.conf` 和 `kdc.conf`，例如：
 
@@ -54,7 +54,7 @@ export KRB5_KDC_PROFILE=/yourdir/kdc.conf
 
 #### krb5.conf
 
-如果你不打算使用 DNS TXT records（参见[将主机名映射为Kerberos realms](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#mapping-hostnames)），你必须在 `[libdefaults]` 节里指定 `default_realm`。如果你不使用 `DNS URI` 或 `SRV records` (参见 [KDCs 主机名](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-hostnames) 和 [KDC 发现](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-discovery)), 你必须在 `[realms]` 节为每一个 realm 指定 `kdc tag`。为了与每一个 realm 的 `kadmin server` 通信，必须在 `[realms]` 节里指定 admin_server 标签。
+如果你不打算使用 DNS TXT records（参见[将主机名映射为 Kerberos realms](https://web.mit.edu/kerberos/krb5-latest/doc/admin/realm_config.html#mapping-hostnames)），你必须在 `[libdefaults]` 节里指定 `default_realm`。如果你不使用 `DNS URI` 或 `SRV records` (参见 [KDCs 主机名](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-hostnames) 和 [KDC 发现](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-discovery)), 你必须在 `[realms]` 节为每一个 realm 指定 `kdc tag`。为了与每一个 realm 的 `kadmin server` 通信，必须在 `[realms]` 节里指定 admin_server 标签。
 
 一个 `krb5.conf` 实例：
 
@@ -136,11 +136,11 @@ shell%
 - 管理数据库锁文件，`principal.kadm5.lock`
 - `stash` 文件, 本例中为 `.k5.ATHENA.MIT.EDU`。如果你不想要一个 stash 文件, 不要 `-s` 选项运行上面的命令。
 
-关于管理 Kerberos 数据库的更多信息，参见 [Kerberos 数据库操作](https://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#db-operations)。 
+关于管理 Kerberos 数据库的更多信息，参见 [Kerberos 数据库操作](https://web.mit.edu/kerberos/krb5-latest/doc/admin/database.html#db-operations)。 
 
 ## 向 ACL 文件添加管理员
 
-接下来，你需要创建一个访问控制列表(ACL) 文件，并添加至少一个管理员的 `Kerberos principal`。这个文件被 [kadmind](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kadmind.html#kadmind-8) 守护进程用于控制谁可以查看并对 Kerberos 数据库文件做特权修改。ACL 文件名由 [kdc.conf](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 中的 `acl_file` 变量确定，默认为 `LOCALSTATEDIR/krb5kdc/kadm5.acl`。
+接下来，你需要创建一个访问控制列表(ACL) 文件，并添加至少一个管理员的 `Kerberos principal`。这个文件被 [kadmind](https://web.mit.edu/kerberos/krb5-latest/doc/admin/admin_commands/kadmind.html#kadmind-8) 守护进程用于控制谁可以查看并对 Kerberos 数据库文件做特权修改。ACL 文件名由 [kdc.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 中的 `acl_file` 变量确定，默认为 `LOCALSTATEDIR/krb5kdc/kadm5.acl`。
 
 关于 Kerberos ACL 文件的详细信息，请参见 [kadm5.acl](https://web.mit.edu/kerberos/krb5-devel/doc/admin/conf_files/kadm5_acl.html#kadm5-acl-5)。
 
@@ -366,6 +366,6 @@ shell% krb5kdc
 
 ## Reference
 
-- [Installing KDCs](https://web.mit.edu/kerberos/krb5-devel/doc/admin/install_kdc.html)
+- [Installing KDCs](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html)
 - [kinit](https://web.mit.edu/kerberos/krb5-devel/doc/user/user_commands/kinit.html#kinit-1)
 - [klist](https://web.mit.edu/kerberos/krb5-devel/doc/user/user_commands/klist.html#klist-1)
