@@ -58,7 +58,7 @@ david@EXAMPLE.COM
 
 一个常见应用就是在 root 的主目录下常见一个 `.k5login` 文件，从而授予该文件中的所有 Kerberos 凭证对该机器具有 root 的访问权限。这允许系统管理员允许用户变成本地 root，或者远程登陆为 root，而无需给与他们 root 密码，更无需跨网络输入 root 密码。
 
-### 密码质量验证Password quality verification
+### 密码质量验证（Password quality verification）
 
 待实现。
 
@@ -408,6 +408,91 @@ alice/mail@EXAMPLE.COM  host=mail.example.com service=imap
 
 ### kinit
 
+#### 概要
+
+```
+kinit [-V] [-l lifetime] [-s start_time] [-r renewable_life] [-p | -P] [-f | -F] [-a] [-A] [-C] [-E] [-v] [-R] [-k [-i | -t keytab_file]] [-c cache_name] [-n] [-S service_name] [-I input_ccache] [-T armor_ccache] [-X attribute[=value]] [–request-pac | –no-request-pac] [principal]
+```
+
+#### 描述
+
+kinit 为 principal 获取并缓存一个初始票据授予票据。如果未提供 principal，kinit 将基于已有凭证缓存内容或调用 kinit 命令的本地用户的用户名来选择一个合适的 principal 名字。一些选项将改变 principal 名字的选择。
+
+#### 选项
+
+- **-V**
+  
+  显示详细输出。
+- **-l lifetime**
+  
+  ([Time duration](https://web.mit.edu/kerberos/krb5-latest/doc/basic/date_format.html#duration) 字符串) 请求一个生命周期为 `lifetime` 的票据，
+  例如，`kinit -l 5:30` 或 `kinit -l 5h30m`。
+
+  如果 **-l** 选项未指定，将会选择默认票据生命周期（每个站点都会配置）。指定一个超过最大票据生命周期（每个站点都会配置）的生命周期将不会覆盖配置的票据最大生命周期。
+
+- **-s start_time**
+
+   ([Time duration](https://web.mit.edu/kerberos/krb5-latest/doc/basic/date_format.html#duration) 字符串) 请求一个过期票据。过期票据发布时带有 **invalid** 标记，在使用前需要提交到 KDC 重新验证。
+
+   start_time 指定了票据变为有效前的有效时长。
+- **-r renewable_life**
+
+  ([Time duration](https://web.mit.edu/kerberos/krb5-latest/doc/basic/date_format.html#duration) 字符串) 请求一个可刷新票据，其总生命周期为 renewable_life。
+- **-f**
+  
+  请求可转发票据。
+- **-F**
+  
+  请求非可转发票据。
+- **-p**
+  
+  请求可代理票据。
+- **-P**
+
+  请求非可代理票据。
+- **-a**
+  
+  请求一个只适用于本地主机的票据。
+- **-A**
+
+  请求一个不受地址限制的票据。
+- **-C**
+
+  请求 principal 名字的规范化形式，允许 KDC 返回与请求不一致的客户端 principal。
+- **-E**
+
+  将 principal 名字视为企业名。
+- **-v**
+
+  将缓存（设置了 **invalid** 位）中的票据授予票据发送至 KDC 验证。如果票据还处于其请求时间范围，缓存将被验证后票据替代。
+- **-R**
+
+  请求刷新票据授予票据。注意已过期的票据不能被刷新，即使其还处于可刷新周期内。
+
+  注意被 [klist](https://web.mit.edu/kerberos/krb5-latest/doc/user/user_commands/klist.html#klist-1) 报告已过期的可刷新票据可以使用这个选项刷新，原因在于 KDC 使用了一种优雅的期间来记入 客户端-KDC 时钟差异。参见 [krb5.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) **clockskew** 设置。
+- **-k [-i | -t keytab_file]**
+
+  从本地主机 keytab 中的一个 key 得到票据。keytab 可以通过 `-t keytab_file` 指定，或者通过 **-i** 指定使用默认客户端 keytab，否则默认 keytab 就会被使用。默认将请求本地主机的主机票据，但任意 principal 可以指定。在一个 KDC 上，特定 keytab 位置 `KDB:` 用于指示 kinit 应该打开 KDC 数据库并直接查询 key。这允许系统管理员为任何支持基于 key 的认证的 principal 获取票据。 
+
+
+- **-n**
+- **-I input_ccache**
+
+  指定一个已经包含一个票据的凭证缓存名字。在获取票据时，如果如何获取票据的信息已经存储在缓存中，这些信息将会影响新的凭证如何获取，包括预选 KDC 认证的相同方法。
+
+- **-T armor_ccache**
+- **-c cache_name**
+
+  使用 `cache_name` 作为 Kerberos 5 凭证（票据）缓存位置。如果这个选项未指定，默认的缓存位置将被使用。
+
+  默认的缓存位置在不同的系统上可能不一样。如果设置了环境变量 **KRB5CCNAME**，这个值将会被用于定位默认缓存。如果指定了一个 principal，并且默认缓存支持集合（例如 DIR 类型），包含这个指定 principal 的凭证的缓存将被选择，或者新的凭证将会被创建并成为新的主缓存。否则，默认缓存的一条已有内容将会被kinit 销毁。 
+
+- **-S service_name**
+
+  在获取票据时选择使用服务名作为备用。
+- **-X attribute[=value]**
+- **–request-pac | –no-request-pac**
+
 ### klist
 
 ### kpasswd
@@ -425,3 +510,4 @@ alice/mail@EXAMPLE.COM  host=mail.example.com service=imap
 ## Reference
 
 - [For users](https://web.mit.edu/kerberos/krb5-latest/doc/user/index.html)
+- [What is a Kerberos Principal?](https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html#:~:text=Traditionally,%20a%20principal%20is%20divided%20into%20three%20parts:)
