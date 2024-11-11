@@ -13,7 +13,7 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 
 ## 前言
 
-当在一个产品环境设置 Kerberos 时，最好除一个主 KDC 外部署多个 KDC 副本以确保 Kerberos 化服务的高可用性。每个 KDC 包含一套 Kerberos 数据库。主 KDC 包含 realm 数据库的一个可写拷贝，它被定期同步到副本 KDC 上。所有数据库修改（例如密码变化）在主 KDC 上做出。副本 KDC 提供 Kerberos 票据授予服务（ticket-granting services），但不包括数据库管理，当主 KDC 不可用时，MIT 建议你将所有 KDC 安装为主 KDC 或一个副本 KDC。这使在必要（参见[切换主 KDC 和副本 KDC](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html#switch-primary-replica)）时切换主 KDC 到一个副本 KDC 上时变得容易。
+当在一个产品环境设置 Kerberos 时，最好除一个主 KDC 外部署多个 KDC 副本以确保 Kerberos 化服务的高可用性。每个 KDC 包含一套 Kerberos 数据库。主 KDC 包含 realm 数据库的一个可写拷贝，它被定期同步到副本 KDC 上。所有数据库修改（例如密码变化）在主 KDC 上做出。副本 KDC 提供 Kerberos 票据授予服务（ticket-granting services），但不包括数据库管理，当主 KDC 不可用时，MIT 建议你将所有 KDC 安装为主 KDC 或一个副本 KDC。这使得在必要（参见[切换主 KDC 和副本 KDC](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html#switch-primary-replica)）时切换主 KDC 到一个副本 KDC 上时变得容易。安装过程基于下面的推荐。
 
 > 警告：
 > - Kerberos 系统依赖正确时间信息的可用性。确保主 KDC 和所有副本 KDC 拥有正确同步的时钟。
@@ -27,15 +27,13 @@ Service Ticket|服务授予票据|这是 KDC 中的 Ticket Granting Server(简�
 > 注意：
 > 基于本文目的，我们将使用下面的名字：
 > 
-> kerberos.mit.edu    - primary KDC
-> 
-> kerberos-1.mit.edu  - replica KDC
-> 
-> ATHENA.MIT.EDU      - realm name
-> 
-> .k5.ATHENA.MIT.EDU  - stash file
-> 
-> admin/admin         - admin principal
+> ```
+> kerberos.mit.edu    - 主 KDC
+> kerberos-1.mit.edu  - 副本 KDC
+> ATHENA.MIT.EDU      - realm 名字
+> .k5.ATHENA.MIT.EDU  - stash 文件
+> admin/admin         - 管理员 principal
+>```
 >
 > 参见[MIT Kerberos 默认值](https://web.mit.edu/kerberos/krb5-latest/doc/mitK5defaults.html#mitk5defaults)可了解本主题相关文件的默认名字和位置。调整名字和路径以适应你的系统环境。
 
@@ -54,7 +52,7 @@ export KRB5_KDC_PROFILE=/yourdir/kdc.conf
 
 #### krb5.conf
 
-如果你不打算使用 DNS TXT records（参见[将主机名映射为 Kerberos realms](https://web.mit.edu/kerberos/krb5-latest/doc/admin/realm_config.html#mapping-hostnames)），你必须在 `[libdefaults]` 节里指定 `default_realm`。如果你不使用 `DNS URI` 或 `SRV records` (参见 [KDCs 主机名](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-hostnames) 和 [KDC 发现](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-discovery)), 你必须在 `[realms]` 节为每一个 realm 指定 `kdc tag`。为了与每一个 realm 的 `kadmin server` 通信，必须在 `[realms]` 节里指定 admin_server 标签。
+如果你不打算使用 DNS TXT records（参见[将主机名映射为 Kerberos realms](https://web.mit.edu/kerberos/krb5-latest/doc/admin/realm_config.html#mapping-hostnames)），你必须在 [libdefaults](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#libdefaults) 节里指定 `default_realm`。如果你不使用 `DNS URI` 或 `SRV records` (参见 [KDCs 主机名](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-hostnames) 和 [KDC 发现](https://web.mit.edu/kerberos/krb5-devel/doc/admin/realm_config.html#kdc-discovery)), 你必须在 `[realms]` 节为每一个 realm 指定 `kdc tag`。为了与每一个 realm 的 `kadmin server` 通信，必须在 [realms](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#realms) 节里指定 **admin_server** 标签。
 
 一个 `krb5.conf` 实例：
 
