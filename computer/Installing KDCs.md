@@ -109,7 +109,7 @@ kdc.conf 用于控制 KDC 和 `kadmind` 的监听端口，也包括 realm 特定
 
 你将使用主 KDC 上的 [kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 命令来创建 Kerberos 数据库及可选的 [stash 文件](https://web.mit.edu/kerberos/krb5-devel/doc/basic/stash_file_def.html#stash-definition)。
 
-> 注意：如果你选择不安装 stash 文件，KDC 在其每次启动时都要提示输入 master key。这意味着 KDC 不能自动启动，比如在一次系统重启后。
+> 注意：如果你选择不安装 stash 文件，KDC 在其每次启动时都要提示输入 `master key`。这意味着 KDC 不能自动启动，比如在一次系统重启后。
 
 [kdb5_util](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kdb5_util.html#kdb5-util-8) 将提示你输入用于 Kerberos 数据库的 master 密码。这个密码可以是任意字符串。一个好的密码是你能够记得，但别的人却不能猜到。坏的密码的例子包括字典里的单词，任何常见和流行的名字，尤其是一个名人（或卡通人物），任何形式的你的名字（例如顺序，倒序，重复两次等），这篇手册里的任意密码等。没有出现在本手册里的一个好的密码示例是 “MITiys4K5!”，它代表句子 “MIT is your source for Kerberos 5!” (它是每个单词的首字母，将单词 “for” 用数字 “4” 代替并在最后加上了叹号)。
 
@@ -127,7 +127,7 @@ Re-enter KDC database master key to verify:  <= Type it again.
 shell%
 ```
 
-这将在 **LOCALSTATEDIR/krb5kdc**（或者在 `kdc.conf` 中指定的位置） 下创建五个文件：
+这将在 **LOCALSTATEDIR/krb5kdc**（或者在 [kdc.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/kdc_conf.html#kdc-conf-5) 中指定的位置） 下创建五个文件：
 
 - 两个 Kerberos 数据库文件，`principal`, 和 `principal.ok`
 - Kerberos 管理数据库文件，`principal.kadm5`
@@ -144,7 +144,7 @@ shell%
 
 ## 添加 Kerberos 数据库管理员
 
-接下来你需要添加 Kerberos 数据库管理员 principals（例如，被允许管理 Kerberos 数据库的 principals）。现在你必须至少添加一个 principals 以允许 Kerberos 管理守护进程 kadmind 和 kadmin 程序的相互网络通信以便于进一步管理。为了实现这个，在主 KDC 上使用 `kadmin.local` 工具。 `kadmin.local` 被设计为在主 KDC 主机上运行无需使用对管理服务器的 Kerberos 认证。作为替代，它必须拥有对本地文件系统之上的 Kerberos 数据库的读写权限。
+接下来你需要添加 Kerberos 数据库管理员 principals（例如，被允许管理 Kerberos 数据库的 principals）。现在你必须至少添加一个 principals 以允许 Kerberos 管理守护进程 kadmind 和 kadmin 程序的相互网络通信以便于进一步管理。为了实现这个，在主 KDC 上使用 `kadmin.local` 工具。`kadmin.local` 被设计为在主 KDC 主机上运行无需使用对管理服务器的 Kerberos 认证。作为替代，它必须拥有对本地文件系统之上的 Kerberos 数据库的读写权限。
 
 你创建的管理员 principals 应该是你添加到 ACL 文件的那个（参见[向 ACL 文件添加管理员](https://web.mit.edu/kerberos/krb5-devel/doc/admin/install_kdc.html#admin-acl)）。
 
@@ -260,7 +260,7 @@ host/kerberos.mit.edu@ATHENA.MIT.EDU
 host/kerberos-1.mit.edu@ATHENA.MIT.EDU
 ```
 
-> 注意：如果你期待主从 KDC 能够在同一时间点切换，在所有 KDC 上的 `kpropd.acl` 文件中理出所有参与的 KDC 的 `host principals`。否则，你只需要在副本 KDC 的 `kpropd.acl` 中列出主 KDC 的 `host principals`。
+> 注意：如果你期待主从 KDC 能够在某一时间点切换，在所有 KDC 上的 `kpropd.acl` 文件中理出所有参与的 KDC 的 `host principals`。否则，你只需要在副本 KDC 的 `kpropd.acl` 中列出主 KDC 的 `host principals`。
 
 然后，在每个 KDC（调整 `kpropd` 的路径） 上添加下面的命令到 `/etc/inetd.conf`：
 
@@ -278,9 +278,9 @@ krb5_prop       754/tcp               # Kerberos replica propagation
 
 可选地，将 [kpropd](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kpropd.html#kpropd-8) 作为一个独立守护进程启动。当增量传播开启时这是需要的。
 
-现在副本 KDC 可以接受数据库传播，你需要从主 KDC 传播数据库。
+现在副本 KDC 可以接受数据库传播，你需要从主 KDC 获取数据库转储。
 
-> 注意：现在请不要启动副本 KDC；因此你现在有没有主数据库的拷贝。
+> **注意：现在请不要启动副本 KDC；因此你现在有没有主数据库的拷贝**。
 
 ### 传播数据库到每个副本 KDC（Propagate the database to each replica KDC）
 
@@ -333,17 +333,17 @@ shell% krb5kdc
 2. [kprop: Connection refused while connecting to server](https://web.mit.edu/kerberos/krb5-devel/doc/admin/troubleshoot.html#kprop-con-refused)
 3. [kprop: Server rejected authentication (during sendauth exchange) while authenticating to server](https://web.mit.edu/kerberos/krb5-devel/doc/admin/troubleshoot.html#kprop-sendauth-exchange)
 
-## 添加数据库 Kerberos principals
+## 向数据库添加 Kerberos principals
 
-一旦你的 KDC 已经建立并正常运行，你已经准备好使用 [kadmin](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kadmin_local.html#kadmin-1) 来为你的用户，主机，或其它服务向你的 Kerberos 数据库里添加 principals。这一过程在 [Principal](shttps://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#principals) 被详细描述。 
+一旦你的 KDC 已经建立并正常运行，你已经准备好使用 [kadmin](https://web.mit.edu/kerberos/krb5-devel/doc/admin/admin_commands/kadmin_local.html#kadmin-1) 来为你的用户，主机，或其它服务向你的 Kerberos 数据库里添加 principals。这一过程在 [Principal](shttps://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#principals) 有详细描述。 
 
 你可能偶尔期待把你的一个副本 KDC 当主 KDC 使用，比如，当你升级你的主 KDC 时，或者你的主 KDC 磁盘崩溃了。参考下面的章节以了解详细指令。
 
 ## 切换主从 KDCs
 
-你可能偶尔期待把你的一个副本 KDC 当主 KDC 使用，这可能当你升级你的主 KDC 时，或者你的主 KDC 磁盘崩溃了会呈现。
+你可能偶尔期待把你的一个副本 KDC 当主 KDC 使用，比如当你升级你的主 KDC 时，或者你的主 KDC 磁盘崩溃了。
 
-假设你已经配置好你所有的 KDC，它们或者作为一个主 KDC 或一个副本 KDC，你所有需要操作的步骤包括：
+假设你已经配置好你所有的 KDC，它们或者作为一个主 KDC 或一个副本 KDC 运行，你所有需要操作的步骤包括：
 
 如果主 KDC 仍在运行，在老的主 KDC 上执行下面的操作：
 
@@ -359,7 +359,7 @@ shell% krb5kdc
 
 ## 增量数据库传播（Incremental database propagation）
 
-如果你期待你的 Kerberos 数据库变得更大，你可能期待设置到副本 KDC 的增量传播。参考[增量数据库传播](https://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#incr-db-prop)以获得更多细节。
+如果你预测你的 Kerberos 数据库变得更大，你可能期待设置到副本 KDC 的增量传播。参考[增量数据库传播](https://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#incr-db-prop)以获得更多细节。
 
 
 ## Reference
