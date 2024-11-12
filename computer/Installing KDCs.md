@@ -359,11 +359,53 @@ shell% krb5kdc
 
 ## 增量数据库传播（Incremental database propagation）
 
-如果你预测你的 Kerberos 数据库变得更大，你可能期待设置到副本 KDC 的增量传播。参考[增量数据库传播](https://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#incr-db-prop)以获得更多细节。
+如果你预测你的 Kerberos 数据库会变得更大，你可能期待设置到副本 KDC 的增量传播。参考[增量数据库传播](https://web.mit.edu/kerberos/krb5-devel/doc/admin/database.html#incr-db-prop)以获得更多细节。
 
+
+# 安装和配置 UNIX 客户端主机
+
+Kerberos 客户端程序包括 [kinit](https://web.mit.edu/kerberos/krb5-latest/doc/user/user_commands/kinit.html#kinit-1), [klist](https://web.mit.edu/kerberos/krb5-latest/doc/user/user_commands/klist.html#klist-1), [kdestroy](https://web.mit.edu/kerberos/krb5-latest/doc/user/user_commands/kdestroy.html#kdestroy-1), 和 [kpasswd](https://web.mit.edu/kerberos/krb5-latest/doc/user/user_commands/kpasswd.html#kpasswd-1)。所有这些应用在 [BINDIR](https://web.mit.edu/kerberos/krb5-latest/doc/mitK5defaults.html#paths) 目录下。
+
+你可以将 Kerberos 与你的客户端主机登陆系统集成，典型地通过使用 PAM。细节会随操作系统不同而不同，但一般会在操作系统得文档中涉及。如果你实现这个，你需要确保你的用户知道在他们登陆时需要使用他们的 Kerberos 密码。
+
+你需要教育你的用户使用票据管理程序如 `kinit`, `klist`, 和 `kdestroy`。如果你的 Kerberos 密码修改机制没有与原生密码程序集成（再次强调，典型地通过 PAM），你需要教育你的用户使用 kpasswd 以替代非 Kerberos 对应 passwd 应用。
+
+## 客户端主机配置文件
+
+每个运行 Kerberos 的主机应该拥有一个 [krb5.conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#krb5-conf-5) 文件。它应该至少在 [[libdefaults](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#libdefaults)] 里定义了 **default_realm**。如果你没有使用 DNS SRV 记录（[KDC 主机名](https://web.mit.edu/kerberos/krb5-latest/doc/admin/realm_config.html#kdc-hostnames)）或者 URI 记录 ([KDC 发现](https://web.mit.edu/kerberos/krb5-latest/doc/admin/realm_config.html#kdc-discovery))，它必须在包含一个 [[realms](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#realms)] 节，并在其中包含你的 Realm 的 KDC。
+
+考虑设置 rdns 为 false 以减少对服务主机的正确 DNS 信息的依赖。关闭这个标记意味着服务主机名字将会通过前向 DNS 解析规范化（它添加域名到你的未规范化主机名，并解析 DNS 中的 CNAME 记录），但不通过反向解析。仅仅出于历史原因该标记默认值为 true。
+
+如果你预料你的用户频繁使用前向凭证登录到远程主机（例如，使用 ssh），那么可以考虑设置 **forwardable** 为 true，如此用户就可以默认的到可前向票据。否则用户需要通过 `kinit -f` 获得可前向票据。
+
+考虑调整 **ticket_lifetime** 的设置以匹配你的用户会话长度。例如，如果你的大多数用户在工作日登陆系统 8 个小时，你可以考虑设置默认值为 10 个小时，如此早上得到的票据就会在一天工作结束不久之后过期。用户任然可以在必要时请求更长的票据，直至 KDC 中用户 principal 记录允许的最大值。
+
+如果客户拥有位于不同 realms 的访问服务，定义一个 [[domain_realm](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html#domain-realm)] 映射是有用的，如此客户就知道那个主机被那个 realms 拥有。但如果你的客户端和 KDC 运行 1.7 或以后版本，那就不需要在客户端定义这一节而只需要在 KDC 的 `krb5.conf` 中定义。
+
+
+# UNIX 应用服务器
+
+一个应用服务器是一个通过网络提供一个或多个服务的主机。应用服务器可以是安全的或者不安全的。一台安全的主机被设置为每个连接到它的客户都需要认证。一台不安全的主机任然提供了 Kerberos 认证，但也允许未经认证的客户连接。
+
+如果你所有的客户端机器已经安装了 Kerberos V5，MIT 建议你配置你的主机为安全主机以便利用 Kerberos 认证提供的安全保证。但是，如果你的部分客户没有安装 Kerberos V5，你可以运行一台不安全的主机，并且仍可利用 Kerberos V5 的单点登录功能。
+
+## keytab 文件
+
+
+
+## 关于安全主机的一些建议
+
+Kerberos V5 可以防止你的主机被意外闯入，但即使你安装了 Kerberos V5，你的主机仍有可能为攻击留有漏洞。显然，一篇安装指南不可能穷尽所有可能攻击以及对策，但指出一些较大漏洞及如何关闭它们是值得的。
+
+我们建议安全主机的备份要排除 keytab 文件（[DEFKTNAME](https://web.mit.edu/kerberos/krb5-latest/doc/mitK5defaults.html#paths)）。如果这不可能，那么备份应该在本地执行而不是通过网络，并且备份的磁带必须确保物理安全。
+
+keytab 文件以及任何 root 运行的程序，包括 Kerberos V5 二进制文件，应该被保存在本地磁盘上。keytab 应该只对 root 可读。
 
 ## Reference
 
 - [Installing KDCs](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html)
 - [kinit](https://web.mit.edu/kerberos/krb5-devel/doc/user/user_commands/kinit.html#kinit-1)
 - [klist](https://web.mit.edu/kerberos/krb5-devel/doc/user/user_commands/klist.html#klist-1)
+- [krb5_conf](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.htm)
+- [Installing and configuring UNIX client machines](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_clients.html)
+- [UNIX Application Servers](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_appl_srv.html)
