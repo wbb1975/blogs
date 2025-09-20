@@ -391,7 +391,25 @@ Kerberos 客户端程序包括 [kinit](https://web.mit.edu/kerberos/krb5-latest/
 
 ## keytab 文件
 
+所有的 Kerberos 服务器机器需要一个 keytab 文件来向 KDC 认证。在类 UNIX 系统上默认地该文件被命名为 [DEFKTNAME](https://web.mit.edu/kerberos/krb5-latest/doc/mitK5defaults.html#paths)。keytab 是主机 key 文件的一个本地拷贝。keytab 文件是一个潜在的入侵入口，如果伤害成立，则会允许对主机的不受限访问。keytab 应该只对 root 可读，而且因该只存在于机器的本地磁盘上。该文件应该不是机器任何备份的一部分，除非访问备份数据就像访问 root 的密码一样安全牢靠。
 
+为了在一个主机上产生一个 keytab 文件，该主机必须在 Kerberos 数据库里拥有一个 principal。将主机添加到数据库里的过程在[Principals](https://web.mit.edu/kerberos/krb5-latest/doc/admin/database.html#principals)里有完整描述（参见[Create host keytabs for replica KDCs](https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html#replica-host-key) 可获得一个简要描述）。keytab 通过运行 [kadmin](https://web.mit.edu/kerberos/krb5-latest/doc/admin/admin_commands/kadmin_local.html#kadmin-1) 并使用 [ktadd](https://web.mit.edu/kerberos/krb5-latest/doc/admin/admin_commands/kadmin_local.html#ktadd) 来产生。
+
+例如，为了产生一个 keytab 文件以允许主机 `trillium.mit.edu` 来为服务器主机（services host）, ftp, 和 pop 认证，管理员 `joeadmin` 可以发布下面的命令（在 `trillium.mit.edu` 上）：
+
+```
+trillium% kadmin
+Authenticating as principal root/admin@ATHENA.MIT.EDU with password.
+Password for root/admin@ATHENA.MIT.EDU:
+kadmin: ktadd host/trillium.mit.edu ftp/trillium.mit.edu pop/trillium.mit.edu
+Entry for principal host/trillium.mit.edu@ATHENA.MIT.EDU with kvno 3, encryption type aes256-cts-hmac-sha384-192 added to keytab FILE:/etc/krb5.keytab.
+kadmin: Entry for principal ftp/trillium.mit.edu@ATHENA.MIT.EDU with kvno 3, encryption type aes256-cts-hmac-sha384-192 added to keytab FILE:/etc/krb5.keytab.
+kadmin: Entry for principal pop/trillium.mit.edu@ATHENA.MIT.EDU with kvno 3, encryption type aes256-cts-hmac-sha384-192 added to keytab FILE:/etc/krb5.keytab.
+kadmin: quit
+trillium%
+```
+
+如果你在另一个主机上产生 keytab 文件，你需要将该 keytab 文件拷贝到目标主机上（在上例中为 `trillium`），不能通过网络以非加密方式发送。
 
 ## 关于安全主机的一些建议
 
